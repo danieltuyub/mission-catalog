@@ -22,10 +22,10 @@ export default function ProjectCard({ project }: Props) {
   ]
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5 sm:h-60 sm:flex-row">
+    <article className="flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5 sm:h-56 sm:flex-row">
       <div
         aria-hidden="true"
-        className="flex h-44 shrink-0 items-center justify-center bg-stone-200 text-stone-400 sm:size-60"
+        className="flex h-44 shrink-0 items-center justify-center bg-stone-200 text-stone-400 sm:size-56"
       >
         <svg viewBox="0 0 24 24" className="size-10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -36,11 +36,11 @@ export default function ProjectCard({ project }: Props) {
 
       <div className="relative flex min-w-0 flex-1 flex-col p-5">
         <h3 className="truncate text-lg font-semibold text-brand-primary">{project.name}</h3>
-        <p className="mt-1 line-clamp-2 text-sm text-stone-500">
+        <p className="mt-1 line-clamp-2 min-h-10 text-sm text-stone-500">
           {project.description || 'Sin descripción'}
         </p>
 
-        <dl className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-y-1 text-sm sm:mt-auto">
+        <dl className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-y-1 text-sm">
           {details.map(({ label, value }, i) => (
             <div key={label} className="contents">
               <dt className="text-stone-500">{label}</dt>
