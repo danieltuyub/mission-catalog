@@ -9,7 +9,7 @@ const YEAR = new Date().getFullYear()
 export default function Footer() {
   return (
     <footer className="pb-5 pt-5">
-      <div className="mx-auto w-[94%] rounded-3xl bg-brand-primary px-6 py-14 text-brand-blush md:w-4/5 md:px-12 md:py-16">
+      <div className="mx-auto w-[94%] rounded-3xl bg-brand-primary px-6 pb-6 pt-14 text-brand-blush md:w-4/5 md:px-12 md:pt-16">
         <div className="text-center">
           <p className="mx-auto max-w-2xl text-lg leading-relaxed">
             Si quieres más información sobre las iglesias en casa, o de algún proyecto en
@@ -26,7 +26,7 @@ export default function Footer() {
         <div className="mt-14 grid gap-10 border-t border-white/10 pt-10 text-center text-sm md:grid-cols-3 md:text-left">
           <div>
             <p className="font-medium text-white">Mission Catalog</p>
-            <p className="mt-2 max-w-xs text-brand-blush/70 md:max-w-none">
+            <p className="mx-auto mt-2 max-w-xs text-brand-blush/70 md:mx-0 md:max-w-none">
               Un mapa de las iglesias en casa y proyectos misioneros.
             </p>
           </div>
