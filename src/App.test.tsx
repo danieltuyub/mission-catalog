@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -12,7 +12,7 @@ describe('App', () => {
   it('shows the map by default with navbar and footer', () => {
     render(<App />)
     expect(screen.getByRole('main')).toHaveTextContent('map')
-    expect(screen.getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page')
+    expect(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Contáctanos' })).toHaveAttribute('href', '#/contacto')
   })
 
@@ -20,6 +20,6 @@ describe('App', () => {
     window.location.hash = '#/contacto'
     render(<App />)
     expect(screen.getByRole('main')).toHaveTextContent('Contacto')
-    expect(screen.getByRole('link', { name: 'Contacto' })).toHaveAttribute('aria-current', 'page')
+    expect(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Contacto' })).toHaveAttribute('aria-current', 'page')
   })
 })
