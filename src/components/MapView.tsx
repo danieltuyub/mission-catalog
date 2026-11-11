@@ -19,16 +19,20 @@ const DEFAULT_CENTER: LatLngTuple = [20, 0]
 const DEFAULT_ZOOM = 2
 const LOCATED_ZOOM = 13
 
-const pinIcon = L.divIcon({
-  className: '',
-  iconSize: [32, 40],
-  iconAnchor: [16, 40],
-  popupAnchor: [0, -36],
-  html: `<svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-    <path d="M16 0C7.2 0 0 7 0 15.7 0 27 16 40 16 40s16-13 16-24.300C32 7 24.800 0 16 0z" fill="#0e1428"/>
+const createPinIcon = (color: string) =>
+  L.divIcon({
+    className: '',
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -36],
+    html: `<svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16 0C7.2 0 0 7 0 15.7 0 27 16 40 16 40s16-13 16-24.300C32 7 24.800 0 16 0z" fill="${color}"/>
     <circle cx="16" cy="15.500" r="6" fill="#fff"/>
   </svg>`,
-})
+  })
+
+const pinIcon = createPinIcon('#0e1428')
+const selectedPinIcon = createPinIcon('#7b9e89')
 
 const userIcon = L.divIcon({
   className: '',
@@ -77,7 +81,13 @@ export default function MapView() {
 
   useEffect(() => {
     if (!selectedId || draft) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSelectedId(null)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setSelectedId(null)
+      // The clicked marker keeps focus; after a key press the browser draws a focus ring on it.
+      const active = document.activeElement
+      if (active instanceof HTMLElement && active.closest('.leaflet-marker-icon')) active.blur()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selectedId, draft])
@@ -112,7 +122,8 @@ export default function MapView() {
           <Marker
             key={pin.id}
             position={[pin.lat, pin.lng]}
-            icon={pinIcon}
+            icon={pin.id === selectedId ? selectedPinIcon : pinIcon}
+            zIndexOffset={pin.id === selectedId ? 1000 : 0}
             eventHandlers={{ click: () => setSelectedId(pin.id) }}
           />
         ))}
