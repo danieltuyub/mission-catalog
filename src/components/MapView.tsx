@@ -1,7 +1,6 @@
 import L, { type LatLngTuple } from 'leaflet'
 import { useEffect, useState } from 'react'
 import {
-  CircleMarker,
   MapContainer,
   Marker,
   Popup,
@@ -26,6 +25,13 @@ const pinIcon = L.divIcon({
     <path d="M16 0C7.2 0 0 7 0 15.7 0 27 16 40 16 40s16-13 16-24.300C32 7 24.800 0 16 0z" fill="#4f46e5"/>
     <circle cx="16" cy="15.500" r="6" fill="#fff"/>
   </svg>`,
+})
+
+const userIcon = L.divIcon({
+  className: '',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+  html: '<div style="width:16px;height:16px;box-sizing:border-box;border-radius:9999px;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)"></div>',
 })
 
 const GEO_MESSAGES: Partial<Record<GeoStatus, string>> = {
@@ -66,11 +72,7 @@ export default function MapView() {
         <ClickHandler onClick={(lat, lng) => setDraft({ lat, lng })} />
 
         {position && (
-          <CircleMarker
-            center={position}
-            radius={8}
-            pathOptions={{ color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1 }}
-          />
+          <Marker position={position} icon={userIcon} interactive={false} keyboard={false} />
         )}
 
         {pins.map((pin) => (
