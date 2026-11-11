@@ -19,7 +19,7 @@ export default function Pagination({ page, totalPages, onChange }: Props) {
               onClick={() => onChange(p)}
               aria-label={`Página ${p}`}
               aria-current={p === page ? 'page' : undefined}
-              className={`size-10 rounded-full text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
+              className={`size-10 rounded-full text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
                 p === page
                   ? 'bg-brand-primary font-medium text-brand-blush'
                   : 'bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush'
