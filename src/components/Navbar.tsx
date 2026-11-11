@@ -21,9 +21,9 @@ export default function Navbar({ current }: { current: Route }) {
     <header className="relative z-[3000] flex justify-center pb-5 pt-5">
       <nav
         aria-label="Principal"
-        className="relative flex w-[94%] items-center justify-between rounded-full bg-brand-primary px-3 py-2.5 text-brand-blush shadow-lg shadow-brand-primary/25 md:grid md:w-4/5 md:grid-cols-[1fr_auto_1fr]"
+        className="relative flex w-[94%] items-center justify-between rounded-full bg-brand-primary px-3 py-2.5 text-brand-blush shadow-lg shadow-brand-primary/25 md:w-4/5"
       >
-        <a href="#/mapa" aria-label="Mission Catalog" className="flex items-center gap-3 justify-self-start">
+        <a href="#/mapa" aria-label="Mission Catalog" className="flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-full bg-brand-blush">
             <svg viewBox="0 0 24 24" className="size-5 fill-brand-primary" aria-hidden="true">
               <path d="M12 2C8.1 2 5 5 5 8.800 5 14 12 22 12 22s7-8 7-13.200C19 5 15.900 2 12 2zm0 9.500a2.700 2.700 0 1 1 0-5.400 2.700 2.700 0 0 1 0 5.400z" />
@@ -34,7 +34,7 @@ export default function Navbar({ current }: { current: Route }) {
 
         <ul
           id="main-menu"
-          className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:mt-0 md:flex md:flex-row md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
+          className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:mt-0 md:flex md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
         >
           {LINKS.map(({ route, label }) => (
             <li key={route}>
@@ -52,13 +52,7 @@ export default function Navbar({ current }: { current: Route }) {
           ))}
         </ul>
 
-        <div className="flex items-center gap-2 justify-self-end">
-          <a
-            href="#/contacto"
-            className="hidden rounded-full bg-brand-blush px-5 py-2 text-sm font-medium text-brand-primary transition-colors hover:bg-brand-sage md:inline-block"
-          >
-            Escríbenos
-          </a>
+        <div className="flex items-center md:hidden">
           <button
             type="button"
             aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
