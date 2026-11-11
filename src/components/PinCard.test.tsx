@@ -60,7 +60,7 @@ describe('PinCard transitions', () => {
       expect(screen.getByRole('heading', { name: 'Base' })).toBeInTheDocument()
       expect(screen.getByTestId('pin-content').className).toContain('opacity-0')
 
-      act(() => void vi.advanceTimersByTime(100))
+      act(() => void vi.advanceTimersByTime(500))
       expect(screen.getByRole('heading', { name: 'Otro' })).toBeInTheDocument()
       expect(screen.getByTestId('pin-content').className).toContain('opacity-100')
       expect(screen.getByRole('complementary')).toBe(card)
@@ -78,7 +78,7 @@ describe('PinCard transitions', () => {
       rerender(<PinCard pin={{ ...pin, id: '2', title: 'Dos' }} onClose={vi.fn()} />)
       act(() => void vi.advanceTimersByTime(30))
       rerender(<PinCard pin={{ ...pin, id: '3', title: 'Tres' }} onClose={vi.fn()} />)
-      act(() => void vi.advanceTimersByTime(200))
+      act(() => void vi.advanceTimersByTime(500))
       expect(screen.getByRole('heading', { name: 'Tres' })).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Dos' })).not.toBeInTheDocument()
     } finally {

@@ -10,6 +10,7 @@ import {
 import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
+import LocateControl from './LocateControl'
 import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
 import TrackpadNavigation from './TrackpadNavigation'
@@ -68,7 +69,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 
 export default function MapView() {
   const [savedView] = useState(loadMapView)
-  const { status, position } = useGeolocation()
+  const { status, position, locate } = useGeolocation()
   const { pins, error, addPin } = usePins()
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -98,6 +99,7 @@ export default function MapView() {
         <FlyToPosition position={savedView ? null : position} />
         <ViewPersistor />
         <TrackpadNavigation />
+        <LocateControl onLocate={locate} zoom={LOCATED_ZOOM} disabled={status === 'unsupported'} />
         <ClickHandler onClick={(lat, lng) => setDraft({ lat, lng })} />
 
         {position && (
