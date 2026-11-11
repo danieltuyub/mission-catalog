@@ -12,6 +12,7 @@ import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
+import TrackpadNavigation from './TrackpadNavigation'
 
 const DEFAULT_CENTER: LatLngTuple = [20, 0]
 const DEFAULT_ZOOM = 2
@@ -87,6 +88,7 @@ export default function MapView() {
       <MapContainer
         center={savedView?.center ?? DEFAULT_CENTER}
         zoom={savedView?.zoom ?? DEFAULT_ZOOM}
+        scrollWheelZoom={false}
         className="h-full w-full"
       >
         <TileLayer
@@ -95,6 +97,7 @@ export default function MapView() {
         />
         <FlyToPosition position={savedView ? null : position} />
         <ViewPersistor />
+        <TrackpadNavigation />
         <ClickHandler onClick={(lat, lng) => setDraft({ lat, lng })} />
 
         {position && (
