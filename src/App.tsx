@@ -16,7 +16,7 @@ export default function App() {
   const Page = PAGES[route]
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-linear-to-b from-stone-50 to-stone-100">
       <Navbar current={route} />
       <main className="flex-1">
         <Page />

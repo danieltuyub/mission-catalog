@@ -2,7 +2,7 @@
 @import 'leaflet/dist/leaflet.css';
 
 @theme {
-  --color-brand-lime: #aace50;
-  --color-brand-mint: #88dfb0;
-  --color-brand-moss: #869a63;
+  --color-brand-primary: #0e1428;
+  --color-brand-sage: #7b9e89;
+  --color-brand-blush: #f4d8cd;
 }

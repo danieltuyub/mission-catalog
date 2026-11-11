@@ -54,7 +54,7 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
           />
         </label>
 
@@ -64,7 +64,7 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="mt-1 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
           />
         </label>
 
@@ -82,7 +82,7 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
           <button
             type="submit"
             disabled={saving || !title.trim()}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90 disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>

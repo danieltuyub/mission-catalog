@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { Route } from '../hooks/useRoute'
 
 const LINKS: { route: Route; label: string }[] = [
@@ -7,23 +8,42 @@ const LINKS: { route: Route; label: string }[] = [
 ]
 
 export default function Navbar({ current }: { current: Route }) {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
   return (
-    <header className="sticky top-0 z-[3000] flex justify-center bg-white/90 py-3 backdrop-blur">
+    <header className="relative z-[3000] flex justify-center pb-5 pt-5">
       <nav
         aria-label="Principal"
-        className="flex w-[94%] items-center justify-between rounded-full bg-brand-lime/25 px-5 py-2 ring-1 ring-brand-moss/30 md:w-4/5"
+        className="relative flex w-[94%] items-center justify-between rounded-full bg-brand-primary px-3 py-2.5 text-brand-blush shadow-lg shadow-brand-primary/25 md:grid md:w-4/5 md:grid-cols-[1fr_auto_1fr]"
       >
-        <a href="#/mapa" className="font-semibold text-gray-900">
-          Mission Catalog
+        <a href="#/mapa" aria-label="Mission Catalog" className="flex items-center gap-3 justify-self-start">
+          <span className="flex size-10 items-center justify-center rounded-full bg-brand-blush">
+            <svg viewBox="0 0 24 24" className="size-5 fill-brand-primary" aria-hidden="true">
+              <path d="M12 2C8.1 2 5 5 5 8.800 5 14 12 22 12 22s7-8 7-13.200C19 5 15.900 2 12 2zm0 9.500a2.700 2.700 0 1 1 0-5.400 2.700 2.700 0 0 1 0 5.400z" />
+            </svg>
+          </span>
+          <span className="hidden text-sm font-semibold sm:inline">Mission Catalog</span>
         </a>
-        <ul className="flex gap-1">
+
+        <ul
+          id="main-menu"
+          className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:mt-0 md:flex md:flex-row md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
+        >
           {LINKS.map(({ route, label }) => (
             <li key={route}>
               <a
                 href={`#/${route}`}
+                onClick={() => setOpen(false)}
                 aria-current={current === route ? 'page' : undefined}
-                className={`rounded-full px-4 py-1.5 text-sm text-gray-900 transition-colors ${
-                  current === route ? 'bg-brand-lime font-medium' : 'hover:bg-brand-mint/50'
+                className={`block rounded-full px-5 py-2 text-sm transition-colors ${
+                  current === route ? 'bg-brand-sage font-medium text-brand-primary' : 'hover:bg-white/10'
                 }`}
               >
                 {label}
@@ -31,6 +51,27 @@ export default function Navbar({ current }: { current: Route }) {
             </li>
           ))}
         </ul>
+
+        <div className="flex items-center gap-2 justify-self-end">
+          <a
+            href="#/contacto"
+            className="hidden rounded-full bg-brand-blush px-5 py-2 text-sm font-medium text-brand-primary transition-colors hover:bg-brand-sage md:inline-block"
+          >
+            Escríbenos
+          </a>
+          <button
+            type="button"
+            aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={open}
+            aria-controls="main-menu"
+            onClick={() => setOpen((o) => !o)}
+            className="flex size-10 items-center justify-center rounded-full bg-brand-blush md:hidden"
+          >
+            <svg viewBox="0 0 24 24" className="size-5 stroke-brand-primary" fill="none" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
+        </div>
       </nav>
     </header>
   )
