@@ -1,2 +1,8 @@
 @import 'tailwindcss';
 @import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --color-brand-lime: #aace50;
+  --color-brand-mint: #88dfb0;
+  --color-brand-moss: #869a63;
+}

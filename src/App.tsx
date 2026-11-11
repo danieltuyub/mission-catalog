@@ -1,9 +1,27 @@
-import MapView from './components/MapView'
+import Footer from './components/Footer'
+import Navbar from './components/Navbar'
+import { useRoute } from './hooks/useRoute'
+import ContactPage from './pages/ContactPage'
+import MapPage from './pages/MapPage'
+import ProjectsPage from './pages/ProjectsPage'
+
+const PAGES = {
+  mapa: MapPage,
+  proyectos: ProjectsPage,
+  contacto: ContactPage,
+}
 
 export default function App() {
+  const route = useRoute()
+  const Page = PAGES[route]
+
   return (
-    <main className="h-screen w-screen">
-      <MapView />
-    </main>
+    <div className="flex min-h-screen flex-col bg-white">
+      <Navbar current={route} />
+      <main className="flex-1">
+        <Page />
+      </main>
+      <Footer />
+    </div>
   )
 }

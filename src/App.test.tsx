@@ -1,12 +1,25 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 vi.mock('./components/MapView', () => ({ default: () => <div>map</div> }))
 
+afterEach(() => {
+  window.location.hash = ''
+})
+
 describe('App', () => {
-  it('renders the map inside the app shell', () => {
+  it('shows the map by default with navbar and footer', () => {
     render(<App />)
     expect(screen.getByRole('main')).toHaveTextContent('map')
+    expect(screen.getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Contáctanos' })).toHaveAttribute('href', '#/contacto')
+  })
+
+  it('shows the contact page for #/contacto', () => {
+    window.location.hash = '#/contacto'
+    render(<App />)
+    expect(screen.getByRole('main')).toHaveTextContent('Contacto')
+    expect(screen.getByRole('link', { name: 'Contacto' })).toHaveAttribute('aria-current', 'page')
   })
 })

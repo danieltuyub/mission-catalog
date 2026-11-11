@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react'
 import {
   MapContainer,
   Marker,
-  Popup,
   TileLayer,
   useMap,
   useMapEvents,
 } from 'react-leaflet'
 import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
+import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
 
 const DEFAULT_CENTER: LatLngTuple = [20, 0]
@@ -58,6 +58,15 @@ export default function MapView() {
   const { status, position } = useGeolocation()
   const { pins, error, addPin } = usePins()
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = pins.find((p) => p.id === selectedId) ?? null
+
+  useEffect(() => {
+    if (!selectedId || draft) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSelectedId(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedId, draft])
 
   const notice = error ?? GEO_MESSAGES[status]
 
@@ -76,14 +85,16 @@ export default function MapView() {
         )}
 
         {pins.map((pin) => (
-          <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={pinIcon}>
-            <Popup>
-              <strong>{pin.title}</strong>
-              {pin.description && <p className="mt-1">{pin.description}</p>}
-            </Popup>
-          </Marker>
+          <Marker
+            key={pin.id}
+            position={[pin.lat, pin.lng]}
+            icon={pinIcon}
+            eventHandlers={{ click: () => setSelectedId(pin.id) }}
+          />
         ))}
       </MapContainer>
+
+      {selected && <PinCard pin={selected} onClose={() => setSelectedId(null)} />}
 
       {notice && (
         <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow">

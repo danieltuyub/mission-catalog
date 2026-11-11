@@ -33,7 +33,7 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && !saving && onCancel()}
     >
       <form
