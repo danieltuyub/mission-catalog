@@ -1,8 +1,14 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/dm-sans';
 @import 'leaflet/dist/leaflet.css';
 
 @theme {
+  --font-sans: 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif;
   --color-brand-primary: #0e1428;
   --color-brand-sage: #7b9e89;
   --color-brand-blush: #f4d8cd;
+}
+
+.leaflet-container {
+  font-family: inherit;
 }
