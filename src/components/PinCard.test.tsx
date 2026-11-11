@@ -85,4 +85,29 @@ describe('PinCard transitions', () => {
       vi.useRealTimers()
     }
   })
+
+  it('animates the card height to match the content', () => {
+    let notify: ResizeObserverCallback = () => {}
+    class FakeResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        notify = cb
+      }
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+    try {
+      render(<PinCard pin={pin} onClose={vi.fn()} />)
+      const wrapper = screen.getByTestId('pin-content').parentElement!
+      const entry = (blockSize: number) =>
+        [{ borderBoxSize: [{ blockSize }] }] as unknown as ResizeObserverEntry[]
+
+      act(() => notify(entry(120), {} as ResizeObserver))
+      expect(wrapper.style.height).toBe('120px')
+      act(() => notify(entry(260), {} as ResizeObserver))
+      expect(wrapper.style.height).toBe('260px')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })

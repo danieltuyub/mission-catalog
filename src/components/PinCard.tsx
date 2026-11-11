@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Pin } from '../types'
 
 // Must be >= the longest exit transition below (duration-[120ms]).
@@ -15,6 +15,8 @@ interface Props {
 export default function PinCard({ pin, onClose }: Props) {
   const [shown, setShown] = useState<Pin | null>(pin)
   const [entered, setEntered] = useState(false)
+  const [height, setHeight] = useState<number | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // Opening from closed: show content right away (the card itself animates in).
   if (pin && !shown) setShown(pin)
@@ -30,6 +32,7 @@ export default function PinCard({ pin, onClose }: Props) {
     const timer = setTimeout(() => {
       setShown(null)
       setEntered(false)
+      setHeight(null)
     }, EXIT_MS)
     return () => clearTimeout(timer)
   }, [pin])
@@ -41,6 +44,19 @@ export default function PinCard({ pin, onClose }: Props) {
     const timer = setTimeout(() => setShown(pin), reduced ? 0 : SWAP_OUT_MS)
     return () => clearTimeout(timer)
   }, [switching, pin])
+
+  const mounted = shown !== null
+
+  // Track the content's natural height so the card can grow/shrink smoothly between pins.
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) =>
+      setHeight(entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight),
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [mounted])
 
   if (!shown) return null
 
@@ -65,18 +81,24 @@ export default function PinCard({ pin, onClose }: Props) {
       </button>
 
       <div
-        data-testid="pin-content"
-        className={`transition-opacity ease-out motion-reduce:transition-none motion-reduce:opacity-100 ${
-          switching ? 'opacity-0 duration-[80ms]' : 'opacity-100 duration-[120ms]'
-        }`}
+        style={height !== null ? { height } : undefined}
+        className="overflow-hidden transition-[height] duration-200 ease-out motion-reduce:transition-none"
       >
-        <h2 className="pr-9 text-lg font-semibold text-brand-primary">{shown.title}</h2>
+        <div
+          ref={contentRef}
+          data-testid="pin-content"
+          className={`transition-opacity ease-out motion-reduce:transition-none motion-reduce:opacity-100 ${
+            switching ? 'opacity-0 duration-[80ms]' : 'opacity-100 duration-[120ms]'
+          }`}
+        >
+          <h2 className="pr-9 text-lg font-semibold text-brand-primary">{shown.title}</h2>
 
-        <div className="mt-3 flex h-36 items-center justify-center rounded-lg border border-dashed border-brand-sage/70 bg-brand-blush/30 text-sm text-brand-primary/60">
-          Foto
+          <div className="mt-3 flex h-36 items-center justify-center rounded-lg border border-dashed border-brand-sage/70 bg-brand-blush/30 text-sm text-brand-primary/60">
+            Foto
+          </div>
+
+          <p className="mt-3 text-sm text-gray-700">{shown.description || 'Sin descripción'}</p>
         </div>
-
-        <p className="mt-3 text-sm text-gray-700">{shown.description || 'Sin descripción'}</p>
       </div>
     </aside>
   )

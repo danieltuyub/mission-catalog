@@ -100,7 +100,9 @@ export default function MapView() {
         <ViewPersistor />
         <TrackpadNavigation />
         <LocateControl onLocate={locate} zoom={LOCATED_ZOOM} disabled={status === 'unsupported'} />
-        <ClickHandler onClick={(lat, lng) => setDraft({ lat, lng })} />
+        <ClickHandler
+          onClick={(lat, lng) => (selectedId ? setSelectedId(null) : setDraft({ lat, lng }))}
+        />
 
         {position && (
           <Marker position={position} icon={userIcon} interactive={false} keyboard={false} />
