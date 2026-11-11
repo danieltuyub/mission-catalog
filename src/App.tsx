@@ -1,3 +1,9 @@
+import MapView from './components/MapView'
+
 export default function App() {
-  return <main className="min-h-screen p-4">mission-catalog</main>
+  return (
+    <main className="h-screen w-screen">
+      <MapView />
+    </main>
+  )
 }
