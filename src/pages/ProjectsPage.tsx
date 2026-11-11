@@ -1,12 +1,32 @@
 import { useRef, useState, type CSSProperties } from 'react'
 import AnimatedHeight from '../components/AnimatedHeight'
-import PageSizeSelect from '../components/PageSizeSelect'
 import Pagination from '../components/Pagination'
 import ProjectCard from '../components/ProjectCard'
+import Select from '../components/Select'
+import SortDirectionToggle from '../components/SortDirectionToggle'
 import { useProjects } from '../hooks/useProjects'
-import { DEFAULT_PAGE_SIZE } from '../services/projectService'
-import { loadPageSize, savePageSize } from '../services/projectsViewStorage'
-import { CARD_GAP_REM, CARD_HEIGHT_REM, DEFAULT_MIN_SLOTS, PAGE_SIZE_OPTIONS } from './projectsConfig'
+import {
+  DEFAULT_DIRECTION,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_SORT,
+  type ProjectSort,
+  type SortDirection,
+} from '../services/projectService'
+import {
+  loadDirection,
+  loadPageSize,
+  loadSort,
+  savePageSize,
+  saveDirection,
+  saveSort,
+} from '../services/projectsViewStorage'
+import {
+  CARD_GAP_REM,
+  CARD_HEIGHT_REM,
+  DEFAULT_MIN_SLOTS,
+  PAGE_SIZE_OPTIONS,
+  SORT_OPTIONS,
+} from './projectsConfig'
 
 interface Props {
   /** Initial projects per page (a size picked earlier in the session wins). */
@@ -21,13 +41,32 @@ export default function ProjectsPage({
 }: Props) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(() => loadPageSize() ?? initialPageSize)
-  const { projects, pagination, loading, error } = useProjects(page, pageSize)
+  const [sort, setSort] = useState<ProjectSort>(() => loadSort() ?? DEFAULT_SORT)
+  const [direction, setDirection] = useState<SortDirection>(
+    () => loadDirection() ?? DEFAULT_DIRECTION[sort],
+  )
+  const { projects, pagination, loading, error } = useProjects(page, pageSize, sort, direction)
   const headerRef = useRef<HTMLDivElement>(null)
 
   const changePageSize = (size: number) => {
     setPageSize(size)
     setPage(1)
     savePageSize(size)
+  }
+
+  const changeSort = (value: string) => {
+    const next = value as ProjectSort
+    setSort(next)
+    setDirection(DEFAULT_DIRECTION[next])
+    setPage(1)
+    saveSort(next)
+    saveDirection(DEFAULT_DIRECTION[next])
+  }
+
+  const changeDirection = (next: SortDirection) => {
+    setDirection(next)
+    setPage(1)
+    saveDirection(next)
   }
 
   const changePage = (next: number) => {
@@ -43,6 +82,7 @@ export default function ProjectsPage({
   const sizeOptions = PAGE_SIZE_OPTIONS.includes(pageSize as (typeof PAGE_SIZE_OPTIONS)[number])
     ? PAGE_SIZE_OPTIONS
     : [...PAGE_SIZE_OPTIONS, pageSize].sort((a, b) => a - b)
+  const sizeSelectOptions = sizeOptions.map((n) => ({ value: String(n), label: String(n) }))
   const reserved = `calc(${minSlots} * ${CARD_HEIGHT_REM}rem + ${Math.max(minSlots - 1, 0)} * ${CARD_GAP_REM}rem)`
 
   return (
@@ -50,7 +90,21 @@ export default function ProjectsPage({
       <div ref={headerRef} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-5">
         <h1 className="text-2xl font-semibold text-brand-primary">Proyectos</h1>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <PageSizeSelect value={pageSize} options={sizeOptions} onChange={changePageSize} />
+          <Select
+            label="Ordenar proyectos"
+            icon={<path d="M8 4v16M8 4L4 8M8 4l4 4M16 20V4M16 20l-4-4M16 20l4-4" />}
+            value={sort}
+            options={SORT_OPTIONS}
+            onChange={changeSort}
+          />
+          <SortDirectionToggle value={direction} onChange={changeDirection} />
+          <Select
+            label="Proyectos por página"
+            icon={<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />}
+            value={String(pageSize)}
+            options={sizeSelectOptions}
+            onChange={(v) => changePageSize(Number(v))}
+          />
           <Pagination page={page} totalPages={pagination?.totalPages ?? 0} onChange={changePage} />
         </div>
       </div>
