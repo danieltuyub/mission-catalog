@@ -114,7 +114,7 @@ export default function MapView() {
         ))}
       </MapContainer>
 
-      {selected && <PinCard pin={selected} onClose={() => setSelectedId(null)} />}
+      <PinCard pin={selected} onClose={() => setSelectedId(null)} />
 
       {notice && (
         <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow">
