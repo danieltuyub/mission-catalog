@@ -9,12 +9,13 @@ import {
 } from 'react-leaflet'
 import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
+import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
 
 const DEFAULT_CENTER: LatLngTuple = [20, 0]
 const DEFAULT_ZOOM = 2
-const LOCATED_ZOOM = 15
+const LOCATED_ZOOM = 13
 
 const pinIcon = L.divIcon({
   className: '',
@@ -49,12 +50,23 @@ function FlyToPosition({ position }: { position: LatLngTuple | null }) {
   return null
 }
 
+function ViewPersistor() {
+  const map = useMapEvents({
+    moveend: () => {
+      const { lat, lng } = map.getCenter()
+      saveMapView({ center: [lat, lng], zoom: map.getZoom() })
+    },
+  })
+  return null
+}
+
 function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
   useMapEvents({ click: (e) => onClick(e.latlng.lat, e.latlng.lng) })
   return null
 }
 
 export default function MapView() {
+  const [savedView] = useState(loadMapView)
   const { status, position } = useGeolocation()
   const { pins, error, addPin } = usePins()
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
@@ -72,12 +84,17 @@ export default function MapView() {
 
   return (
     <div className="relative h-full w-full">
-      <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} className="h-full w-full">
+      <MapContainer
+        center={savedView?.center ?? DEFAULT_CENTER}
+        zoom={savedView?.zoom ?? DEFAULT_ZOOM}
+        className="h-full w-full"
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FlyToPosition position={position} />
+        <FlyToPosition position={savedView ? null : position} />
+        <ViewPersistor />
         <ClickHandler onClick={(lat, lng) => setDraft({ lat, lng })} />
 
         {position && (
