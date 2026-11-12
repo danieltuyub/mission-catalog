@@ -1,10 +1,5 @@
-import type { Project, ProjectStatus } from '../types'
-
-const STATUS: Record<ProjectStatus, { label: string; className: string }> = {
-  open: { label: 'Abierto', className: 'bg-green-100 text-green-800' },
-  paused: { label: 'Pausado', className: 'bg-yellow-100 text-yellow-800' },
-  closed: { label: 'Cerrado', className: 'bg-red-100 text-red-800' },
-}
+import type { Project } from '../types'
+import { STATUS_META } from './projectStatus'
 
 const EMPTY = '—'
 
@@ -13,7 +8,7 @@ interface Props {
 }
 
 export default function ProjectCard({ project }: Props) {
-  const status = STATUS[project.status]
+  const status = STATUS_META[project.status]
   const details = [
     { label: 'País', value: project.country },
     { label: 'Región', value: project.region },
@@ -55,7 +50,7 @@ export default function ProjectCard({ project }: Props) {
         </dl>
 
         <span
-          className={`mt-4 self-end rounded-full px-3 py-1 text-xs font-medium sm:absolute sm:bottom-5 sm:right-5 sm:mt-0 ${status.className}`}
+          className={`mt-4 self-end rounded-full px-3 py-1 text-xs font-medium sm:absolute sm:bottom-5 sm:right-5 sm:mt-0 ${status.chip}`}
         >
           {status.label}
         </span>

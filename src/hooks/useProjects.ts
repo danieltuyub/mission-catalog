@@ -4,51 +4,49 @@ import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_SORT,
   getProjects,
-  type ProjectSort,
-  type SortDirection,
+  type GetProjectsOptions,
   type ProjectsPage,
 } from '../services/projectService'
 
 interface Result {
-  page: number
-  pageSize: number
-  sort: ProjectSort
-  direction: SortDirection
+  key: string
   data?: ProjectsPage
   error?: string
 }
 
-export function useProjects(
-  page = 1,
-  pageSize = DEFAULT_PAGE_SIZE,
-  sort: ProjectSort = DEFAULT_SORT,
-  direction: SortDirection = DEFAULT_DIRECTION[sort],
-) {
+export function useProjects(options: GetProjectsOptions = {}) {
+  const sort = options.sort ?? DEFAULT_SORT
+  const key = JSON.stringify({
+    page: options.page ?? 1,
+    pageSize: options.pageSize ?? DEFAULT_PAGE_SIZE,
+    sort,
+    direction: options.direction ?? DEFAULT_DIRECTION[sort],
+    filters: options.filters ?? {},
+  })
+
   const [result, setResult] = useState<Result | null>(null)
   const [latest, setLatest] = useState<ProjectsPage | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    getProjects(page, pageSize, sort, direction)
+    getProjects(JSON.parse(key) as GetProjectsOptions)
       .then((data) => {
         if (cancelled) return
         setLatest(data)
-        setResult({ page, pageSize, sort, direction, data })
+        setResult({ key, data })
       })
       .catch(
         (e: unknown) =>
           !cancelled &&
-          setResult({ page, pageSize, sort, direction, error: e instanceof Error ? e.message : 'Failed to load projects' }),
+          setResult({ key, error: e instanceof Error ? e.message : 'Failed to load projects' }),
       )
     return () => {
       cancelled = true
     }
-  }, [page, pageSize, sort, direction])
+  }, [key])
 
-  const current = result?.page === page && result.pageSize === pageSize && result.sort === sort && result.direction === direction
-      ? result
-      : null
-  // Keep the previous page's data on screen while the next one loads.
+  const current = result?.key === key ? result : null
+  // Keep the previous results on screen while the next ones load.
   return {
     projects: latest?.data ?? [],
     pagination: latest,

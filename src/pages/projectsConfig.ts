@@ -11,3 +11,9 @@ export const SORT_OPTIONS = [
   { value: 'name', label: 'Nombre' },
   { value: 'created_at', label: 'Fecha' },
 ] as const
+
+/** Wait before querying after a filter checkbox changes. */
+export const FILTER_DEBOUNCE_MS = 300
+
+/** Show a search box in a filter group when it has more options than this. */
+export const FILTER_SEARCH_THRESHOLD = 8

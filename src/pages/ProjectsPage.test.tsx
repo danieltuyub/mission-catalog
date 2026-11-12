@@ -1,11 +1,19 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Project } from '../types'
 
-const getProjects = vi.hoisted(() => vi.fn())
-vi.mock('../services/projectService', () => ({ getProjects, DEFAULT_PAGE_SIZE: 3, DEFAULT_SORT: 'name',
+const { getProjects, getProjectFilterOptions } = vi.hoisted(() => ({
+  getProjects: vi.fn(),
+  getProjectFilterOptions: vi.fn(),
+}))
+vi.mock('../services/projectService', () => ({
+  getProjects,
+  getProjectFilterOptions,
+  DEFAULT_PAGE_SIZE: 3,
+  DEFAULT_SORT: 'name',
   DEFAULT_DIRECTION: { name: 'asc', created_at: 'desc' },
+  EMPTY_FILTERS: { status: [], country: [], region: [], responsible: [] },
 }))
 
 import { clearProjectsView } from '../services/projectsViewStorage'
@@ -34,9 +42,17 @@ const page = (data: Project[], pageNumber = 1, totalPages = 1) => ({
   totalPages,
 })
 
+const lastOptions = () => getProjects.mock.lastCall?.[0]
+
 describe('ProjectsPage', () => {
   beforeEach(() => {
     getProjects.mockReset()
+    getProjectFilterOptions.mockReset()
+    getProjectFilterOptions.mockResolvedValue({
+      country: ['México', 'Perú'],
+      region: ['Norte'],
+      responsible: ['Ana'],
+    })
     clearProjectsView()
   })
 
@@ -46,6 +62,28 @@ describe('ProjectsPage', () => {
     expect(screen.getByText('Cargando proyectos…')).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Uno' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Dos' })).toBeInTheDocument()
+  })
+
+  it('shows the total next to the title, with an accessible label', async () => {
+    getProjects.mockResolvedValue({ ...page([project('1', 'Uno'), project('2', 'Dos')]), total: 12 })
+    render(<ProjectsPage />)
+    await screen.findByRole('heading', { name: 'Uno' })
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('12 proyectos')
+    expect(status).toHaveAttribute('title', '12 proyectos')
+  })
+
+  it('says "resultados" when filters are applied and uses the singular for one', async () => {
+    getProjects.mockImplementation(async ({ filters }: { filters: { country: string[] } }) =>
+      filters.country.length
+        ? { ...page([project('1', 'Uno')]), total: 1 }
+        : { ...page([project('1', 'Uno')]), total: 5 },
+    )
+    render(<ProjectsPage filterDebounceMs={0} />)
+    await screen.findByRole('heading', { name: 'Uno' })
+    expect(screen.getByRole('status')).toHaveTextContent('5 proyectos')
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'México' }))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('1 resultado'))
   })
 
   it('shows an empty state', async () => {
@@ -61,7 +99,7 @@ describe('ProjectsPage', () => {
   })
 
   it('loads the selected page from the pagination', async () => {
-    getProjects.mockImplementation(async (p: number) =>
+    getProjects.mockImplementation(async ({ page: p }: { page: number }) =>
       p === 1 ? page([project('1', 'Uno')], 1, 2) : page([project('5', 'Cinco')], 2, 2),
     )
     render(<ProjectsPage />)
@@ -69,18 +107,18 @@ describe('ProjectsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Página 2' }))
     expect(await screen.findByRole('heading', { name: 'Cinco' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Uno' })).not.toBeInTheDocument()
-    expect(getProjects).toHaveBeenLastCalledWith(2, 3, 'name', 'asc')
+    expect(lastOptions()).toMatchObject({ page: 2, pageSize: 3, sort: 'name', direction: 'asc' })
   })
 
   it('uses the pageSize prop', async () => {
     getProjects.mockResolvedValue(page([project('1', 'Uno')]))
     render(<ProjectsPage pageSize={6} />)
     await screen.findByRole('heading', { name: 'Uno' })
-    expect(getProjects).toHaveBeenCalledWith(1, 6, 'name', 'asc')
+    expect(getProjects).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 6 }))
   })
 
   it('changes the page size, goes back to page 1 and remembers it', async () => {
-    getProjects.mockImplementation(async (p: number, size: number) =>
+    getProjects.mockImplementation(async ({ page: p, pageSize: size }: { page: number; pageSize: number }) =>
       page([project(`${p}-${size}`, `P${p}-${size}`)], p, 3),
     )
     const { unmount } = render(<ProjectsPage />)
@@ -90,7 +128,7 @@ describe('ProjectsPage', () => {
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Proyectos por página' }), '6')
     expect(await screen.findByRole('heading', { name: 'P1-6' })).toBeInTheDocument()
-    expect(getProjects).toHaveBeenLastCalledWith(1, 6, 'name', 'asc')
+    expect(lastOptions()).toMatchObject({ page: 1, pageSize: 6 })
 
     unmount()
     render(<ProjectsPage />)
@@ -102,13 +140,14 @@ describe('ProjectsPage', () => {
     getProjects.mockResolvedValue(page([project('1', 'Uno')]))
     render(<ProjectsPage minSlots={3} />)
     await screen.findByRole('heading', { name: 'Uno' })
-    const list = screen.getByRole('list')
+    const list = screen.getByTestId('projects-list')
     expect(list.style.getPropertyValue('--reserved')).toBe('calc(3 * 14rem + 2 * 1.25rem)')
   })
 
   it('sorts by name by default, changes sort, goes back to page 1 and remembers it', async () => {
-    getProjects.mockImplementation(async (p: number, _size: number, sort: string, dir: string) =>
-      page([project(`${p}-${sort}-${dir}`, `P${p}-${sort}-${dir}`)], p, 3),
+    getProjects.mockImplementation(
+      async ({ page: p, sort, direction }: { page: number; sort: string; direction: string }) =>
+        page([project(`${p}-${sort}-${direction}`, `P${p}-${sort}-${direction}`)], p, 3),
     )
     const { unmount } = render(<ProjectsPage />)
     const select = screen.getByRole('combobox', { name: 'Ordenar proyectos' })
@@ -119,7 +158,7 @@ describe('ProjectsPage', () => {
 
     await userEvent.selectOptions(select, 'created_at')
     expect(await screen.findByRole('heading', { name: 'P1-created_at-desc' })).toBeInTheDocument()
-    expect(getProjects).toHaveBeenLastCalledWith(1, 3, 'created_at', 'desc')
+    expect(lastOptions()).toMatchObject({ page: 1, pageSize: 3, sort: 'created_at', direction: 'desc' })
 
     unmount()
     render(<ProjectsPage />)
@@ -128,8 +167,9 @@ describe('ProjectsPage', () => {
   })
 
   it('toggles the sort direction with a single button and goes back to page 1', async () => {
-    getProjects.mockImplementation(async (p: number, _s: number, sort: string, dir: string) =>
-      page([project(`${p}`, `P${p}-${sort}-${dir}`)], p, 3),
+    getProjects.mockImplementation(
+      async ({ page: p, sort, direction }: { page: number; sort: string; direction: string }) =>
+        page([project(`${p}`, `P${p}-${sort}-${direction}`)], p, 3),
     )
     render(<ProjectsPage />)
     await screen.findByRole('heading', { name: 'P1-name-asc' })
@@ -154,5 +194,86 @@ describe('ProjectsPage', () => {
     expect(screen.getByRole('button', { name: 'Orden descendente' })).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ordenar proyectos' }), 'name')
     expect(screen.getByRole('button', { name: 'Orden ascendente' })).toBeInTheDocument()
+  })
+
+  describe('filters', () => {
+    it('renders the filter form with options from the service', async () => {
+      getProjects.mockResolvedValue(page([project('1', 'Uno')]))
+      render(<ProjectsPage />)
+      expect(screen.getByRole('heading', { name: 'Filtros' })).toBeInTheDocument()
+      expect(await screen.findByRole('checkbox', { name: 'México' })).toBeInTheDocument()
+      expect(screen.getByRole('checkbox', { name: 'Abierto' })).toBeInTheDocument()
+      expect(screen.getByRole('checkbox', { name: 'Ana' })).toBeInTheDocument()
+    })
+
+    it('queries with the selected filters, goes back to page 1 and remembers them', async () => {
+      getProjects.mockImplementation(async ({ page: p }: { page: number }) =>
+        page([project(`${p}`, `P${p}`)], p, 3),
+      )
+      const { unmount } = render(<ProjectsPage filterDebounceMs={0} />)
+      await screen.findByRole('heading', { name: 'P1' })
+      await userEvent.click(screen.getByRole('button', { name: 'Página 2' }))
+      await screen.findByRole('heading', { name: 'P2' })
+
+      await userEvent.click(await screen.findByRole('checkbox', { name: 'México' }))
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Pausado' }))
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Abierto' }))
+      await waitFor(() =>
+        expect(lastOptions()).toMatchObject({
+          page: 1,
+          filters: { status: ['paused', 'open'], country: ['México'], region: [], responsible: [] },
+        }),
+      )
+
+      unmount()
+      render(<ProjectsPage filterDebounceMs={0} />)
+      expect(await screen.findByRole('checkbox', { name: 'México' })).toBeChecked()
+      expect(screen.getByRole('checkbox', { name: 'Pausado' })).toBeChecked()
+      expect(lastOptions().filters.country).toEqual(['México'])
+    })
+
+    it('debounces quick changes into a single query', async () => {
+      getProjects.mockResolvedValue(page([project('1', 'Uno')]))
+      render(<ProjectsPage filterDebounceMs={80} />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      const before = getProjects.mock.calls.length
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Abierto' }))
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Cerrado' }))
+      expect(getProjects.mock.calls.length).toBe(before)
+      await waitFor(() => expect(lastOptions().filters.status).toEqual(['open', 'closed']))
+      expect(getProjects.mock.calls.length).toBe(before + 1)
+    })
+
+    it('clears filters immediately', async () => {
+      getProjects.mockResolvedValue(page([project('1', 'Uno')]))
+      render(<ProjectsPage filterDebounceMs={0} />)
+      await userEvent.click(await screen.findByRole('checkbox', { name: 'México' }))
+      await waitFor(() => expect(lastOptions().filters.country).toEqual(['México']))
+      await userEvent.click(screen.getByRole('button', { name: 'Limpiar' }))
+      await waitFor(() => expect(lastOptions().filters.country).toEqual([]))
+      expect(screen.getByRole('checkbox', { name: 'México' })).not.toBeChecked()
+    })
+
+    it('shows a no-match state with a clear action when filters leave no results', async () => {
+      getProjects.mockImplementation(async ({ filters }: { filters: { country: string[] } }) =>
+        page(filters.country.length ? [] : [project('1', 'Uno')]),
+      )
+      render(<ProjectsPage filterDebounceMs={0} />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      await userEvent.click(await screen.findByRole('checkbox', { name: 'México' }))
+      expect(await screen.findByText('Ningún proyecto coincide con los filtros')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+      expect(await screen.findByRole('heading', { name: 'Uno' })).toBeInTheDocument()
+    })
+
+    it('can toggle the filters panel on small screens', async () => {
+      getProjects.mockResolvedValue(page([project('1', 'Uno')]))
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      const toggle = screen.getByRole('button', { name: /^Filtros/ })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await userEvent.click(toggle)
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    })
   })
 })
