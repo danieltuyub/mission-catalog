@@ -5,42 +5,13 @@ import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
 import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
 import { useProject } from '../hooks/useProject'
-import { countActiveFilters } from '../services/filterUtils'
-import { DEFAULT_DIRECTION, DEFAULT_SORT } from '../services/projectService'
-import {
-  clearOpenedFromList,
-  loadDirection,
-  loadFilters,
-  loadOpenedFromList,
-  loadPage,
-  loadSort,
-  resetListContext,
-} from '../services/projectsViewStorage'
+import { clearOpenedFromList, loadOpenedFromList, resetListContext } from '../services/projectsViewStorage'
 import type { Project } from '../types'
-import { SKELETON_DELAY_MS, SORT_OPTIONS } from './projectsConfig'
+import { SKELETON_DELAY_MS } from './projectsConfig'
 
 const EMPTY = '—'
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' })
-
-/** What the list had applied (filters, non-default sort, page), for the back link. */
-function listSummary(): string {
-  const parts: string[] = []
-  const filters = loadFilters()
-  const active = filters ? countActiveFilters(filters) : 0
-  if (active > 0) parts.push(`${active} ${active === 1 ? 'filtro' : 'filtros'}`)
-
-  const sort = loadSort() ?? DEFAULT_SORT
-  const direction = loadDirection() ?? DEFAULT_DIRECTION[sort]
-  if (sort !== DEFAULT_SORT || direction !== DEFAULT_DIRECTION[sort]) {
-    const label = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort
-    parts.push(`${label} ${direction === 'asc' ? '↑' : '↓'}`)
-  }
-
-  const page = loadPage() ?? 1
-  if (page > 1) parts.push(`Página ${page}`)
-  return parts.join(' · ')
-}
 
 // Placeholder copy until the projects have a real long description in the database.
 function detailParagraphs(project: Project): string[] {
@@ -66,15 +37,15 @@ const linkClass =
 export default function ProjectDetailPage({ id }: { id: string }) {
   const { project, loading, error } = useProject(id)
   const showSkeleton = useDelayed(loading, SKELETON_DELAY_MS)
-  // null = opened by URL (no list context); string = opened from the list.
-  const [summary] = useState<string | null>(() => (loadOpenedFromList() ? listSummary() : null))
+  // True when opened from the list (its filters, sort and page are kept for the way back).
+  const [fromList] = useState(() => loadOpenedFromList())
 
   useEffect(() => {
     window.scrollTo(0, 0)
     clearOpenedFromList()
     // Arrived by URL: the back link must lead to an unfiltered list.
-    if (summary === null) resetListContext()
-  }, [summary])
+    if (!fromList) resetListContext()
+  }, [fromList])
 
   const status = project ? STATUS_META[project.status] : null
 
@@ -99,7 +70,6 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           </svg>
           Proyectos
         </a>
-        {summary && <span className="text-sm text-stone-400">{summary}</span>}
       </nav>
 
       {loading ? (

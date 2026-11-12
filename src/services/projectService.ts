@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 
 const TABLE = 'projects'
 
-export const DEFAULT_PAGE_SIZE = 3
+export const DEFAULT_PAGE_SIZE = 4
 
 export type ProjectSort = 'name' | 'created_at'
 export type SortDirection = 'asc' | 'desc'

@@ -169,36 +169,25 @@ describe('ProjectDetailPage', () => {
       markOpenedFromList(300)
     })
 
-    it('summarizes the list context next to the back link and keeps it stored', async () => {
+    it('keeps the list context for the way back without showing any filter legend', async () => {
       saveSort('created_at')
       saveDirection('asc')
       render(<ProjectDetailPage id="abc" />)
       await screen.findByRole('heading', { name: 'Iglesia Norte' })
-      expect(screen.getByText('3 filtros · Fecha ↑ · Página 2')).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Proyectos' })).toHaveAttribute('href', '#/proyectos')
+      expect(screen.queryByText(/filtro/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Página 2/)).not.toBeInTheDocument()
       // The list will restore from this state.
       expect(loadFilters()?.country).toEqual(['México'])
       expect(loadPage()).toBe(2)
+      expect(loadSort()).toBe('created_at')
+      expect(loadDirection()).toBe('asc')
       expect(loadOpenedFromList()).toBe(false)
-    })
-
-    it('omits what is at its default', async () => {
-      render(<ProjectDetailPage id="abc" />)
-      await screen.findByRole('heading', { name: 'Iglesia Norte' })
-      expect(screen.getByText('3 filtros · Página 2')).toBeInTheDocument()
-    })
-
-    it('uses the singular for one filter', async () => {
-      saveFilters({ ...filters, country: [] })
-      savePage(1)
-      render(<ProjectDetailPage id="abc" />)
-      await screen.findByRole('heading', { name: 'Iglesia Norte' })
-      expect(screen.getByText('1 filtro')).toBeInTheDocument()
     })
   })
 
   describe('opened by URL', () => {
-    it('shows no summary and resets filters and page, keeping size and sort', async () => {
+    it('resets filters and page, keeping size and sort', async () => {
       saveFilters(filters)
       savePage(3)
       savePageSize(6)

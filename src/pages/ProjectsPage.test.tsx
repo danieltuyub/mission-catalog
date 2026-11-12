@@ -10,7 +10,7 @@ const { getProjects, getProjectFilterOptions } = vi.hoisted(() => ({
 vi.mock('../services/projectService', () => ({
   getProjects,
   getProjectFilterOptions,
-  DEFAULT_PAGE_SIZE: 3,
+  DEFAULT_PAGE_SIZE: 4,
   DEFAULT_SORT: 'name',
   DEFAULT_DIRECTION: { name: 'asc', created_at: 'desc' },
   EMPTY_FILTERS: { status: [], country: [], region: [], responsible: [] },
@@ -114,7 +114,7 @@ describe('ProjectsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Página 2' }))
     expect(await screen.findByRole('heading', { name: 'Cinco' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Uno' })).not.toBeInTheDocument()
-    expect(lastOptions()).toMatchObject({ page: 2, pageSize: 3, sort: 'name', direction: 'asc' })
+    expect(lastOptions()).toMatchObject({ page: 2, pageSize: 4, sort: 'name', direction: 'asc' })
   })
 
   it('uses the pageSize prop', async () => {
@@ -129,18 +129,31 @@ describe('ProjectsPage', () => {
       page([project(`${p}-${size}`, `P${p}-${size}`)], p, 3),
     )
     const { unmount } = render(<ProjectsPage />)
-    await screen.findByRole('heading', { name: 'P1-3' })
+    await screen.findByRole('heading', { name: 'P1-4' })
     await userEvent.click(screen.getByRole('button', { name: 'Página 2' }))
-    await screen.findByRole('heading', { name: 'P2-3' })
+    await screen.findByRole('heading', { name: 'P2-4' })
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Proyectos por página' }), '6')
-    expect(await screen.findByRole('heading', { name: 'P1-6' })).toBeInTheDocument()
-    expect(lastOptions()).toMatchObject({ page: 1, pageSize: 6 })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Proyectos por página' }), '8')
+    expect(await screen.findByRole('heading', { name: 'P1-8' })).toBeInTheDocument()
+    expect(lastOptions()).toMatchObject({ page: 1, pageSize: 8 })
 
     unmount()
     render(<ProjectsPage />)
-    expect(await screen.findByRole('heading', { name: 'P1-6' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Proyectos por página' })).toHaveValue('6')
+    expect(await screen.findByRole('heading', { name: 'P1-8' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Proyectos por página' })).toHaveValue('8')
+  })
+
+  it('defaults to 4 per page with 4, 8 and 12 as options, reserving room for 4 cards', async () => {
+    getProjects.mockResolvedValue(page([project('1', 'Uno')]))
+    render(<ProjectsPage />)
+    await screen.findByRole('heading', { name: 'Uno' })
+    const select = screen.getByRole('combobox', { name: 'Proyectos por página' })
+    expect(select).toHaveValue('4')
+    expect([...select.querySelectorAll('option')].map((o) => o.value)).toEqual(['4', '8', '12'])
+    expect(getProjects).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 4 }))
+    expect(screen.getByTestId('projects-list').style.getPropertyValue('--reserved')).toBe(
+      'calc(4 * 14rem + 3 * 1.25rem)',
+    )
   })
 
   it('reserves space for the minimum number of cards', async () => {
@@ -165,7 +178,7 @@ describe('ProjectsPage', () => {
 
     await userEvent.selectOptions(select, 'created_at')
     expect(await screen.findByRole('heading', { name: 'P1-created_at-desc' })).toBeInTheDocument()
-    expect(lastOptions()).toMatchObject({ page: 1, pageSize: 3, sort: 'created_at', direction: 'desc' })
+    expect(lastOptions()).toMatchObject({ page: 1, pageSize: 4, sort: 'created_at', direction: 'desc' })
 
     unmount()
     render(<ProjectsPage />)
