@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import type { Project } from '../types'
 import ProjectCard from './ProjectCard'
 
@@ -28,9 +29,23 @@ describe('ProjectCard', () => {
     }
   })
 
-  it('does not render phone and mail as links', () => {
+  it('links to the project detail and keeps phone and mail as plain text', () => {
     render(<ProjectCard project={base} />)
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    const links = screen.getAllByRole('link')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '#/proyectos/1')
+    expect(links[0]).toHaveTextContent('Iglesia Norte')
+  })
+
+  it('calls onOpen on a plain click but not on a modified click', async () => {
+    const onOpen = vi.fn()
+    render(<ProjectCard project={base} onOpen={onOpen} />)
+    const link = screen.getByRole('link')
+    await userEvent.click(link)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    fireEvent.click(link, { ctrlKey: true })
+    fireEvent.click(link, { metaKey: true })
+    expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
   it('fills missing values with dashes', () => {

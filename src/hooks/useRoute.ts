@@ -8,11 +8,28 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener('hashchange', onChange)
 }
 
-function getSnapshot(): Route {
-  const name = window.location.hash.replace(/^#\/?/, '')
+const segments = () => window.location.hash.replace(/^#\/?/, '').split('/')
+
+function getRouteSnapshot(): Route {
+  const [name] = segments()
   return ROUTES.find((r) => r === name) ?? 'mapa'
 }
 
+function getProjectIdSnapshot(): string | null {
+  const [name, id] = segments()
+  if (name !== 'proyectos' || !id) return null
+  try {
+    return decodeURIComponent(id)
+  } catch {
+    return id
+  }
+}
+
 export function useRoute(): Route {
-  return useSyncExternalStore(subscribe, getSnapshot)
+  return useSyncExternalStore(subscribe, getRouteSnapshot)
+}
+
+/** `#/proyectos/<id>` -> id; null on any other route. */
+export function useProjectId(): string | null {
+  return useSyncExternalStore(subscribe, getProjectIdSnapshot)
 }

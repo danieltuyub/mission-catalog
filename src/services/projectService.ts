@@ -107,3 +107,13 @@ export function getProjectFilterOptions(): Promise<FilterOptions> {
 export function clearFilterOptionsCache(): void {
   optionsRequest = null
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Null when the id is not a valid uuid or no project has it. */
+export async function getProjectById(id: string): Promise<Project | null> {
+  if (!UUID.test(id)) return null
+  const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return (data as Project | null) ?? null
+}

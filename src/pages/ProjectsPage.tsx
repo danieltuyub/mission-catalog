@@ -21,10 +21,15 @@ import {
 import {
   loadDirection,
   loadFilters,
+  loadPage,
   loadPageSize,
   loadSort,
+  clearScroll,
+  loadScroll,
+  markOpenedFromList,
   saveDirection,
   saveFilters,
+  savePage,
   savePageSize,
   saveSort,
 } from '../services/projectsViewStorage'
@@ -56,7 +61,7 @@ export default function ProjectsPage({
   minSlots = DEFAULT_MIN_SLOTS,
   filterDebounceMs = FILTER_DEBOUNCE_MS,
 }: Props) {
-  const [page, setPage] = useState(1)
+  const [page, setPageState] = useState(() => loadPage() ?? 1)
   const [pageSize, setPageSize] = useState(() => loadPageSize() ?? initialPageSize)
   const [sort, setSort] = useState<ProjectSort>(() => loadSort() ?? DEFAULT_SORT)
   const [direction, setDirection] = useState<SortDirection>(
@@ -67,6 +72,8 @@ export default function ProjectsPage({
   const [applied, setApplied] = useState<Filters>(filters)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const filterTimer = useRef<number | undefined>(undefined)
+  // Scroll to restore after the list loads when coming back from a project detail.
+  const scrollToRestore = useRef<number | null>(loadScroll())
   const headerRef = useRef<HTMLDivElement>(null)
 
   const { projects, pagination, loading, error } = useProjects({
@@ -79,6 +86,18 @@ export default function ProjectsPage({
   const filterOptions = useFilterOptions()
 
   useEffect(() => () => window.clearTimeout(filterTimer.current), [])
+
+  useEffect(() => {
+    if (loading || scrollToRestore.current === null) return
+    window.scrollTo(0, scrollToRestore.current)
+    scrollToRestore.current = null
+    clearScroll()
+  }, [loading])
+
+  const setPage = (next: number) => {
+    setPageState(next)
+    savePage(next)
+  }
 
   const changeFilters = (next: Filters, immediate = false) => {
     setFilters(next)
@@ -251,7 +270,7 @@ export default function ProjectsPage({
             >
               {projects.map((project) => (
                 <li key={project.id}>
-                  <ProjectCard project={project} />
+                  <ProjectCard project={project} onOpen={() => markOpenedFromList(window.scrollY)} />
                 </li>
               ))}
             </ul>

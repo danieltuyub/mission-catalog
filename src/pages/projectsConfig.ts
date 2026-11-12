@@ -17,3 +17,6 @@ export const FILTER_DEBOUNCE_MS = 300
 
 /** Show a search box in a filter group when it has more options than this. */
 export const FILTER_SEARCH_THRESHOLD = 8
+
+/** Loading placeholders appear only after this long, so fast loads do not flash a skeleton. */
+export const SKELETON_DELAY_MS = 200

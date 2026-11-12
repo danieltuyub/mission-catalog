@@ -16,7 +16,12 @@ vi.mock('../services/projectService', () => ({
   EMPTY_FILTERS: { status: [], country: [], region: [], responsible: [] },
 }))
 
-import { clearProjectsView } from '../services/projectsViewStorage'
+import {
+  clearProjectsView,
+  loadOpenedFromList,
+  loadScroll,
+  markOpenedFromList,
+} from '../services/projectsViewStorage'
 import ProjectsPage from './ProjectsPage'
 
 const project = (id: string, name: string): Project => ({
@@ -54,6 +59,8 @@ describe('ProjectsPage', () => {
       responsible: ['Ana'],
     })
     clearProjectsView()
+    window.location.hash = ''
+    vi.mocked(window.scrollTo).mockClear()
   })
 
   it('lists projects from the service', async () => {
@@ -274,6 +281,50 @@ describe('ProjectsPage', () => {
       expect(toggle).toHaveAttribute('aria-expanded', 'false')
       await userEvent.click(toggle)
       expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    })
+  })
+
+  describe('detail navigation', () => {
+    it('links each card to its detail and remembers it was opened from the list', async () => {
+      getProjects.mockResolvedValue(page([project('p1', 'Uno')]))
+      render(<ProjectsPage />)
+      const link = await screen.findByRole('link', { name: 'Uno' })
+      expect(link).toHaveAttribute('href', '#/proyectos/p1')
+      Object.defineProperty(window, 'scrollY', { value: 250, configurable: true })
+      await userEvent.click(link)
+      expect(loadOpenedFromList()).toBe(true)
+      expect(loadScroll()).toBe(250)
+    })
+
+    it('restores the page where the user was', async () => {
+      getProjects.mockImplementation(async ({ page: p }: { page: number }) =>
+        page([project(`${p}`, `P${p}`)], p, 3),
+      )
+      const { unmount } = render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'P1' })
+      await userEvent.click(screen.getByRole('button', { name: 'Página 3' }))
+      await screen.findByRole('heading', { name: 'P3' })
+      unmount()
+
+      render(<ProjectsPage />)
+      expect(await screen.findByRole('heading', { name: 'P3' })).toBeInTheDocument()
+      expect(lastOptions().page).toBe(3)
+    })
+
+    it('restores the scroll after the list loads when coming back', async () => {
+      getProjects.mockResolvedValue(page([project('p1', 'Uno')]))
+      markOpenedFromList(240)
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      await waitFor(() => expect(window.scrollTo).toHaveBeenCalledWith(0, 240))
+      expect(loadScroll()).toBeNull()
+    })
+
+    it('does not scroll on a normal visit', async () => {
+      getProjects.mockResolvedValue(page([project('p1', 'Uno')]))
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      expect(window.scrollTo).not.toHaveBeenCalled()
     })
   })
 })

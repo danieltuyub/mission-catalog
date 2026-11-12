@@ -5,9 +5,11 @@ const EMPTY = '—'
 
 interface Props {
   project: Project
+  /** Called on a plain click on the card link (not for new-tab clicks). */
+  onOpen?: () => void
 }
 
-export default function ProjectCard({ project }: Props) {
+export default function ProjectCard({ project, onOpen }: Props) {
   const status = STATUS_META[project.status]
   const details = [
     { label: 'País', value: project.country },
@@ -17,7 +19,7 @@ export default function ProjectCard({ project }: Props) {
   ]
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5 sm:h-56 sm:flex-row">
+    <article className="relative flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5 transition-shadow hover:shadow-md has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-brand-sage motion-reduce:transition-none sm:h-56 sm:flex-row">
       <div
         aria-hidden="true"
         className="flex h-44 shrink-0 items-center justify-center bg-stone-200 text-stone-400 sm:size-56"
@@ -29,8 +31,20 @@ export default function ProjectCard({ project }: Props) {
         </svg>
       </div>
 
-      <div className="relative flex min-w-0 flex-1 flex-col p-5">
-        <h3 className="truncate text-lg font-semibold text-brand-primary">{project.name}</h3>
+      <div className="flex min-w-0 flex-1 flex-col p-5">
+        <h3 className="truncate text-lg font-semibold text-brand-primary">
+          {/* The whole card is the click target (stretched link). */}
+          <a
+            href={`#/proyectos/${project.id}`}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+              onOpen?.()
+            }}
+            className="outline-none after:absolute after:inset-0"
+          >
+            {project.name}
+          </a>
+        </h3>
         <p className="mt-1 line-clamp-2 min-h-10 text-sm text-stone-500">
           {project.description || 'Sin descripción'}
         </p>

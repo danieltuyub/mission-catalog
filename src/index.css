@@ -7,6 +7,18 @@
   --color-brand-primary: #0e1428;
   --color-brand-sage: #7b9e89;
   --color-brand-blush: #f4d8cd;
+
+  --animate-fade-in: fade-in 250ms ease-out both;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 .leaflet-container {
