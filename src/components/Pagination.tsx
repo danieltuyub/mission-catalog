@@ -6,12 +6,67 @@ interface Props {
   onChange: (page: number) => void
 }
 
+const ARROWS = {
+  first: { label: 'Primera página', path: 'M11 17l-5-5 5-5M18 17l-5-5 5-5' },
+  prev: { label: 'Página anterior', path: 'M15 18l-6-6 6-6' },
+  next: { label: 'Página siguiente', path: 'M9 6l6 6-6 6' },
+  last: { label: 'Última página', path: 'M13 17l5-5-5-5M6 17l5-5-5-5' },
+}
+
+const BASE =
+  'flex size-8 items-center justify-center rounded-full text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-sage'
+
+function ArrowButton({
+  kind,
+  disabled,
+  onClick,
+  className = '',
+}: {
+  kind: keyof typeof ARROWS
+  disabled: boolean
+  onClick: () => void
+  className?: string
+}) {
+  const { label, path } = ARROWS[kind]
+  return (
+    <li className={className}>
+      <button
+        type="button"
+        aria-label={label}
+        title={label}
+        disabled={disabled}
+        onClick={onClick}
+        className={`${BASE} text-brand-primary enabled:hover:bg-brand-blush/70 disabled:opacity-30`}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="size-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d={path} />
+        </svg>
+      </button>
+    </li>
+  )
+}
+
 export default function Pagination({ page, totalPages, onChange }: Props) {
   if (totalPages <= 1) return null
 
+  const atStart = page <= 1
+  const atEnd = page >= totalPages
+
   return (
     <nav aria-label="Paginación">
-      <ul className="flex items-center gap-2">
+      <ul className="flex h-10 items-center gap-0.5 rounded-full bg-white p-1 ring-1 ring-black/5">
+        {/* First/last are hidden on small screens to save width. */}
+        <ArrowButton kind="first" disabled={atStart} onClick={() => onChange(1)} className="hidden sm:block" />
+        <ArrowButton kind="prev" disabled={atStart} onClick={() => onChange(page - 1)} />
         {getPageWindow(page, totalPages).map((p) => (
           <li key={p}>
             <button
@@ -19,16 +74,18 @@ export default function Pagination({ page, totalPages, onChange }: Props) {
               onClick={() => onChange(p)}
               aria-label={`Página ${p}`}
               aria-current={p === page ? 'page' : undefined}
-              className={`size-10 rounded-full text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
+              className={`${BASE} ${
                 p === page
                   ? 'bg-brand-primary font-medium text-brand-blush'
-                  : 'bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush'
+                  : 'text-brand-primary hover:bg-brand-blush/70'
               }`}
             >
               {p}
             </button>
           </li>
         ))}
+        <ArrowButton kind="next" disabled={atEnd} onClick={() => onChange(page + 1)} />
+        <ArrowButton kind="last" disabled={atEnd} onClick={() => onChange(totalPages)} className="hidden sm:block" />
       </ul>
     </nav>
   )
