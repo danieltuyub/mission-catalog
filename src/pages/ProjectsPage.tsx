@@ -90,14 +90,21 @@ export default function ProjectsPage({
       <div ref={headerRef} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-5">
         <h1 className="text-2xl font-semibold text-brand-primary">Proyectos</h1>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <Select
-            label="Ordenar proyectos"
-            icon={<path d="M8 4v16M8 4L4 8M8 4l4 4M16 20V4M16 20l-4-4M16 20l4-4" />}
-            value={sort}
-            options={SORT_OPTIONS}
-            onChange={changeSort}
-          />
-          <SortDirectionToggle value={direction} onChange={changeDirection} />
+          <div
+            role="group"
+            aria-label="Orden de proyectos"
+            className="flex h-10 items-center rounded-full bg-white p-1 ring-1 ring-black/5"
+          >
+            <SortDirectionToggle value={direction} onChange={changeDirection} />
+            <span aria-hidden="true" className="mx-1 h-5 w-px bg-stone-200" />
+            <Select
+              bare
+              label="Ordenar proyectos"
+              value={sort}
+              options={SORT_OPTIONS}
+              onChange={changeSort}
+            />
+          </div>
           <Select
             label="Proyectos por página"
             icon={<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />}

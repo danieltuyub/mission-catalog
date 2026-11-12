@@ -20,7 +20,7 @@ export default function SortDirectionToggle({ value, onChange }: Props) {
       aria-label={label}
       title={`${label} (clic para cambiar)`}
       onClick={() => onChange(next)}
-      className="flex size-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-blush/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
+      className="flex size-8 shrink-0 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-blush/70 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-sage"
     >
       <svg
         viewBox="0 0 24 24"
