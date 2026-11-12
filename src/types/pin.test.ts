@@ -10,6 +10,7 @@ describe('Pin type', () => {
       lat: number
       lng: number
       created_at: string
+      image_path: string | null
     }>()
   })
 })

@@ -11,6 +11,7 @@ const pin: Pin = {
   lat: 1,
   lng: 2,
   created_at: '2026-01-01T00:00:00Z',
+  image_path: null,
 }
 
 describe('PinCard', () => {
@@ -18,6 +19,31 @@ describe('PinCard', () => {
     render(<PinCard pin={pin} onClose={vi.fn()} />)
     expect(screen.getByRole('heading', { name: 'Base' })).toBeInTheDocument()
     expect(screen.getByText('Main camp')).toBeInTheDocument()
+  })
+
+  it('shows the pin image when there is one', () => {
+    render(<PinCard pin={{ ...pin, image_path: 'a.webp' }} onClose={vi.fn()} />)
+    expect(screen.getByRole('img', { name: 'Base' })).toHaveAttribute(
+      'src',
+      expect.stringContaining('pin-images/a.webp'),
+    )
+    expect(screen.queryByText('Foto')).not.toBeInTheDocument()
+  })
+
+  it('shows an edit button only when onEdit is given', async () => {
+    const onEdit = vi.fn()
+    const { rerender } = render(<PinCard pin={pin} onClose={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
+    rerender(<PinCard pin={pin} onClose={vi.fn()} onEdit={onEdit} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    expect(onEdit).toHaveBeenCalledWith(pin)
+  })
+
+  it('updates in place when the same pin is edited', () => {
+    const { rerender } = render(<PinCard pin={pin} onClose={vi.fn()} />)
+    rerender(<PinCard pin={{ ...pin, title: 'Editado' }} onClose={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: 'Editado' })).toBeInTheDocument()
+    expect(screen.getByTestId('pin-content')).toHaveClass('opacity-100')
   })
 
   it('falls back when there is no description', () => {

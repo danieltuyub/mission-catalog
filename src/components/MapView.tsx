@@ -74,13 +74,15 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 export default function MapView() {
   const [savedView] = useState(loadMapView)
   const { status, position, locate } = useGeolocation()
-  const { pins, error, addPin } = usePins()
+  const { pins, error, addPin, editPin } = usePins()
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = pins.find((p) => p.id === selectedId) ?? null
+  const editing = pins.find((p) => p.id === editingId) ?? null
 
   useEffect(() => {
-    if (!selectedId || draft) return
+    if (!selectedId || draft || editingId) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       setSelectedId(null)
@@ -90,7 +92,7 @@ export default function MapView() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedId, draft])
+  }, [selectedId, draft, editingId])
 
   const notice = error ?? GEO_MESSAGES[status]
 
@@ -129,7 +131,7 @@ export default function MapView() {
         ))}
       </MapContainer>
 
-      <PinCard pin={selected} onClose={() => setSelectedId(null)} />
+      <PinCard pin={selected} onClose={() => setSelectedId(null)} onEdit={(pin) => setEditingId(pin.id)} />
 
       {notice && (
         <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow">
@@ -137,13 +139,27 @@ export default function MapView() {
         </div>
       )}
 
+      {editing && (
+        <PinFormModal
+          key={editing.id}
+          lat={editing.lat}
+          lng={editing.lng}
+          pin={editing}
+          onCancel={() => setEditingId(null)}
+          onSubmit={async ({ image, removeImage, ...data }) => {
+            await editPin(editing, data, image, removeImage)
+            setEditingId(null)
+          }}
+        />
+      )}
+
       {draft && (
         <PinFormModal
           lat={draft.lat}
           lng={draft.lng}
           onCancel={() => setDraft(null)}
-          onSubmit={async (data) => {
-            await addPin({ ...draft, ...data })
+          onSubmit={async ({ image, ...data }) => {
+            await addPin({ ...draft, ...data }, image)
             setDraft(null)
           }}
         />

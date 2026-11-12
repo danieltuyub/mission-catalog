@@ -1,15 +1,27 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { validateImage } from '../services/imageUtils'
+import { pinImageUrl } from '../services/pinService'
+import type { Pin } from '../types'
 
 interface Props {
   lat: number
   lng: number
-  onSubmit: (data: { title: string; description: string }) => Promise<void>
+  /** When set, the form edits this pin instead of creating one. */
+  pin?: Pin
+  onSubmit: (data: {
+    title: string
+    description: string
+    image?: File
+    removeImage?: boolean
+  }) => Promise<void>
   onCancel: () => void
 }
 
-export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Props) {
+  const [title, setTitle] = useState(pin?.title ?? '')
+  const [description, setDescription] = useState(pin?.description ?? '')
+  const [removed, setRemoved] = useState(false)
+  const [image, setImage] = useState<{ file: File; url: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,12 +31,35 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onCancel, saving])
 
+  useEffect(() => {
+    if (!image) return
+    return () => URL.revokeObjectURL(image.url)
+  }, [image])
+
+  function handleImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return setImage(null)
+    const problem = validateImage(file)
+    if (problem) {
+      e.target.value = ''
+      setImage(null)
+      return setError(problem)
+    }
+    setError(null)
+    setImage({ file, url: URL.createObjectURL(file) })
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setSaving(true)
     setError(null)
     try {
-      await onSubmit({ title: title.trim(), description: description.trim() })
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim(),
+        image: image?.file,
+        removeImage: removed && !image ? true : undefined,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the pin')
       setSaving(false)
@@ -38,11 +73,11 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
     >
       <form
         role="dialog"
-        aria-label="New pin"
+        aria-label={pin ? 'Edit pin' : 'New pin'}
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 shadow-xl"
       >
-        <h2 className="text-lg font-semibold text-gray-900">New pin</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{pin ? 'Edit pin' : 'New pin'}</h2>
         <p className="text-xs text-gray-500">
           {lat.toFixed(5)}, {lng.toFixed(5)}
         </p>
@@ -67,6 +102,37 @@ export default function PinFormModal({ lat, lng, onSubmit, onCancel }: Props) {
             className="mt-1 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
           />
         </label>
+
+        <label className="block text-sm text-gray-700">
+          Image
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImage}
+            className="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-blush file:px-3 file:py-2 file:text-sm file:text-brand-primary hover:file:bg-brand-blush/70"
+          />
+        </label>
+        {image ? (
+          <img src={image.url} alt="Preview" className="h-32 w-full rounded-lg object-cover" />
+        ) : (
+          pin?.image_path &&
+          !removed && (
+            <div className="relative">
+              <img
+                src={pinImageUrl(pin.image_path)}
+                alt="Current image"
+                className="h-32 w-full rounded-lg object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setRemoved(true)}
+                className="absolute right-2 top-2 rounded-full bg-white/90 px-3 py-1 text-xs text-gray-700 shadow hover:bg-white"
+              >
+                Remove image
+              </button>
+            </div>
+          )
+        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
