@@ -205,7 +205,7 @@ export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
           />
         </Field>
 
-        <Field id="project-responsible" label="Responsable">
+        <Field id="project-responsible" label="Encargado">
           <input id="project-responsible" value={values.responsible} onChange={set('responsible')} className={control} />
         </Field>
 
@@ -248,7 +248,7 @@ export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
           <input id="project-region" value={values.region} onChange={set('region')} className={control} />
         </Field>
 
-        <Field id="project-started" label="Fecha de inicio">
+        <Field id="project-started" label="Inicio">
           <input id="project-started" type="date" value={values.started_at} onChange={set('started_at')} className={control} />
         </Field>
 

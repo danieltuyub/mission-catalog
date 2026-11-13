@@ -174,7 +174,7 @@ export default function ProjectFilters({
         note={emptyNote(options?.region)}
       />
       <CheckboxGroup
-        legend="Responsable"
+        legend="Encargado"
         options={asOptions(options?.responsible)}
         selected={filters.responsible}
         onToggle={(v) => onChange({ ...filters, responsible: toggle(filters.responsible, v) })}

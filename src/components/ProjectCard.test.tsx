@@ -20,16 +20,24 @@ const base: Project = {
 }
 
 describe('ProjectCard', () => {
+  it('does not show phone or mail', () => {
+    render(<ProjectCard project={base} />)
+    expect(screen.queryByText('Teléfono')).not.toBeInTheDocument()
+    expect(screen.queryByText('Mail')).not.toBeInTheDocument()
+    expect(screen.queryByText('999 123 4567')).not.toBeInTheDocument()
+    expect(screen.queryByText('norte@example.com')).not.toBeInTheDocument()
+  })
+
   it('shows name, description and details', () => {
     render(<ProjectCard project={base} />)
     expect(screen.getByRole('heading', { name: 'Iglesia Norte' })).toBeInTheDocument()
     expect(screen.getByText('Una iglesia en casa')).toBeInTheDocument()
-    for (const v of ['México', 'Yucatán', '999 123 4567', 'norte@example.com']) {
+    for (const v of ['México', 'Yucatán', 'Ana', '1 de enero de 2026']) {
       expect(screen.getByText(v)).toBeInTheDocument()
     }
   })
 
-  it('links to the project detail and keeps phone and mail as plain text', () => {
+  it('links to the project detail', () => {
     render(<ProjectCard project={base} />)
     const links = screen.getAllByRole('link')
     expect(links).toHaveLength(1)
@@ -79,7 +87,7 @@ describe('ProjectCard', () => {
   it('fills missing values with dashes', () => {
     render(
       <ProjectCard
-        project={{ ...base, country: null, region: null, phone: null, mail: null, description: null }}
+        project={{ ...base, country: null, region: null, responsible: null, started_at: null, description: null }}
       />,
     )
     expect(screen.getAllByText('—')).toHaveLength(4)

@@ -5,6 +5,8 @@ import { STATUS_META } from './projectStatus'
 
 const EMPTY = '—'
 
+const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' })
+
 interface Props {
   project: Project
   /** Called on a plain click on the card link (not for new-tab clicks). */
@@ -19,8 +21,11 @@ export default function ProjectCard({ project, onOpen, editable = false }: Props
   const details = [
     { label: 'País', value: project.country },
     { label: 'Región', value: project.region },
-    { label: 'Teléfono', value: project.phone },
-    { label: 'Mail', value: project.mail },
+    { label: 'Encargado', value: project.responsible },
+    {
+      label: 'Inicio',
+      value: project.started_at ? dateFormat.format(new Date(`${project.started_at}T00:00:00Z`)) : null,
+    },
   ]
 
   return (

@@ -31,7 +31,7 @@ describe('ProjectFilters', () => {
   it('has a title and the four groups', () => {
     setup()
     expect(screen.getByRole('heading', { name: 'Filtros' })).toBeInTheDocument()
-    for (const name of ['Estado', 'País', 'Región', 'Responsable']) {
+    for (const name of ['Estado', 'País', 'Región', 'Encargado']) {
       expect(screen.getByRole('group', { name })).toBeInTheDocument()
     }
   })

@@ -76,7 +76,7 @@ describe('ProjectForm', () => {
     const { onSubmit } = setup()
     await userEvent.type(screen.getByLabelText('Nombre *'), 'Casa')
     await userEvent.selectOptions(screen.getByLabelText('Estado'), 'paused')
-    await userEvent.type(screen.getByLabelText('Fecha de inicio'), '2026-03-01')
+    await userEvent.type(screen.getByLabelText('Inicio'), '2026-03-01')
     await save()
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ project: expect.objectContaining({ status: 'paused', started_at: '2026-03-01' }) }),
@@ -168,7 +168,7 @@ describe('ProjectForm', () => {
       expect(screen.getByLabelText('Nombre *')).toHaveValue('Casa Norte')
       expect(screen.getByLabelText('Detalles')).toHaveValue('Largo')
       expect(screen.getByLabelText('Estado')).toHaveValue('paused')
-      expect(screen.getByLabelText('Fecha de inicio')).toHaveValue('2026-01-01')
+      expect(screen.getByLabelText('Inicio')).toHaveValue('2026-01-01')
       const srcs = screen.getAllByRole('img').map((i) => i.getAttribute('src'))
       expect(srcs[0]).toContain('a.webp')
       expect(srcs[1]).toContain('b.webp')

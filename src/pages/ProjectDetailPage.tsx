@@ -107,7 +107,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                 <div className="min-w-0 space-y-6">
                   <p className="leading-relaxed text-stone-600">{project.description || 'Sin descripción'}</p>
                   <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-                    <Field label="Responsable">{project.responsible || EMPTY}</Field>
+                    <Field label="Encargado">{project.responsible || EMPTY}</Field>
                     <Field label="Inicio">
                       {project.started_at ? dateFormat.format(new Date(`${project.started_at}T00:00:00Z`)) : EMPTY}
                     </Field>
