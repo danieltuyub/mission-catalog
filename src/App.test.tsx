@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getAuthSnapshot } from './services/authService'
 import App from './App'
 
 vi.mock('./components/MapView', () => ({ default: () => <div>map</div> }))
@@ -35,6 +36,27 @@ describe('App', () => {
     window.location.hash = '#/login?next=%2Fproyectos'
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Acceso' })).toBeInTheDocument()
+  })
+
+  describe('#/proyectos/nuevo', () => {
+    afterEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: null, isAdmin: false })
+    })
+
+    it('sends signed-out visitors to the login', () => {
+      window.location.hash = '#/proyectos/nuevo'
+      render(<App />)
+      expect(screen.queryByRole('form', { name: 'Nuevo proyecto' })).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/login?next=%2Fproyectos%2Fnuevo')
+    })
+
+    it('shows the form to admins and does not treat "nuevo" as a project id', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      window.location.hash = '#/proyectos/nuevo'
+      render(<App />)
+      expect(screen.getByRole('heading', { name: 'Nuevo proyecto' })).toBeInTheDocument()
+      expect(screen.getByRole('form', { name: 'Nuevo proyecto' })).toBeInTheDocument()
+    })
   })
 
   it('shows the contact page for #/contacto', () => {

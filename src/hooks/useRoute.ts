@@ -16,9 +16,12 @@ function getRouteSnapshot(): Route {
   return ROUTES.find((r) => r === name) ?? 'mapa'
 }
 
+/** Segment of `#/proyectos/nuevo` (the create form). */
+const NEW_PROJECT = 'nuevo'
+
 function getProjectIdSnapshot(): string | null {
   const [name, id] = segments()
-  if (name !== 'proyectos' || !id) return null
+  if (name !== 'proyectos' || !id || id === NEW_PROJECT) return null
   try {
     return decodeURIComponent(id)
   } catch {
@@ -33,4 +36,12 @@ export function useRoute(): Route {
 /** `#/proyectos/<id>` -> id; null on any other route. */
 export function useProjectId(): string | null {
   return useSyncExternalStore(subscribe, getProjectIdSnapshot)
+}
+
+/** True on `#/proyectos/nuevo`. */
+export function useIsNewProject(): boolean {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, id] = segments()
+    return name === 'proyectos' && id === NEW_PROJECT
+  })
 }
