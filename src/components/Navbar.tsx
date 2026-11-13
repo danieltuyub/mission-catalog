@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import type { Route } from '../hooks/useRoute'
-import { signOut } from '../services/authService'
+import UserMenu from './UserMenu'
 
 const LINKS: { route: Route; label: string }[] = [
   { route: 'mapa', label: 'Mapa' },
@@ -11,7 +11,18 @@ const LINKS: { route: Route; label: string }[] = [
 
 export default function Navbar({ current }: { current: Route }) {
   const [open, setOpen] = useState(false)
-  const { email } = useAuth()
+  const [userOpen, setUserOpen] = useState(false)
+  const { email, loading } = useAuth()
+
+  // The mobile menu and the user menu never stay open together.
+  const changeUserOpen = (next: boolean) => {
+    setUserOpen(next)
+    if (next) setOpen(false)
+  }
+  const toggleMenu = () => {
+    setOpen((o) => !o)
+    setUserOpen(false)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -53,37 +64,28 @@ export default function Navbar({ current }: { current: Route }) {
               </a>
             </li>
           ))}
+          {/* Not shown while the stored session is still being resolved (avoids a flash). */}
+          {!email && !loading && (
+            <li>
+              <a
+                href="#/login"
+                onClick={() => setOpen(false)}
+                className="block rounded-full px-5 py-2 text-sm ring-1 ring-brand-blush/40 transition-colors hover:bg-white/10 md:ml-1"
+              >
+                Iniciar sesión
+              </a>
+            </li>
+          )}
         </ul>
 
         <div className={`flex items-center gap-2 ${email ? 'md:ml-3' : 'md:hidden'}`}>
-          {email && (
-            <div className="flex h-10 items-center rounded-full bg-white/10 pr-1 text-sm sm:pl-4">
-              <span title={email} className="hidden max-w-40 truncate sm:inline">
-                {email}
-              </span>
-              <button
-                type="button"
-                aria-label="Cerrar sesión"
-                title="Cerrar sesión"
-                onClick={() => {
-                  void signOut().then(() => {
-                    window.location.hash = '#/mapa'
-                  })
-                }}
-                className="flex size-8 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand-sage sm:ml-1"
-              >
-                <svg viewBox="0 0 24 24" className="size-4 stroke-brand-blush" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-                </svg>
-              </button>
-            </div>
-          )}
+          {email && <UserMenu email={email} open={userOpen} onOpenChange={changeUserOpen} />}
           <button
             type="button"
             aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
             aria-expanded={open}
             aria-controls="main-menu"
-            onClick={() => setOpen((o) => !o)}
+            onClick={toggleMenu}
             className="flex size-10 items-center justify-center rounded-full bg-brand-blush md:hidden"
           >
             <svg viewBox="0 0 24 24" className="size-5 stroke-brand-primary" fill="none" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
