@@ -42,3 +42,41 @@ export async function insertProjectImages(projectId: string, paths: string[]): P
   const { error } = await supabase.from('project_images').insert(rows)
   if (error) throw error
 }
+
+export interface ImageRow {
+  id: string
+  path: string
+}
+
+export async function listProjectImages(projectId: string): Promise<ImageRow[]> {
+  const { data, error } = await supabase.from('project_images').select('id, path').eq('project_id', projectId)
+  if (error) throw error
+  return data as ImageRow[]
+}
+
+/** Moves existing photos to their new `position` (one upsert; `alt` is left untouched). */
+export async function saveImagePositions(
+  projectId: string,
+  rows: { id: string; path: string; position: number }[],
+): Promise<void> {
+  if (rows.length === 0) return
+  const { error } = await supabase
+    .from('project_images')
+    .upsert(rows.map((r) => ({ ...r, project_id: projectId })), { onConflict: 'id' })
+  if (error) throw error
+}
+
+export async function addProjectImageRows(
+  projectId: string,
+  rows: { path: string; position: number }[],
+): Promise<void> {
+  if (rows.length === 0) return
+  const { error } = await supabase.from('project_images').insert(rows.map((r) => ({ ...r, project_id: projectId })))
+  if (error) throw error
+}
+
+export async function deleteProjectImageRows(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const { error } = await supabase.from('project_images').delete().in('id', ids)
+  if (error) throw error
+}

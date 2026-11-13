@@ -23,6 +23,7 @@ import {
   savePageSize,
   saveSort,
 } from '../services/projectsViewStorage'
+import { getAuthSnapshot } from '../services/authService'
 import ProjectDetailPage from './ProjectDetailPage'
 
 const project: Project = {
@@ -104,6 +105,28 @@ describe('ProjectDetailPage', () => {
         await vi.advanceTimersByTimeAsync(500)
       })
       expect(screen.queryByRole('status', { hidden: true })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('edit shortcut', () => {
+    afterEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: null, isAdmin: false })
+    })
+
+    it('is hidden for visitors', async () => {
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
+    })
+
+    it('is an icon link to the edit page for admins', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.getByRole('link', { name: 'Editar proyecto' })).toHaveAttribute(
+        'href',
+        `#/proyectos/${project.id}/editar`,
+      )
     })
   })
 

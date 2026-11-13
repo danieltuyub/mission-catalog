@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Project } from '../types'
 import ProjectForm from './ProjectForm'
 
 const png = (name: string) => new File(['x'], name, { type: 'image/png' })
@@ -100,7 +101,14 @@ describe('ProjectForm', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1)
 
     await save()
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ images: [b, a] }))
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        images: [
+          { kind: 'new', file: b },
+          { kind: 'new', file: a },
+        ],
+      }),
+    )
   })
 
   it('rejects non-image files', async () => {
@@ -127,5 +135,63 @@ describe('ProjectForm', () => {
     const { onCancel } = setup()
     await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: 'Cancelar' }))
     expect(onCancel).toHaveBeenCalled()
+  })
+
+  describe('edit mode', () => {
+    const project: Project = {
+      id: 'p1',
+      name: 'Casa Norte',
+      responsible: 'Ana',
+      description: 'Corta',
+      details: 'Largo',
+      started_at: '2026-01-01',
+      country: 'México',
+      region: 'Yucatán',
+      phone: '999',
+      mail: 'a@b.com',
+      status: 'paused',
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+      project_images: [
+        { id: 'i2', path: 'p1/b.webp', position: 1, alt: null },
+        { id: 'i1', path: 'p1/a.webp', position: 0, alt: null },
+      ],
+    }
+    const open = (onSubmit = vi.fn().mockResolvedValue(undefined)) => {
+      render(<ProjectForm project={project} onSubmit={onSubmit} onCancel={vi.fn()} />)
+      return onSubmit
+    }
+
+    it('prefills every field and lists the saved photos in position order', () => {
+      open()
+      expect(screen.getByRole('form', { name: 'Editar proyecto' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Nombre *')).toHaveValue('Casa Norte')
+      expect(screen.getByLabelText('Detalles')).toHaveValue('Largo')
+      expect(screen.getByLabelText('Estado')).toHaveValue('paused')
+      expect(screen.getByLabelText('Fecha de inicio')).toHaveValue('2026-01-01')
+      const srcs = screen.getAllByRole('img').map((i) => i.getAttribute('src'))
+      expect(srcs[0]).toContain('a.webp')
+      expect(srcs[1]).toContain('b.webp')
+      expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeInTheDocument()
+    })
+
+    it('submits saved photos as existing and added ones as new, in the final order', async () => {
+      const onSubmit = open()
+      const extra = png('c.png')
+      await userEvent.upload(document.querySelector('input[type=file]')!, extra)
+      await userEvent.click(screen.getByRole('button', { name: 'Quitar foto 1' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Subir foto 2' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          images: [
+            { kind: 'new', file: extra },
+            { kind: 'existing', id: 'i2', path: 'p1/b.webp' },
+          ],
+        }),
+      )
+      // Only the object URL of the new file is ever revoked; saved photos use public URLs.
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+    })
   })
 })

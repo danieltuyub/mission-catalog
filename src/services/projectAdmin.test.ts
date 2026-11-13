@@ -8,6 +8,11 @@ const m = vi.hoisted(() => ({
   upload: vi.fn(),
   removeFiles: vi.fn(),
   insertImages: vi.fn(),
+  updateEq: vi.fn(),
+  list: vi.fn(),
+  savePos: vi.fn(),
+  addRows: vi.fn(),
+  delRows: vi.fn(),
 }))
 
 vi.mock('./supabaseClient', () => {
@@ -17,6 +22,7 @@ vi.mock('./supabaseClient', () => {
       from: () => ({
         insert: m.insert.mockImplementation(() => insertChain),
         delete: m.del.mockImplementation(() => ({ eq: m.eq })),
+        update: () => ({ eq: m.updateEq.mockImplementation(() => ({ select: () => ({ single: m.single }) })) }),
       }),
     },
   }
@@ -25,9 +31,13 @@ vi.mock('./projectImages', () => ({
   uploadProjectImage: m.upload,
   removeProjectImageFiles: m.removeFiles,
   insertProjectImages: m.insertImages,
+  listProjectImages: m.list,
+  saveImagePositions: m.savePos,
+  addProjectImageRows: m.addRows,
+  deleteProjectImageRows: m.delRows,
 }))
 
-import { createProject, createProjectWithImages } from './projectAdmin'
+import { createProject, createProjectWithImages, updateProjectWithImages } from './projectAdmin'
 
 const file = (n: string) => new File(['x'], n, { type: 'image/png' })
 const project = { id: 'p1', name: 'Casa' }
@@ -80,5 +90,76 @@ describe('createProjectWithImages', () => {
     await expect(createProjectWithImages({ name: 'Casa' }, [file('a')])).rejects.toThrow('link')
     expect(m.removeFiles).toHaveBeenCalledWith(['p1/a.webp'])
     expect(m.eq).toHaveBeenCalledWith('id', 'p1')
+  })
+})
+
+describe('updateProjectWithImages', () => {
+  const patch = { name: 'Casa' }
+  beforeEach(() => {
+    m.list.mockResolvedValue([
+      { id: 'i1', path: 'p1/a.webp' },
+      { id: 'i2', path: 'p1/b.webp' },
+      { id: 'i3', path: 'p1/c.webp' },
+    ])
+    m.savePos.mockResolvedValue(undefined)
+    m.addRows.mockResolvedValue(undefined)
+    m.delRows.mockResolvedValue(undefined)
+  })
+
+  it('re-positions kept photos, adds new ones and deletes removed ones last', async () => {
+    m.upload.mockResolvedValue('p1/new.webp')
+    const res = await updateProjectWithImages('p1', patch, [
+      { kind: 'new', file: file('n') },
+      { kind: 'existing', id: 'i3', path: 'p1/c.webp' },
+      { kind: 'existing', id: 'i1', path: 'p1/a.webp' },
+    ])
+    expect(res).toEqual(project)
+    expect(m.updateEq).toHaveBeenCalledWith('id', 'p1')
+    expect(m.savePos).toHaveBeenCalledWith('p1', [
+      { id: 'i3', path: 'p1/c.webp', position: 1 },
+      { id: 'i1', path: 'p1/a.webp', position: 2 },
+    ])
+    expect(m.addRows).toHaveBeenCalledWith('p1', [{ path: 'p1/new.webp', position: 0 }])
+    expect(m.delRows).toHaveBeenCalledWith(['i2'])
+    expect(m.removeFiles).toHaveBeenCalledWith(['p1/b.webp'])
+  })
+
+  it('does not upload when only fields change', async () => {
+    await updateProjectWithImages('p1', patch, [
+      { kind: 'existing', id: 'i1', path: 'p1/a.webp' },
+      { kind: 'existing', id: 'i2', path: 'p1/b.webp' },
+      { kind: 'existing', id: 'i3', path: 'p1/c.webp' },
+    ])
+    expect(m.upload).not.toHaveBeenCalled()
+    expect(m.delRows).toHaveBeenCalledWith([])
+  })
+
+  it('removes the new uploads and keeps the old photos when the update fails', async () => {
+    m.upload.mockResolvedValue('p1/new.webp')
+    m.single.mockResolvedValue({ data: null, error: new Error('rls') })
+    await expect(
+      updateProjectWithImages('p1', patch, [{ kind: 'new', file: file('n') }]),
+    ).rejects.toThrow('rls')
+    expect(m.removeFiles).toHaveBeenCalledWith(['p1/new.webp'])
+    expect(m.delRows).not.toHaveBeenCalled()
+  })
+
+  it('removes the new uploads when linking them fails', async () => {
+    m.upload.mockResolvedValue('p1/new.webp')
+    m.addRows.mockRejectedValue(new Error('link'))
+    await expect(
+      updateProjectWithImages('p1', patch, [{ kind: 'new', file: file('n') }]),
+    ).rejects.toThrow('link')
+    expect(m.removeFiles).toHaveBeenCalledWith(['p1/new.webp'])
+    expect(m.delRows).not.toHaveBeenCalled()
+  })
+
+  it('keeps the new uploads when only deleting removed rows fails', async () => {
+    m.upload.mockResolvedValue('p1/new.webp')
+    m.delRows.mockRejectedValue(new Error('del'))
+    await expect(
+      updateProjectWithImages('p1', patch, [{ kind: 'new', file: file('n') }]),
+    ).rejects.toThrow('del')
+    expect(m.removeFiles).not.toHaveBeenCalled()
   })
 })

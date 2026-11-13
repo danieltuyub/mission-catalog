@@ -1,5 +1,13 @@
 import type { Project } from '../types'
-import { insertProjectImages, removeProjectImageFiles, uploadProjectImage } from './projectImages'
+import {
+  addProjectImageRows,
+  deleteProjectImageRows,
+  insertProjectImages,
+  listProjectImages,
+  removeProjectImageFiles,
+  saveImagePositions,
+  uploadProjectImage,
+} from './projectImages'
 import { supabase } from './supabaseClient'
 
 const TABLE = 'projects'
@@ -8,6 +16,9 @@ export type NewProject = Pick<Project, 'name'> &
   Partial<
     Pick<Project, 'responsible' | 'description' | 'details' | 'started_at' | 'country' | 'region' | 'phone' | 'mail' | 'status'>
   >
+
+/** A photo in the form: one already saved, or a file still to upload. */
+export type ImageInput = { kind: 'existing'; id: string; path: string } | { kind: 'new'; file: File }
 
 export async function createProject(input: NewProject): Promise<Project> {
   const { data, error } = await supabase.from(TABLE).insert(input).select('*').single()
@@ -36,6 +47,50 @@ export async function createProjectWithImages(input: NewProject, files: File[]):
   } catch (e) {
     await removeProjectImageFiles(paths).catch(() => {})
     await deleteProject(project.id).catch(() => {})
+    throw e
+  }
+}
+
+export async function updateProject(id: string, patch: NewProject): Promise<Project> {
+  const { data, error } = await supabase.from(TABLE).update(patch).eq('id', id).select('*').single()
+  if (error) throw error
+  return data as Project
+}
+
+/**
+ * Saves the project fields and syncs its photos to `images` (final order, first = cover):
+ * new files are uploaded, kept ones are re-positioned, removed ones are deleted.
+ * A failure before the photos are linked removes the new uploads and leaves the old
+ * photos untouched. Files of removed photos are deleted last, only after everything worked.
+ */
+export async function updateProjectWithImages(id: string, patch: NewProject, images: ImageInput[]): Promise<Project> {
+  const uploaded: string[] = []
+  let linked = false
+  try {
+    const kept: { id: string; path: string; position: number }[] = []
+    const added: { path: string; position: number }[] = []
+    for (const [position, image] of images.entries()) {
+      if (image.kind === 'existing') kept.push({ id: image.id, path: image.path, position })
+      else {
+        const path = await uploadProjectImage(id, image.file)
+        uploaded.push(path)
+        added.push({ path, position })
+      }
+    }
+
+    const project = await updateProject(id, patch)
+    const current = await listProjectImages(id)
+    await saveImagePositions(id, kept)
+    await addProjectImageRows(id, added)
+    linked = true
+
+    const keptIds = new Set(kept.map((k) => k.id))
+    const removed = current.filter((row) => !keptIds.has(row.id))
+    await deleteProjectImageRows(removed.map((r) => r.id))
+    await removeProjectImageFiles(removed.map((r) => r.path)).catch(() => {})
+    return project
+  } catch (e) {
+    if (!linked) await removeProjectImageFiles(uploaded).catch(() => {})
     throw e
   }
 }

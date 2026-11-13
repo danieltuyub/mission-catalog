@@ -50,6 +50,29 @@ describe('App', () => {
       expect(window.location.hash).toBe('#/login?next=%2Fproyectos%2Fnuevo')
     })
 
+    it('guards the edit route and does not show the detail for it', () => {
+      getProjectById.mockClear()
+      window.location.hash = '#/proyectos/00000000-0000-0000-0000-000000000001/editar'
+      render(<App />)
+      expect(getProjectById).not.toHaveBeenCalled()
+      expect(window.location.hash).toBe(
+        '#/login?next=%2Fproyectos%2F00000000-0000-0000-0000-000000000001%2Feditar',
+      )
+    })
+
+    it('shows the edit form to admins, loaded from the project', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      getProjectById.mockResolvedValue({
+        id: '00000000-0000-0000-0000-000000000001',
+        name: 'Casa Norte',
+        status: 'open',
+      })
+      window.location.hash = '#/proyectos/00000000-0000-0000-0000-000000000001/editar'
+      render(<App />)
+      expect(await screen.findByRole('form', { name: 'Editar proyecto' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Nombre *')).toHaveValue('Casa Norte')
+    })
+
     it('shows the form to admins and does not treat "nuevo" as a project id', () => {
       vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
       window.location.hash = '#/proyectos/nuevo'

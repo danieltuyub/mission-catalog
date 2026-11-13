@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { validateImage } from '../services/imageUtils'
-import type { NewProject } from '../services/projectAdmin'
-import type { ProjectStatus } from '../types'
+import type { ImageInput, NewProject } from '../services/projectAdmin'
+import { projectImageUrl } from '../services/projectImages'
+import type { Project, ProjectStatus } from '../types'
 import { STATUS_META, STATUS_ORDER } from './projectStatus'
 
 export const MAX_IMAGES = 10
@@ -10,19 +11,33 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export interface ProjectFormData {
   project: NewProject
   /** In display order: the first one is the cover. */
-  images: File[]
+  images: ImageInput[]
 }
 
 interface Props {
+  /** When set, the form edits this project instead of creating one. */
+  project?: Project
   onSubmit: (data: ProjectFormData) => Promise<void>
   onCancel: () => void
 }
 
 interface Image {
   id: string
-  file: File
+  input: ImageInput
   url: string
 }
+
+function initialImages(project?: Project): Image[] {
+  return [...(project?.project_images ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((img) => ({
+      id: img.id,
+      input: { kind: 'existing', id: img.id, path: img.path },
+      url: projectImageUrl(img.path),
+    }))
+}
+
+const revoke = (image: Image) => image.input.kind === 'new' && URL.revokeObjectURL(image.url)
 
 const control =
   'mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage aria-invalid:border-red-500'
@@ -67,21 +82,21 @@ const Icon = ({ d }: { d: string }) => (
   </svg>
 )
 
-export default function ProjectForm({ onSubmit, onCancel }: Props) {
+export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
   const [values, setValues] = useState({
-    name: '',
-    responsible: '',
-    description: '',
-    details: '',
-    started_at: '',
-    country: '',
-    region: '',
-    phone: '',
-    mail: '',
-    status: 'open' as ProjectStatus,
+    name: project?.name ?? '',
+    responsible: project?.responsible ?? '',
+    description: project?.description ?? '',
+    details: project?.details ?? '',
+    started_at: project?.started_at ?? '',
+    country: project?.country ?? '',
+    region: project?.region ?? '',
+    phone: project?.phone ?? '',
+    mail: project?.mail ?? '',
+    status: (project?.status ?? 'open') as ProjectStatus,
   })
   const [errors, setErrors] = useState<{ name?: string; mail?: string }>({})
-  const [images, setImages] = useState<Image[]>([])
+  const [images, setImages] = useState<Image[]>(() => initialImages(project))
   const [imageError, setImageError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +106,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
   useEffect(() => {
     latest.current = images
   }, [images])
-  useEffect(() => () => latest.current.forEach((i) => URL.revokeObjectURL(i.url)), [])
+  useEffect(() => () => latest.current.forEach(revoke), [])
 
   const set = (key: keyof typeof values) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setValues((v) => ({ ...v, [key]: e.target.value }))
@@ -105,7 +120,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
       const invalid = validateImage(file)
       if (invalid) problem = `${file.name}: ${invalid}`
       else if (images.length + accepted.length >= MAX_IMAGES) problem = `Máximo ${MAX_IMAGES} fotos`
-      else accepted.push({ id: crypto.randomUUID(), file, url: URL.createObjectURL(file) })
+      else accepted.push({ id: crypto.randomUUID(), input: { kind: 'new', file }, url: URL.createObjectURL(file) })
     }
     setImageError(problem)
     if (accepted.length > 0) setImages((prev) => [...prev, ...accepted])
@@ -113,7 +128,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
 
   const removeImage = (id: string) => {
     const image = images.find((i) => i.id === id)
-    if (image) URL.revokeObjectURL(image.url)
+    if (image) revoke(image)
     setImages((prev) => prev.filter((i) => i.id !== id))
     setImageError(null)
   }
@@ -155,7 +170,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
           mail: text(mail),
           status: values.status,
         },
-        images: images.map((i) => i.file),
+        images: images.map((i) => i.input),
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el proyecto')
@@ -170,7 +185,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
     <form
       noValidate
       onSubmit={handleSubmit}
-      aria-label="Nuevo proyecto"
+      aria-label={project ? 'Editar proyecto' : 'Nuevo proyecto'}
       className="space-y-5 rounded-2xl bg-white p-6 shadow ring-1 ring-black/5"
     >
       <section aria-labelledby="section-data">
@@ -321,7 +336,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
           disabled={saving}
           className="h-10 rounded-full bg-brand-primary px-6 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
         >
-          {saving ? 'Guardando…' : 'Guardar proyecto'}
+          {saving ? 'Guardando…' : project ? 'Guardar cambios' : 'Guardar proyecto'}
         </button>
       </div>
     </form>

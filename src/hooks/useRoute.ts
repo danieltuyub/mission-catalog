@@ -16,12 +16,15 @@ function getRouteSnapshot(): Route {
   return ROUTES.find((r) => r === name) ?? 'mapa'
 }
 
+/** Segment of `#/proyectos/<id>/editar` (the edit form). */
+const EDIT = 'editar'
+
 /** Segment of `#/proyectos/nuevo` (the create form). */
 const NEW_PROJECT = 'nuevo'
 
 function getProjectIdSnapshot(): string | null {
-  const [name, id] = segments()
-  if (name !== 'proyectos' || !id || id === NEW_PROJECT) return null
+  const [name, id, action] = segments()
+  if (name !== 'proyectos' || !id || id === NEW_PROJECT || action === EDIT) return null
   try {
     return decodeURIComponent(id)
   } catch {
@@ -43,5 +46,18 @@ export function useIsNewProject(): boolean {
   return useSyncExternalStore(subscribe, () => {
     const [name, id] = segments()
     return name === 'proyectos' && id === NEW_PROJECT
+  })
+}
+
+/** `#/proyectos/<id>/editar` -> id; null on any other route. */
+export function useEditProjectId(): string | null {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, id, action] = segments()
+    if (name !== 'proyectos' || !id || action !== EDIT) return null
+    try {
+      return decodeURIComponent(id)
+    } catch {
+      return id
+    }
   })
 }

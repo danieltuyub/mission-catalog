@@ -4,6 +4,7 @@ import PhotoCarousel from '../components/PhotoCarousel'
 import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
 import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
+import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
 import { projectPhotos } from '../services/projectImages'
 import { clearOpenedFromList, loadOpenedFromList, resetListContext } from '../services/projectsViewStorage'
@@ -35,6 +36,7 @@ const linkClass =
 
 export default function ProjectDetailPage({ id }: { id: string }) {
   const { project, loading, error } = useProject(id)
+  const { isAdmin } = useAuth()
   const showSkeleton = useDelayed(loading, SKELETON_DELAY_MS)
   // True when opened from the list (its filters, sort and page are kept for the way back).
   const [fromList] = useState(() => loadOpenedFromList())
@@ -69,6 +71,18 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           </svg>
           Proyectos
         </a>
+        {isAdmin && project && (
+          <a
+            href={`#/proyectos/${project.id}/editar`}
+            aria-label="Editar proyecto"
+            title="Editar proyecto"
+            className="ml-auto inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+            </svg>
+          </a>
+        )}
       </nav>
 
       {loading ? (
