@@ -23,6 +23,14 @@ function paragraphs(text: string | null | undefined): string[] {
     .filter(Boolean)
 }
 
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  // If the date is invalid (NaN timestamp), return null
+  if (isNaN(date.getTime())) return null
+  return dateFormat.format(date)
+}
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
@@ -109,7 +117,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                   <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
                     <Field label="Encargado">{project.responsible || EMPTY}</Field>
                     <Field label="Inicio">
-                      {project.started_at ? dateFormat.format(new Date(`${project.started_at}T00:00:00Z`)) : EMPTY}
+                      {formatDate(project.started_at) || EMPTY}
                     </Field>
                     <Field label="País">{project.country || EMPTY}</Field>
                     <Field label="Región">{project.region || EMPTY}</Field>
@@ -130,6 +138,9 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                       ) : (
                         EMPTY
                       )}
+                    </Field>
+                    <Field label="Actualizado">
+                      {formatDate(project.updated_at) || EMPTY}
                     </Field>
                   </dl>
                 </div>

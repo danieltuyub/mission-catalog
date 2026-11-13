@@ -7,6 +7,14 @@ const EMPTY = '—'
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' })
 
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  // If the date is invalid (NaN timestamp), return null
+  if (isNaN(date.getTime())) return null
+  return dateFormat.format(date)
+}
+
 interface Props {
   project: Project
   /** Called on a plain click on the card link (not for new-tab clicks). */
@@ -24,7 +32,7 @@ export default function ProjectCard({ project, onOpen, editable = false }: Props
     { label: 'Encargado', value: project.responsible },
     {
       label: 'Inicio',
-      value: project.started_at ? dateFormat.format(new Date(`${project.started_at}T00:00:00Z`)) : null,
+      value: formatDate(project.started_at),
     },
   ]
 
