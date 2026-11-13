@@ -22,6 +22,8 @@ export interface Project {
   status: ProjectStatus
   created_at: string
   updated_at: string
+  /** Long text for the detail page. Only loaded by the detail query, not the list. */
+  details?: string | null
   /** Present when the query embeds `project_images`. */
   project_images?: ProjectImage[]
 }

@@ -36,12 +36,14 @@ function Field({
   id,
   label,
   error,
+  hint,
   className = '',
   children,
 }: {
   id: string
   label: string
   error?: string
+  hint?: string
   className?: string
   children: ReactNode
 }) {
@@ -49,6 +51,7 @@ function Field({
     <div className={`text-sm text-gray-700 ${className}`}>
       <label htmlFor={id}>{label}</label>
       {children}
+      {hint && <p className="mt-1 text-xs text-stone-500">{hint}</p>}
       {error && (
         <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-red-700">
           {error}
@@ -69,6 +72,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
     name: '',
     responsible: '',
     description: '',
+    details: '',
     started_at: '',
     country: '',
     region: '',
@@ -143,6 +147,7 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
           name,
           responsible: text(values.responsible),
           description: text(values.description),
+          details: text(values.details),
           started_at: values.started_at || null,
           country: text(values.country),
           region: text(values.region),
@@ -201,6 +206,15 @@ export default function ProjectForm({ onSubmit, onCancel }: Props) {
 
         <Field id="project-description" label="Descripción" className="sm:col-span-2">
           <textarea id="project-description" rows={4} value={values.description} onChange={set('description')} className={`${control} resize-none`} />
+        </Field>
+
+        <Field
+          id="project-details"
+          label="Detalles"
+          hint="Se muestra solo en la página del proyecto. Separa los párrafos con una línea en blanco."
+          className="sm:col-span-2"
+        >
+          <textarea id="project-details" rows={7} value={values.details} onChange={set('details')} className={`${control} resize-y`} />
         </Field>
 
         </div>

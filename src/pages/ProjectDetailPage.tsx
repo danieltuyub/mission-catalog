@@ -7,20 +7,18 @@ import { useDelayed } from '../hooks/useDelayed'
 import { useProject } from '../hooks/useProject'
 import { projectPhotos } from '../services/projectImages'
 import { clearOpenedFromList, loadOpenedFromList, resetListContext } from '../services/projectsViewStorage'
-import type { Project } from '../types'
 import { SKELETON_DELAY_MS } from './projectsConfig'
 
 const EMPTY = '—'
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' })
 
-// Placeholder copy until the projects have a real long description in the database.
-function detailParagraphs(project: Project): string[] {
-  const where = project.region || project.country
-  return [
-    `${project.name} nació como un grupo pequeño de familias que decidieron reunirse cada semana en una casa para orar, estudiar la Biblia y compartir la comida. Con el tiempo la comunidad ha crecido de manera natural, y hoy recibe a vecinos, amigos y visitantes${where ? ` de ${where}` : ''}.`,
-    `Además de las reuniones, el equipo acompaña a las familias con visitas, apoyo en momentos difíciles y actividades para niños y jóvenes. Si quieres conocer más o visitarnos, escribe o llama a la persona responsable${project.responsible ? ` (${project.responsible})` : ''}.`,
-  ]
+/** Blank-line separated paragraphs; empty when there is no text. */
+function paragraphs(text: string | null | undefined): string[] {
+  return (text ?? '')
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -138,9 +136,12 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                   Detalles
                 </h2>
                 <div className="mt-3 max-w-3xl space-y-4 leading-relaxed text-stone-600">
-                  {detailParagraphs(project).map((text) => (
-                    <p key={text}>{text}</p>
+                  {paragraphs(project.details).map((text, i) => (
+                    <p key={i} className="whitespace-pre-line">
+                      {text}
+                    </p>
                   ))}
+                  {paragraphs(project.details).length === 0 && <p className="text-stone-500">Sin detalles</p>}
                 </div>
               </section>
             </article>

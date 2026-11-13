@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { range, order, inFilter, rpc } = vi.hoisted(() => ({
+const { range, order, inFilter, rpc, select, maybeSingle } = vi.hoisted(() => ({
+  select: vi.fn(),
+  maybeSingle: vi.fn(),
   range: vi.fn(),
   order: vi.fn(),
   inFilter: vi.fn(),
@@ -9,7 +11,8 @@ const { range, order, inFilter, rpc } = vi.hoisted(() => ({
 
 vi.mock('./supabaseClient', () => {
   const query = {
-    select: vi.fn(() => query),
+    select: select.mockImplementation(() => query),
+    eq: vi.fn(() => ({ maybeSingle })),
     in: inFilter.mockImplementation(() => query),
     order: order.mockImplementation(() => query),
     range,
@@ -17,7 +20,7 @@ vi.mock('./supabaseClient', () => {
   return { supabase: { from: vi.fn(() => query), rpc } }
 })
 
-import { clearFilterOptionsCache, getProjectFilterOptions, getProjects } from './projectService'
+import { clearFilterOptionsCache, getProjectById, getProjectFilterOptions, getProjects } from './projectService'
 
 describe('getProjects', () => {
   beforeEach(() => {
@@ -31,6 +34,13 @@ describe('getProjects', () => {
     const res = await getProjects()
     expect(range).toHaveBeenCalledWith(0, 3)
     expect(res).toMatchObject({ page: 1, pageSize: 4, total: 10, totalPages: 3 })
+  })
+
+  it('does not load the long details text in the list', async () => {
+    await getProjects()
+    const columns = select.mock.calls[0][0] as string
+    expect(columns).not.toMatch(/(^|[ ,])\*|details/)
+    expect(columns).toContain('project_images(')
   })
 
   it('computes the range for later pages', async () => {
@@ -117,5 +127,15 @@ describe('getProjectFilterOptions', () => {
     await expect(getProjectFilterOptions()).rejects.toThrow('boom')
     rpc.mockResolvedValueOnce({ data: { country: ['X'] }, error: null })
     expect((await getProjectFilterOptions()).country).toEqual(['X'])
+  })
+})
+
+describe('getProjectById', () => {
+  it('loads every column, including details', async () => {
+    select.mockClear()
+    maybeSingle.mockResolvedValue({ data: { id: 'x', details: 'texto' }, error: null })
+    const project = await getProjectById('00000000-0000-0000-0000-000000000001')
+    expect(select.mock.calls[0][0]).toMatch(/^\*, project_images\(/)
+    expect(project?.details).toBe('texto')
   })
 })

@@ -6,7 +6,7 @@ const TABLE = 'projects'
 
 export type NewProject = Pick<Project, 'name'> &
   Partial<
-    Pick<Project, 'responsible' | 'description' | 'started_at' | 'country' | 'region' | 'phone' | 'mail' | 'status'>
+    Pick<Project, 'responsible' | 'description' | 'details' | 'started_at' | 'country' | 'region' | 'phone' | 'mail' | 'status'>
   >
 
 export async function createProject(input: NewProject): Promise<Project> {

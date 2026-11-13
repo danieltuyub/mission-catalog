@@ -128,16 +128,25 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByAltText('Fachada')).toHaveAttribute('src', expect.stringContaining('a.webp'))
   })
 
-  it('has a Detalles section with a couple of paragraphs about the project', async () => {
+  it('shows the details from the database, one paragraph per blank-line block', async () => {
+    getProjectById.mockResolvedValue({ ...project, details: 'Primer párrafo.\n\nSegundo párrafo.\ncon salto.' })
     render(<ProjectDetailPage id="abc" />)
     await screen.findByRole('heading', { name: 'Iglesia Norte' })
     const section = screen.getByRole('region', { name: 'Detalles' })
     expect(within(section).getByRole('heading', { level: 2, name: 'Detalles' })).toBeInTheDocument()
     const paragraphs = section.querySelectorAll('p')
     expect(paragraphs).toHaveLength(2)
-    expect(paragraphs[0]).toHaveTextContent('Iglesia Norte')
-    expect(paragraphs[0]).toHaveTextContent('Yucatán')
-    expect(paragraphs[1]).toHaveTextContent('Ana Pérez')
+    expect(paragraphs[0]).toHaveTextContent('Primer párrafo.')
+    expect(paragraphs[1]).toHaveTextContent('Segundo párrafo. con salto.')
+  })
+
+  it.each([[null], [undefined], ['  \n\n ']])('says there are no details when it is %j', async (details) => {
+    getProjectById.mockResolvedValue({ ...project, details })
+    render(<ProjectDetailPage id="abc" />)
+    await screen.findByRole('heading', { name: 'Iglesia Norte' })
+    const section = screen.getByRole('region', { name: 'Detalles' })
+    expect(within(section).getByText('Sin detalles')).toBeInTheDocument()
+    expect(section).not.toHaveTextContent('nació como un grupo')
   })
 
   it('fills missing values with dashes', async () => {

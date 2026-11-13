@@ -49,6 +49,7 @@ describe('ProjectForm', () => {
         name: 'Casa Norte',
         responsible: null,
         description: null,
+        details: null,
         started_at: null,
         country: 'México',
         region: null,
@@ -58,6 +59,16 @@ describe('ProjectForm', () => {
       },
       images: [],
     })
+  })
+
+  it('sends the details text', async () => {
+    const { onSubmit } = setup()
+    await userEvent.type(screen.getByLabelText('Nombre *'), 'Casa')
+    await userEvent.type(screen.getByLabelText('Detalles'), 'Uno.{Enter}{Enter}Dos.')
+    await save()
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ project: expect.objectContaining({ details: 'Uno.\n\nDos.' }) }),
+    )
   })
 
   it('sends the chosen status and date', async () => {
