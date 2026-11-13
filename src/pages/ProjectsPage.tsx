@@ -6,6 +6,7 @@ import ProjectCard from '../components/ProjectCard'
 import ProjectFilters from '../components/ProjectFilters'
 import Select from '../components/Select'
 import SortDirectionToggle from '../components/SortDirectionToggle'
+import { useAuth } from '../hooks/useAuth'
 import { useFilterOptions } from '../hooks/useFilterOptions'
 import { useProjects } from '../hooks/useProjects'
 import { countActiveFilters } from '../services/filterUtils'
@@ -84,6 +85,7 @@ export default function ProjectsPage({
     filters: applied,
   })
   const filterOptions = useFilterOptions()
+  const { isAdmin } = useAuth()
 
   useEffect(() => () => window.clearTimeout(filterTimer.current), [])
 
@@ -270,7 +272,7 @@ export default function ProjectsPage({
             >
               {projects.map((project) => (
                 <li key={project.id}>
-                  <ProjectCard project={project} onOpen={() => markOpenedFromList(window.scrollY)} />
+                  <ProjectCard project={project} editable={isAdmin} onOpen={() => markOpenedFromList(window.scrollY)} />
                 </li>
               ))}
             </ul>

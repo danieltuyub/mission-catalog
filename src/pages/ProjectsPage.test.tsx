@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getAuthSnapshot } from '../services/authService'
 import type { Project } from '../types'
 
 const { getProjects, getProjectFilterOptions } = vi.hoisted(() => ({
@@ -69,6 +70,21 @@ describe('ProjectsPage', () => {
     expect(screen.getByText('Cargando proyectos…')).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Uno' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Dos' })).toBeInTheDocument()
+  })
+
+  it('shows an edit icon per project only to admins', async () => {
+    getProjects.mockResolvedValue(page([project('1', 'Uno'), project('2', 'Dos')]))
+    const { unmount } = render(<ProjectsPage />)
+    await screen.findByRole('heading', { name: 'Uno' })
+    expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
+    unmount()
+
+    vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+    render(<ProjectsPage />)
+    await screen.findByRole('heading', { name: 'Uno' })
+    const links = screen.getAllByRole('link', { name: 'Editar proyecto' })
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(['#/proyectos/1/editar?from=lista', '#/proyectos/2/editar?from=lista'])
+    vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: null, isAdmin: false })
   })
 
   it('shows the total next to the title, with an accessible label', async () => {

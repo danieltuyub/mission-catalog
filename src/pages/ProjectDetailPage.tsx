@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import EditProjectLink from '../components/EditProjectLink'
 import PageHeader from '../components/PageHeader'
 import PhotoCarousel from '../components/PhotoCarousel'
 import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
@@ -71,18 +72,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           </svg>
           Proyectos
         </a>
-        {isAdmin && project && (
-          <a
-            href={`#/proyectos/${project.id}/editar`}
-            aria-label="Editar proyecto"
-            title="Editar proyecto"
-            className="ml-auto inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
-            </svg>
-          </a>
-        )}
+        {isAdmin && project && <EditProjectLink id={project.id} className="ml-auto" />}
       </nav>
 
       {loading ? (

@@ -65,6 +65,17 @@ describe('ProjectCard', () => {
     expect(container.querySelector('img')).toHaveAttribute('src', expect.stringContaining('a.webp'))
   })
 
+  it('shows the edit icon only when editable, as its own link', async () => {
+    const onOpen = vi.fn()
+    const { rerender } = render(<ProjectCard project={base} onOpen={onOpen} />)
+    expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
+    rerender(<ProjectCard project={base} onOpen={onOpen} editable />)
+    const edit = screen.getByRole('link', { name: 'Editar proyecto' })
+    expect(edit).toHaveAttribute('href', '#/proyectos/1/editar?from=lista')
+    await userEvent.click(edit)
+    expect(onOpen).not.toHaveBeenCalled()
+  })
+
   it('fills missing values with dashes', () => {
     render(
       <ProjectCard

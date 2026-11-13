@@ -60,6 +60,14 @@ describe('App', () => {
       )
     })
 
+    it('matches the edit route with a ?from query', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      getProjectById.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', name: 'Casa Norte', status: 'open' })
+      window.location.hash = '#/proyectos/00000000-0000-0000-0000-000000000001/editar?from=lista'
+      render(<App />)
+      expect(await screen.findByRole('form', { name: 'Editar proyecto' })).toBeInTheDocument()
+    })
+
     it('shows the edit form to admins, loaded from the project', async () => {
       vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
       getProjectById.mockResolvedValue({

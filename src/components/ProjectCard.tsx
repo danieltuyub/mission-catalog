@@ -1,5 +1,6 @@
 import { projectPhotos } from '../services/projectImages'
 import type { Project } from '../types'
+import EditProjectLink from './EditProjectLink'
 import { STATUS_META } from './projectStatus'
 
 const EMPTY = '—'
@@ -8,9 +9,11 @@ interface Props {
   project: Project
   /** Called on a plain click on the card link (not for new-tab clicks). */
   onOpen?: () => void
+  /** Shows the edit icon (admins only). */
+  editable?: boolean
 }
 
-export default function ProjectCard({ project, onOpen }: Props) {
+export default function ProjectCard({ project, onOpen, editable = false }: Props) {
   const status = STATUS_META[project.status]
   const cover = projectPhotos(project)[0]
   const details = [
@@ -21,7 +24,7 @@ export default function ProjectCard({ project, onOpen }: Props) {
   ]
 
   return (
-    <article className="relative flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5 transition-shadow hover:shadow-md has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-brand-sage motion-reduce:transition-none sm:h-56 sm:flex-row">
+    <article className="relative flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5 transition-shadow hover:shadow-md has-[h3_a:focus-visible]:ring-2 has-[h3_a:focus-visible]:ring-brand-sage motion-reduce:transition-none sm:h-56 sm:flex-row">
       <div
         aria-hidden="true"
         className="flex h-44 shrink-0 items-center justify-center bg-stone-200 text-stone-400 sm:size-56"
@@ -37,8 +40,11 @@ export default function ProjectCard({ project, onOpen }: Props) {
         )}
       </div>
 
+      {/* Top-right corner: over the photo when stacked (mobile), over the text from sm. Above the stretched title link. */}
+      {editable && <EditProjectLink id={project.id} from="lista" className="absolute right-3 top-3 z-10 shadow-sm" />}
+
       <div className="flex min-w-0 flex-1 flex-col p-5">
-        <h3 className="truncate text-lg font-semibold text-brand-primary">
+        <h3 className={`truncate text-lg font-semibold text-brand-primary ${editable ? 'sm:pr-12' : ''}`}>
           {/* The whole card is the click target (stretched link). */}
           <a
             href={`#/proyectos/${project.id}`}
