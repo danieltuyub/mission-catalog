@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-export const ROUTES = ['mapa', 'proyectos', 'contacto'] as const
+export const ROUTES = ['mapa', 'proyectos', 'contacto', 'login'] as const
 export type Route = (typeof ROUTES)[number]
 
 function subscribe(onChange: () => void) {
@@ -8,7 +8,8 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener('hashchange', onChange)
 }
 
-const segments = () => window.location.hash.replace(/^#\/?/, '').split('/')
+// Ignore a `?query` (e.g. `#/login?next=...`) when matching routes.
+const segments = () => window.location.hash.replace(/^#\/?/, '').split('?')[0].split('/')
 
 function getRouteSnapshot(): Route {
   const [name] = segments()

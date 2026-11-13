@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth'
 import type { Route } from '../hooks/useRoute'
+import { signOut } from '../services/authService'
 
 const LINKS: { route: Route; label: string }[] = [
   { route: 'mapa', label: 'Mapa' },
@@ -9,6 +11,7 @@ const LINKS: { route: Route; label: string }[] = [
 
 export default function Navbar({ current }: { current: Route }) {
   const [open, setOpen] = useState(false)
+  const { email } = useAuth()
 
   useEffect(() => {
     if (!open) return
@@ -34,7 +37,7 @@ export default function Navbar({ current }: { current: Route }) {
 
         <ul
           id="main-menu"
-          className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:mt-0 md:flex md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
+          className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:ml-auto md:mt-0 md:flex md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
         >
           {LINKS.map(({ route, label }) => (
             <li key={route}>
@@ -52,7 +55,29 @@ export default function Navbar({ current }: { current: Route }) {
           ))}
         </ul>
 
-        <div className="flex items-center md:hidden">
+        <div className={`flex items-center gap-2 ${email ? 'md:ml-3' : 'md:hidden'}`}>
+          {email && (
+            <div className="flex h-10 items-center rounded-full bg-white/10 pr-1 text-sm sm:pl-4">
+              <span title={email} className="hidden max-w-40 truncate sm:inline">
+                {email}
+              </span>
+              <button
+                type="button"
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+                onClick={() => {
+                  void signOut().then(() => {
+                    window.location.hash = '#/mapa'
+                  })
+                }}
+                className="flex size-8 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand-sage sm:ml-1"
+              >
+                <svg viewBox="0 0 24 24" className="size-4 stroke-brand-blush" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                </svg>
+              </button>
+            </div>
+          )}
           <button
             type="button"
             aria-label={open ? 'Cerrar menú' : 'Abrir menú'}

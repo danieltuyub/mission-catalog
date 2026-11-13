@@ -7,6 +7,7 @@ import {
   useMap,
   useMapEvents,
 } from 'react-leaflet'
+import { useAuth } from '../hooks/useAuth'
 import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
@@ -74,6 +75,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 export default function MapView() {
   const [savedView] = useState(loadMapView)
   const { status, position, locate } = useGeolocation()
+  const { isAdmin } = useAuth()
   const { pins, error, addPin, editPin } = usePins()
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -113,7 +115,10 @@ export default function MapView() {
         <TrackpadNavigation />
         <LocateControl onLocate={locate} zoom={LOCATED_ZOOM} disabled={status === 'unsupported'} />
         <ClickHandler
-          onClick={(lat, lng) => (selectedId ? setSelectedId(null) : setDraft({ lat, lng }))}
+          onClick={(lat, lng) => {
+            if (selectedId) setSelectedId(null)
+            else if (isAdmin) setDraft({ lat, lng })
+          }}
         />
 
         {position && (
@@ -131,7 +136,7 @@ export default function MapView() {
         ))}
       </MapContainer>
 
-      <PinCard pin={selected} onClose={() => setSelectedId(null)} onEdit={(pin) => setEditingId(pin.id)} />
+      <PinCard pin={selected} onClose={() => setSelectedId(null)} onEdit={isAdmin ? (pin) => setEditingId(pin.id) : undefined} />
 
       {notice && (
         <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow">

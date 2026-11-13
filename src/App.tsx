@@ -1,12 +1,14 @@
+import type { ComponentType } from 'react'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
-import { useProjectId, useRoute } from './hooks/useRoute'
+import { useProjectId, useRoute, type Route } from './hooks/useRoute'
 import ContactPage from './pages/ContactPage'
+import LoginPage from './pages/LoginPage'
 import MapPage from './pages/MapPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import ProjectsPage from './pages/ProjectsPage'
 
-const PAGES = {
+const PAGES: Record<Exclude<Route, 'login'>, ComponentType> = {
   mapa: MapPage,
   proyectos: ProjectsPage,
   contacto: ContactPage,
@@ -15,6 +17,8 @@ const PAGES = {
 export default function App() {
   const route = useRoute()
   const projectId = useProjectId()
+  // The login is a standalone screen: no navbar or footer.
+  if (route === 'login') return <LoginPage />
   const Page = PAGES[route]
 
   return (

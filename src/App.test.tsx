@@ -22,6 +22,21 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Contáctanos' })).toHaveAttribute('href', '#/contacto')
   })
 
+  it('shows the login without navbar or footer', () => {
+    window.location.hash = '#/login'
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'Acceso' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Volver al mapa/ })).toHaveAttribute('href', '#/mapa')
+  })
+
+  it('matches the login route even with a query string', () => {
+    window.location.hash = '#/login?next=%2Fproyectos'
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'Acceso' })).toBeInTheDocument()
+  })
+
   it('shows the contact page for #/contacto', () => {
     window.location.hash = '#/contacto'
     render(<App />)
