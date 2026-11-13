@@ -48,6 +48,23 @@ describe('ProjectCard', () => {
     expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
+  it('shows the first photo by position as cover, or a placeholder', () => {
+    const { container, rerender } = render(<ProjectCard project={base} />)
+    expect(container.querySelector('img')).toBeNull()
+    rerender(
+      <ProjectCard
+        project={{
+          ...base,
+          project_images: [
+            { id: 'b', path: 'b.webp', position: 1, alt: null },
+            { id: 'a', path: 'a.webp', position: 0, alt: null },
+          ],
+        }}
+      />,
+    )
+    expect(container.querySelector('img')).toHaveAttribute('src', expect.stringContaining('a.webp'))
+  })
+
   it('fills missing values with dashes', () => {
     render(
       <ProjectCard

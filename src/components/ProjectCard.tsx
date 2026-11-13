@@ -1,3 +1,4 @@
+import { projectPhotos } from '../services/projectImages'
 import type { Project } from '../types'
 import { STATUS_META } from './projectStatus'
 
@@ -11,6 +12,7 @@ interface Props {
 
 export default function ProjectCard({ project, onOpen }: Props) {
   const status = STATUS_META[project.status]
+  const cover = projectPhotos(project)[0]
   const details = [
     { label: 'País', value: project.country },
     { label: 'Región', value: project.region },
@@ -24,11 +26,15 @@ export default function ProjectCard({ project, onOpen }: Props) {
         aria-hidden="true"
         className="flex h-44 shrink-0 items-center justify-center bg-stone-200 text-stone-400 sm:size-56"
       >
-        <svg viewBox="0 0 24 24" className="size-10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <circle cx="8.5" cy="9.5" r="1.5" />
-          <path d="M21 16l-5-5-8 8" />
-        </svg>
+        {cover ? (
+          <img src={cover.src} alt="" loading="lazy" className="size-full object-cover" />
+        ) : (
+          <svg viewBox="0 0 24 24" className="size-10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <circle cx="8.5" cy="9.5" r="1.5" />
+            <path d="M21 16l-5-5-8 8" />
+          </svg>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col p-5">

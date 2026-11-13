@@ -1,2 +1,2 @@
 export type { Pin } from './pin'
-export type { Project, ProjectStatus } from './project'
+export type { Project, ProjectImage, ProjectStatus } from './project'

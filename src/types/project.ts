@@ -1,5 +1,13 @@
 export type ProjectStatus = 'open' | 'closed' | 'paused'
 
+export interface ProjectImage {
+  id: string
+  /** Path inside the `project-images` bucket. */
+  path: string
+  position: number
+  alt: string | null
+}
+
 export interface Project {
   id: string
   name: string
@@ -14,4 +22,6 @@ export interface Project {
   status: ProjectStatus
   created_at: string
   updated_at: string
+  /** Present when the query embeds `project_images`. */
+  project_images?: ProjectImage[]
 }

@@ -114,6 +114,20 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByRole('button', { name: /Ir a la foto/ })).toHaveLength(3)
   })
 
+  it('shows the real photos in the carousel when the project has them', async () => {
+    getProjectById.mockResolvedValue({
+      ...project,
+      project_images: [
+        { id: 'a', path: 'a.webp', position: 0, alt: 'Fachada' },
+        { id: 'b', path: 'b.webp', position: 1, alt: null },
+      ],
+    })
+    render(<ProjectDetailPage id="abc" />)
+    await screen.findByRole('heading', { name: 'Iglesia Norte' })
+    expect(screen.getAllByRole('button', { name: /Ir a la foto/ })).toHaveLength(2)
+    expect(screen.getByAltText('Fachada')).toHaveAttribute('src', expect.stringContaining('a.webp'))
+  })
+
   it('has a Detalles section with a couple of paragraphs about the project', async () => {
     render(<ProjectDetailPage id="abc" />)
     await screen.findByRole('heading', { name: 'Iglesia Norte' })

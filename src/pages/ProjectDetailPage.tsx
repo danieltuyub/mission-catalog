@@ -5,6 +5,7 @@ import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
 import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
 import { useProject } from '../hooks/useProject'
+import { projectPhotos } from '../services/projectImages'
 import { clearOpenedFromList, loadOpenedFromList, resetListContext } from '../services/projectsViewStorage'
 import type { Project } from '../types'
 import { SKELETON_DELAY_MS } from './projectsConfig'
@@ -99,8 +100,8 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           {project && (
             <article className="rounded-2xl bg-white p-5 shadow ring-1 ring-black/5 md:p-6 lg:p-8">
               <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-8">
-                {/* Placeholders until the projects have photos. */}
-                <PhotoCarousel />
+                {/* Placeholder slides when the project has no photos. */}
+                <PhotoCarousel photos={projectPhotos(project)} />
                 <div className="min-w-0 space-y-6">
                   <p className="leading-relaxed text-stone-600">{project.description || 'Sin descripción'}</p>
                   <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
