@@ -4,6 +4,7 @@ import RequireAuth from '../components/RequireAuth'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { changePassword, MIN_PASSWORD_LENGTH, updateProfile, type Profile } from '../services/accountService'
+import { setProfileNames } from '../services/authService'
 
 const control =
   'mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage aria-invalid:border-red-500'
@@ -50,7 +51,9 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
     setSaving(true)
     setError(null)
     try {
-      await updateProfile(userId, { first_name: firstName.trim(), last_name: lastName.trim() })
+      const saved = { first_name: firstName.trim(), last_name: lastName.trim() }
+      await updateProfile(userId, saved)
+      setProfileNames(saved.first_name, saved.last_name)
       setDone('Cambios guardados')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron guardar los cambios')

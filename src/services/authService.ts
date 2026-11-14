@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
+import { getProfile } from './accountService'
 import { supabase } from './supabaseClient'
 
 export interface AuthState {
@@ -8,11 +9,14 @@ export interface AuthState {
   email: string | null
   /** What the user may do (`'*'` for admins). Empty for guests. Use `can()` to check. */
   permissions: string[]
+  /** From the user's profile; empty until loaded or when not filled in yet. */
+  firstName: string
+  lastName: string
 }
 
-const SIGNED_OUT: AuthState = { loading: false, userId: null, email: null, permissions: [] }
+const SIGNED_OUT: AuthState = { loading: false, userId: null, email: null, permissions: [], firstName: '', lastName: '' }
 
-let state: AuthState = { loading: true, userId: null, email: null, permissions: [] }
+let state: AuthState = { loading: true, userId: null, email: null, permissions: [], firstName: '', lastName: '' }
 let started = false
 let resolveId = 0
 const listeners = new Set<() => void>()
@@ -27,11 +31,21 @@ async function resolve(session: Session | null) {
   if (!session) return setState(SIGNED_OUT)
   const userId = session.user.id
   const email = session.user.email ?? null
-  setState({ loading: true, userId, email, permissions: [] })
-  const { data, error } = await supabase.rpc('my_permissions')
+  setState({ loading: true, userId, email, permissions: [], firstName: '', lastName: '' })
+  const [{ data, error }, profile] = await Promise.all([
+    supabase.rpc('my_permissions'),
+    getProfile(userId).catch(() => null), // the name is a nicety: never block the session on it
+  ])
   if (id !== resolveId) return // a newer session change won
   const permissions = !error && Array.isArray(data?.permissions) ? (data.permissions as string[]) : []
-  setState({ loading: false, userId, email, permissions })
+  setState({
+    loading: false,
+    userId,
+    email,
+    permissions,
+    firstName: profile?.first_name ?? '',
+    lastName: profile?.last_name ?? '',
+  })
 }
 
 function start() {
@@ -41,6 +55,11 @@ function start() {
   supabase.auth.onAuthStateChange((_event, session) => {
     setTimeout(() => void resolve(session), 0)
   })
+}
+
+/** Keeps the name in the navbar in sync after the user edits their profile. */
+export function setProfileNames(firstName: string, lastName: string): void {
+  setState({ ...state, firstName, lastName })
 }
 
 export function subscribeAuth(listener: () => void): () => void {

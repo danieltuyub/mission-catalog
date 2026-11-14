@@ -12,7 +12,7 @@ const LINKS: { route: Route; label: string }[] = [
 export default function Navbar({ current }: { current: Route }) {
   const [open, setOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
-  const { email, loading } = useAuth()
+  const { email, loading, firstName, lastName } = useAuth()
 
   // The mobile menu and the user menu never stay open together.
   const changeUserOpen = (next: boolean) => {
@@ -79,7 +79,16 @@ export default function Navbar({ current }: { current: Route }) {
         </ul>
 
         <div className={`flex items-center gap-2 ${email ? 'md:ml-3' : 'md:hidden'}`}>
-          {email && <UserMenu email={email} open={userOpen} onOpenChange={changeUserOpen} />}
+          {email && (
+            <UserMenu
+              email={email}
+              firstName={firstName}
+              lastName={lastName}
+              loading={loading}
+              open={userOpen}
+              onOpenChange={changeUserOpen}
+            />
+          )}
           <button
             type="button"
             aria-label={open ? 'Cerrar menú' : 'Abrir menú'}

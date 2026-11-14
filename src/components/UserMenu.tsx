@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { signOut } from '../services/authService'
+import { fullName, initials } from '../services/displayName'
 
 interface Props {
   email: string
+  firstName: string
+  lastName: string
+  /** True while the session (and the profile) is still being resolved. */
+  loading: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -13,7 +18,11 @@ const Icon = ({ d, className }: { d: string; className: string }) => (
   </svg>
 )
 
-export default function UserMenu({ email, open, onOpenChange }: Props) {
+export default function UserMenu({ email, firstName, lastName, loading, open, onOpenChange }: Props) {
+  const name = fullName(firstName, lastName)
+  const letters = initials(firstName, lastName)
+  // The first name is required in "Mi cuenta", so an empty one means the profile is not filled in.
+  // Not while loading: the names are not known yet.
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
 
@@ -43,7 +52,7 @@ export default function UserMenu({ email, open, onOpenChange }: Props) {
       <button
         ref={trigger}
         type="button"
-        aria-label="Menú de usuario"
+        aria-label={name ? `Menú de usuario de ${name}` : 'Menú de usuario'}
         aria-expanded={open}
         aria-controls="user-menu"
         onClick={() => onOpenChange(!open)}
@@ -51,11 +60,17 @@ export default function UserMenu({ email, open, onOpenChange }: Props) {
           open ? 'bg-brand-sage text-brand-primary' : 'bg-white/10 text-brand-blush hover:bg-white/20'
         }`}
       >
-        {/* Head and shoulders */}
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
+        {letters ? (
+          <span aria-hidden="true" className="text-sm font-semibold">
+            {letters}
+          </span>
+        ) : (
+          /* Head and shoulders */
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        )}
       </button>
 
       {/* Always mounted so closing can animate; `inert` keeps it out of reach while hidden. */}
@@ -67,10 +82,31 @@ export default function UserMenu({ email, open, onOpenChange }: Props) {
         }`}
       >
         <div className="px-3 py-2">
-          <p className="text-xs text-brand-blush/60">Sesión iniciada</p>
-          <p title={email} className="truncate text-sm">
-            {email}
-          </p>
+          {name ? (
+            <>
+              <p title={name} className="truncate text-sm font-medium">
+                {name}
+              </p>
+              <p title={email} className="truncate text-xs text-brand-blush/60">
+                {email}
+              </p>
+            </>
+          ) : (
+            <>
+              <p title={email} className="truncate text-sm">
+                {email}
+              </p>
+              {!loading && !firstName.trim() && (
+                <a
+                  href="#/cuenta"
+                  onClick={() => onOpenChange(false)}
+                  className="text-xs text-brand-blush/70 underline underline-offset-2 hover:text-brand-blush focus-visible:outline-2 focus-visible:outline-brand-sage"
+                >
+                  Completa tu nombre
+                </a>
+              )}
+            </>
+          )}
         </div>
         <div role="separator" className="my-1 h-px bg-white/10" />
         <a

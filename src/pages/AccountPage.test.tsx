@@ -9,7 +9,7 @@ const svc = vi.hoisted(() => ({
 }))
 vi.mock('../services/accountService', () => ({ ...svc, MIN_PASSWORD_LENGTH: 8 }))
 
-import { getAuthSnapshot } from '../services/authService'
+import { getAuthSnapshot, setProfileNames } from '../services/authService'
 import { SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import AccountPage from './AccountPage'
 
@@ -18,6 +18,7 @@ beforeEach(() => {
   svc.getProfile.mockResolvedValue({ first_name: 'Ana', last_name: 'Pérez' })
   svc.updateProfile.mockResolvedValue(undefined)
   svc.changePassword.mockResolvedValue(undefined)
+  vi.mocked(setProfileNames).mockClear()
   vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
 })
 afterEach(() => {
@@ -54,6 +55,8 @@ describe('AccountPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(svc.updateProfile).toHaveBeenCalledWith('sub-1', { first_name: 'Lucía', last_name: 'Pérez' })
     expect(await screen.findByRole('status')).toHaveTextContent('Cambios guardados')
+    // The navbar menu shows the new name without a reload.
+    expect(setProfileNames).toHaveBeenCalledWith('Lucía', 'Pérez')
   })
 
   it('requires a first name', async () => {
@@ -69,6 +72,7 @@ describe('AccountPage', () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('No se encontró tu perfil')
+    expect(setProfileNames).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
   })
 

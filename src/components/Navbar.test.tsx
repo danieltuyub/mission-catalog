@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { ADMIN, LOADING, SIGNED_OUT } from '../test/auth'
+import { ADMIN, LOADING, NAMED, SIGNED_OUT } from '../test/auth'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot, signOut } from '../services/authService'
@@ -72,6 +72,43 @@ describe('Navbar', () => {
       expect(panel()).not.toHaveAttribute('inert')
       await userEvent.click(document.body)
       expect(panel()).toHaveAttribute('inert')
+    })
+
+    it('shows the initials on the button and the name above the email', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(NAMED)
+      render(<Navbar current="mapa" />)
+      const trigger = screen.getByRole('button', { name: 'Menú de usuario de Ana Pérez' })
+      expect(trigger).toHaveTextContent('AP')
+      await userEvent.click(trigger)
+      expect(within(panel()).getByText('Ana Pérez')).toBeInTheDocument()
+      expect(within(panel()).getByText('a@b.com')).toBeInTheDocument()
+      expect(within(panel()).queryByText('Completa tu nombre')).not.toBeInTheDocument()
+      expect(within(panel()).queryByText('Sesión iniciada')).not.toBeInTheDocument()
+    })
+
+    it('shows a single initial and just the first name when there is no last name', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ ...NAMED, lastName: '' })
+      render(<Navbar current="mapa" />)
+      expect(screen.getByRole('button', { name: 'Menú de usuario de Ana' })).toHaveTextContent('A')
+      expect(within(panel()).getByText('Ana')).toBeInTheDocument()
+      expect(within(panel()).queryByText('Completa tu nombre')).not.toBeInTheDocument()
+    })
+
+    it('asks to complete the name, linking to the account page, when the profile is empty', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      render(<Navbar current="mapa" />)
+      const nudge = within(panel()).getByRole('link', { name: 'Completa tu nombre' })
+      expect(nudge).toHaveAttribute('href', '#/cuenta')
+      expect(within(panel()).getByText('a@b.com')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
+      await userEvent.click(nudge)
+      expect(panel()).toHaveAttribute('inert')
+    })
+
+    it('does not nag about the name while the profile is still loading', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ ...ADMIN, loading: true })
+      render(<Navbar current="mapa" />)
+      expect(within(panel()).queryByText('Completa tu nombre')).not.toBeInTheDocument()
     })
 
     it('links to the account page from the user menu', async () => {

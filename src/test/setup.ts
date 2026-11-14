@@ -13,6 +13,7 @@ vi.mock('../services/authService', async () => {
   return {
     getAuthSnapshot: vi.fn(() => SIGNED_OUT),
     subscribeAuth: vi.fn(() => () => {}),
+    setProfileNames: vi.fn(),
     signIn: vi.fn(),
     signOut: vi.fn(),
   }

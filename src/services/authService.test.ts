@@ -5,6 +5,7 @@ const sb = vi.hoisted(() => ({
   signOut: vi.fn(),
   onAuthStateChange: vi.fn(),
   rpc: vi.fn(),
+  maybeSingle: vi.fn(),
 }))
 
 vi.mock('./supabaseClient', () => ({
@@ -15,11 +16,12 @@ vi.mock('./supabaseClient', () => ({
       onAuthStateChange: sb.onAuthStateChange,
     },
     rpc: sb.rpc,
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: sb.maybeSingle }) }) }),
   },
 }))
 
 // setup.ts mocks the module globally; these tests need the real one.
-const { getAuthSnapshot, signIn, signOut, subscribeAuth } = await vi.importActual<
+const { getAuthSnapshot, setProfileNames, signIn, signOut, subscribeAuth } = await vi.importActual<
   typeof import('./authService')
 >('./authService')
 
@@ -68,6 +70,7 @@ describe('auth state', () => {
 
   it('resolves the permissions for a session and clears them on sign out', async () => {
     sb.rpc.mockResolvedValue({ data: { roles: ['creator'], permissions: ['projects.create'] }, error: null })
+    sb.maybeSingle.mockResolvedValue({ data: { first_name: 'Ana', last_name: 'Pérez' }, error: null })
     emit('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.com' } })
     await vi.waitFor(() =>
       expect(getAuthSnapshot()).toEqual({
@@ -75,30 +78,78 @@ describe('auth state', () => {
         userId: 'u1',
         email: 'a@b.com',
         permissions: ['projects.create'],
+        firstName: 'Ana',
+        lastName: 'Pérez',
       }),
     )
     expect(sb.rpc).toHaveBeenCalledWith('my_permissions')
 
     emit('SIGNED_OUT', null)
     await vi.waitFor(() =>
-      expect(getAuthSnapshot()).toEqual({ loading: false, userId: null, email: null, permissions: [] }),
+      expect(getAuthSnapshot()).toEqual({
+        loading: false,
+        userId: null,
+        email: null,
+        permissions: [],
+        firstName: '',
+        lastName: '',
+      }),
     )
     expect(listener).toHaveBeenCalled()
   })
 
   it('has no permissions when loading them fails', async () => {
     sb.rpc.mockResolvedValue({ data: null, error: new Error('x') })
+    sb.maybeSingle.mockResolvedValue({ data: null, error: null })
     emit('SIGNED_IN', { user: { id: 'u2', email: 'c@d.com' } })
     await vi.waitFor(() =>
-      expect(getAuthSnapshot()).toEqual({ loading: false, userId: 'u2', email: 'c@d.com', permissions: [] }),
+      expect(getAuthSnapshot()).toEqual({
+        loading: false,
+        userId: 'u2',
+        email: 'c@d.com',
+        permissions: [],
+        firstName: '',
+        lastName: '',
+      }),
     )
   })
 
   it('has no permissions when the response is malformed', async () => {
     sb.rpc.mockResolvedValue({ data: { permissions: 'nope' }, error: null })
+    sb.maybeSingle.mockResolvedValue({ data: null, error: null })
     emit('SIGNED_IN', { user: { id: 'u3', email: 'e@f.com' } })
     await vi.waitFor(() =>
-      expect(getAuthSnapshot()).toEqual({ loading: false, userId: 'u3', email: 'e@f.com', permissions: [] }),
+      expect(getAuthSnapshot()).toEqual({
+        loading: false,
+        userId: 'u3',
+        email: 'e@f.com',
+        permissions: [],
+        firstName: '',
+        lastName: '',
+      }),
     )
+  })
+
+  it('keeps the session and permissions when the profile cannot be loaded', async () => {
+    sb.rpc.mockResolvedValue({ data: { permissions: ['projects.save'] }, error: null })
+    sb.maybeSingle.mockResolvedValue({ data: null, error: new Error('rls') })
+    emit('SIGNED_IN', { user: { id: 'u4', email: 'g@h.com' } })
+    await vi.waitFor(() =>
+      expect(getAuthSnapshot()).toEqual({
+        loading: false,
+        userId: 'u4',
+        email: 'g@h.com',
+        permissions: ['projects.save'],
+        firstName: '',
+        lastName: '',
+      }),
+    )
+  })
+
+  it('setProfileNames updates the names and notifies subscribers', () => {
+    listener.mockClear()
+    setProfileNames('Lucía', 'Gómez')
+    expect(getAuthSnapshot()).toMatchObject({ userId: 'u4', firstName: 'Lucía', lastName: 'Gómez' })
+    expect(listener).toHaveBeenCalled()
   })
 })
