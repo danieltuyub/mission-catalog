@@ -12,10 +12,12 @@ const control =
 const submitButton =
   'h-10 rounded-full bg-brand-primary px-6 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50'
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Section({ id, title, className = '', children }: { id: string; title: string; className?: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl bg-white p-6 shadow ring-1 ring-black/5">
-      <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-stone-500">{title}</h2>
+    <section aria-labelledby={id} className={className}>
+      <h2 id={id} className="mb-4 text-xs font-semibold uppercase tracking-wide text-stone-500">
+        {title}
+      </h2>
       {children}
     </section>
   )
@@ -176,8 +178,9 @@ function Account({ userId, email }: { userId: string; email: string }) {
   return (
     <div className="mx-auto w-[94%] max-w-3xl">
       <PageHeader title="Mi cuenta" />
-      <div className="space-y-5">
-        <Card title="Datos personales">
+      {/* One panel, two sections: each has its own form and button. */}
+      <div className="space-y-6 rounded-2xl bg-white p-6 shadow ring-1 ring-black/5">
+        <Section id="account-profile" title="Datos personales">
           {loading && <p className="py-6 text-center text-stone-500">Cargando…</p>}
           {error && (
             <p role="alert" className="text-sm text-red-700">
@@ -186,10 +189,10 @@ function Account({ userId, email }: { userId: string; email: string }) {
           )}
           {!loading && !error && !profile && <p className="text-sm text-stone-500">No se encontró tu perfil.</p>}
           {profile && <ProfileForm userId={userId} email={email} initial={profile} />}
-        </Card>
-        <Card title="Contraseña">
+        </Section>
+        <Section id="account-password-section" title="Contraseña" className="border-t border-stone-200 pt-6">
           <PasswordForm />
-        </Card>
+        </Section>
       </div>
     </div>
   )

@@ -40,6 +40,14 @@ describe('AccountPage', () => {
     expect(window.location.hash).toBe('#/login?next=%2Fcuenta')
   })
 
+  it('keeps both sections in a single panel', async () => {
+    await open()
+    const profile = screen.getByRole('region', { name: 'Datos personales' })
+    const password = screen.getByRole('region', { name: 'Contraseña' })
+    expect(profile.parentElement).toBe(password.parentElement)
+    expect(profile.parentElement).toHaveClass('rounded-2xl')
+  })
+
   it('shows the email and the saved names', async () => {
     await open()
     expect(svc.getProfile).toHaveBeenCalledWith('sub-1')
