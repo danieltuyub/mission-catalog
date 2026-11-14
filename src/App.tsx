@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
 import RequireAuth from './components/RequireAuth'
+import Toaster from './components/Toaster'
 import { useEditProjectId, useIsNewProject, useProjectId, useRoute, type Route } from './hooks/useRoute'
 import AccountPage from './pages/AccountPage'
 import ContactPage from './pages/ContactPage'
@@ -47,6 +48,7 @@ export default function App() {
         )}
       </main>
       <Footer />
+      <Toaster />
     </div>
   )
 }

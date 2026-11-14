@@ -9,6 +9,7 @@ import SortDirectionToggle from '../components/SortDirectionToggle'
 import { useAuth } from '../hooks/useAuth'
 import { useFilterOptions } from '../hooks/useFilterOptions'
 import { useProjects } from '../hooks/useProjects'
+import { useSavedProjects } from '../hooks/useSavedProjects'
 import { countActiveFilters } from '../services/filterUtils'
 import { canEditProject } from '../services/permissions'
 import {
@@ -87,6 +88,7 @@ export default function ProjectsPage({
   })
   const filterOptions = useFilterOptions()
   const auth = useAuth()
+  const { isSaved, toggle: toggleSaved, loading: savedLoading } = useSavedProjects()
 
   useEffect(() => () => window.clearTimeout(filterTimer.current), [])
 
@@ -273,7 +275,14 @@ export default function ProjectsPage({
             >
               {projects.map((project) => (
                 <li key={project.id}>
-                  <ProjectCard project={project} editable={canEditProject(auth, project)} onOpen={() => markOpenedFromList(window.scrollY)} />
+                  <ProjectCard
+                    project={project}
+                    editable={canEditProject(auth, project)}
+                    saved={isSaved(project.id)}
+                    onToggleSaved={() => toggleSaved(project.id)}
+                    saveDisabled={savedLoading}
+                    onOpen={() => markOpenedFromList(window.scrollY)}
+                  />
                 </li>
               ))}
             </ul>

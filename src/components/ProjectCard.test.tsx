@@ -84,6 +84,41 @@ describe('ProjectCard', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+  describe('save heart', () => {
+    it('is not shown without a handler', () => {
+      render(<ProjectCard project={base} />)
+      expect(screen.queryByRole('button', { name: 'Guardar proyecto' })).not.toBeInTheDocument()
+    })
+
+    it('reflects the saved state and calls the handler without opening the card', async () => {
+      const onToggleSaved = vi.fn()
+      const onOpen = vi.fn()
+      const { rerender } = render(<ProjectCard project={base} onToggleSaved={onToggleSaved} onOpen={onOpen} />)
+      const heart = screen.getByRole('button', { name: 'Guardar proyecto' })
+      expect(heart).toHaveAttribute('aria-pressed', 'false')
+      expect(heart).toHaveAttribute('title', 'Guardar proyecto')
+      await userEvent.click(heart)
+      expect(onToggleSaved).toHaveBeenCalledOnce()
+      expect(onOpen).not.toHaveBeenCalled()
+
+      rerender(<ProjectCard project={base} saved onToggleSaved={onToggleSaved} />)
+      expect(screen.getByRole('button', { name: 'Guardar proyecto' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'Guardar proyecto' })).toHaveAttribute('title', 'Quitar de guardados')
+    })
+
+    it('can be disabled while loading', () => {
+      render(<ProjectCard project={base} onToggleSaved={() => {}} saveDisabled />)
+      expect(screen.getByRole('button', { name: 'Guardar proyecto' })).toBeDisabled()
+    })
+
+    it('sits next to the edit icon, before it', () => {
+      render(<ProjectCard project={base} editable onToggleSaved={() => {}} />)
+      const heart = screen.getByRole('button', { name: 'Guardar proyecto' })
+      const edit = screen.getByRole('link', { name: 'Editar proyecto' })
+      expect(heart.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+  })
+
   it('fills missing values with dashes', () => {
     render(
       <ProjectCard

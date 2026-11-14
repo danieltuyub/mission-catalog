@@ -2,11 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react'
 import EditProjectLink from '../components/EditProjectLink'
 import PageHeader from '../components/PageHeader'
 import PhotoCarousel from '../components/PhotoCarousel'
+import SaveProjectButton from '../components/SaveProjectButton'
 import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
 import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
 import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
+import { useSavedProjects } from '../hooks/useSavedProjects'
 import { loginUrl } from '../services/authRedirect'
 import { canEditProject } from '../services/permissions'
 import { projectPhotos } from '../services/projectImages'
@@ -48,6 +50,7 @@ const linkClass =
 export default function ProjectDetailPage({ id }: { id: string }) {
   const { project, loading, error, full } = useProject(id)
   const auth = useAuth()
+  const { isSaved, toggle: toggleSaved, loading: savedLoading } = useSavedProjects()
   const showSkeleton = useDelayed(loading, SKELETON_DELAY_MS)
   // True when opened from the list (its filters, sort and page are kept for the way back).
   const [fromList] = useState(() => loadOpenedFromList())
@@ -82,7 +85,16 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           </svg>
           Proyectos
         </a>
-        {project && canEditProject(auth, project) && <EditProjectLink id={project.id} className="ml-auto" />}
+        {project && (
+          <div className="ml-auto flex items-center gap-2">
+            <SaveProjectButton
+              saved={isSaved(project.id)}
+              onToggle={() => toggleSaved(project.id)}
+              disabled={savedLoading}
+            />
+            {canEditProject(auth, project) && <EditProjectLink id={project.id} />}
+          </div>
+        )}
       </nav>
 
       {loading ? (

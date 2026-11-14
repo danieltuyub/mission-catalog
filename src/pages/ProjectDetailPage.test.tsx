@@ -1,4 +1,5 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { ADMIN, CREATOR, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Project } from '../types'
@@ -25,6 +26,8 @@ import {
   saveSort,
 } from '../services/projectsViewStorage'
 import { getAuthSnapshot } from '../services/authService'
+import { listSavedProjectIds, saveProject, unsaveProject } from '../services/savedProjects'
+import { getToast } from '../services/toast'
 import ProjectDetailPage from './ProjectDetailPage'
 
 const project: Project = {
@@ -112,6 +115,42 @@ describe('ProjectDetailPage', () => {
         await vi.advanceTimersByTimeAsync(500)
       })
       expect(screen.queryByRole('status', { hidden: true })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('save heart', () => {
+    it('is shown to members, marked when saved, and sits before the edit icon', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      vi.mocked(listSavedProjectIds).mockResolvedValue([project.id])
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      const heart = screen.getByRole('button', { name: 'Guardar proyecto' })
+      await waitFor(() => expect(heart).toHaveAttribute('aria-pressed', 'true'))
+      const edit = screen.getByRole('link', { name: 'Editar proyecto' })
+      expect(heart.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    it('saves and unsaves with a toast', async () => {
+      vi.mocked(listSavedProjectIds).mockResolvedValue([])
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      const heart = screen.getByRole('button', { name: 'Guardar proyecto' })
+      await waitFor(() => expect(heart).toBeEnabled())
+      await userEvent.click(heart)
+      expect(saveProject).toHaveBeenCalledWith(project.id)
+      await waitFor(() => expect(heart).toHaveAttribute('aria-pressed', 'true'))
+      await userEvent.click(heart)
+      expect(unsaveProject).toHaveBeenCalledWith(project.id)
+      await waitFor(() => expect(getToast()?.message).toBe('Proyecto quitado de guardados'))
+    })
+
+    it('is shown to guests too, who are asked to sign in without leaving the page', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+      getProjectById.mockResolvedValue(project)
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar proyecto' }))
+      expect(getToast()?.message).toBe('Inicia sesión para guardar proyectos')
     })
   })
 

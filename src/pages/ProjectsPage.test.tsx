@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { ADMIN, CREATOR, SIGNED_OUT } from '../test/auth'
+import { ADMIN, CREATOR, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot } from '../services/authService'
+import { listSavedProjectIds, saveProject } from '../services/savedProjects'
+import { getToast } from '../services/toast'
 import type { Project } from '../types'
 
 const { getProjects, getProjectFilterOptions } = vi.hoisted(() => ({
@@ -102,6 +104,48 @@ describe('ProjectsPage', () => {
     const links = screen.getAllByRole('link', { name: 'Editar proyecto' })
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['#/proyectos/1/editar?from=lista'])
     vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+  })
+
+  describe('saved projects', () => {
+    beforeEach(() => {
+      getProjects.mockResolvedValue(page([project('1', 'Uno'), project('2', 'Dos')]))
+    })
+    afterEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+    })
+
+    it('shows a heart on every project, also to guests, who are asked to sign in', async () => {
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      const hearts = screen.getAllByRole('button', { name: 'Guardar proyecto' })
+      expect(hearts).toHaveLength(2)
+      await userEvent.click(hearts[0])
+      expect(getToast()?.message).toBe('Inicia sesión para guardar proyectos')
+      expect(window.location.hash).toBe('')
+    })
+
+    it('marks the ones the user already saved', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      vi.mocked(listSavedProjectIds).mockResolvedValue(['2'])
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      await waitFor(() => {
+        const [one, two] = screen.getAllByRole('button', { name: 'Guardar proyecto' })
+        expect(one).toHaveAttribute('aria-pressed', 'false')
+        expect(two).toHaveAttribute('aria-pressed', 'true')
+      })
+    })
+
+    it('saves from the card and confirms with a toast', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      await waitFor(() => expect(screen.getAllByRole('button', { name: 'Guardar proyecto' })[0]).toBeEnabled())
+      await userEvent.click(screen.getAllByRole('button', { name: 'Guardar proyecto' })[0])
+      expect(saveProject).toHaveBeenCalledWith('1')
+      await waitFor(() => expect(getToast()?.message).toBe('Proyecto guardado'))
+      expect(screen.getAllByRole('button', { name: 'Guardar proyecto' })[0]).toHaveAttribute('aria-pressed', 'true')
+    })
   })
 
   it('shows the total next to the title, with an accessible label', async () => {

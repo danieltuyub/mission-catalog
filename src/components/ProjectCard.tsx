@@ -1,6 +1,7 @@
 import { projectPhotos } from '../services/projectImages'
 import type { Project } from '../types'
 import EditProjectLink from './EditProjectLink'
+import SaveProjectButton from './SaveProjectButton'
 import { STATUS_META } from './projectStatus'
 
 const EMPTY = '—'
@@ -21,9 +22,21 @@ interface Props {
   onOpen?: () => void
   /** Shows the edit icon (admins only). */
   editable?: boolean
+  /** Shows the heart when `onToggleSaved` is given. */
+  saved?: boolean
+  onToggleSaved?: () => void
+  /** While the session or the saved marks are still loading. */
+  saveDisabled?: boolean
 }
 
-export default function ProjectCard({ project, onOpen, editable = false }: Props) {
+export default function ProjectCard({
+  project,
+  onOpen,
+  editable = false,
+  saved = false,
+  onToggleSaved,
+  saveDisabled = false,
+}: Props) {
   const status = STATUS_META[project.status]
   const cover = projectPhotos(project)[0]
   const details = [
@@ -54,10 +67,21 @@ export default function ProjectCard({ project, onOpen, editable = false }: Props
       </div>
 
       {/* Top-right corner: over the photo when stacked (mobile), over the text from sm. Above the stretched title link. */}
-      {editable && <EditProjectLink id={project.id} from="lista" className="absolute right-3 top-3 z-10 shadow-sm" />}
+      {(onToggleSaved || editable) && (
+        <div className="absolute right-3 top-3 z-10 flex gap-2">
+          {onToggleSaved && (
+            <SaveProjectButton saved={saved} onToggle={onToggleSaved} disabled={saveDisabled} className="shadow-sm" />
+          )}
+          {editable && <EditProjectLink id={project.id} from="lista" className="shadow-sm" />}
+        </div>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col p-5">
-        <h3 className={`truncate text-lg font-semibold text-brand-primary ${editable ? 'sm:pr-12' : ''}`}>
+        <h3
+          className={`truncate text-lg font-semibold text-brand-primary ${
+            onToggleSaved && editable ? 'sm:pr-24' : onToggleSaved || editable ? 'sm:pr-12' : ''
+          }`}
+        >
           {/* The whole card is the click target (stretched link). */}
           <a
             href={`#/proyectos/${project.id}`}
