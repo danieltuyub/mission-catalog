@@ -39,7 +39,8 @@ describe('getProjects', () => {
   it('does not load the long details text in the list', async () => {
     await getProjects()
     const columns = select.mock.calls[0][0] as string
-    expect(columns).not.toMatch(/(^|[ ,])\*|details/)
+    expect(columns).not.toMatch(/(^|[ ,])\*|details|phone|mail/)
+    expect(columns).toContain('created_by')
     expect(columns).toContain('project_images(')
   })
 
@@ -131,6 +132,14 @@ describe('getProjectFilterOptions', () => {
 })
 
 describe('getProjectById', () => {
+  it('loads only the summary for guests (the database withholds the rest)', async () => {
+    select.mockClear()
+    maybeSingle.mockResolvedValue({ data: { id: 'x' }, error: null })
+    await getProjectById('00000000-0000-0000-0000-000000000001', false)
+    const columns = select.mock.calls[0][0] as string
+    expect(columns).not.toMatch(/(^|[ ,])\*|details|phone|mail/)
+  })
+
   it('loads every column, including details', async () => {
     select.mockClear()
     maybeSingle.mockResolvedValue({ data: { id: 'x', details: 'texto' }, error: null })

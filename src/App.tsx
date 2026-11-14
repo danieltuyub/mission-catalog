@@ -3,6 +3,7 @@ import Footer from './components/Footer'
 import Navbar from './components/Navbar'
 import RequireAuth from './components/RequireAuth'
 import { useEditProjectId, useIsNewProject, useProjectId, useRoute, type Route } from './hooks/useRoute'
+import AccountPage from './pages/AccountPage'
 import ContactPage from './pages/ContactPage'
 import LoginPage from './pages/LoginPage'
 import MapPage from './pages/MapPage'
@@ -15,6 +16,7 @@ const PAGES: Record<Exclude<Route, 'login'>, ComponentType> = {
   mapa: MapPage,
   proyectos: ProjectsPage,
   contacto: ContactPage,
+  cuenta: AccountPage,
 }
 
 export default function App() {
@@ -31,11 +33,11 @@ export default function App() {
       <Navbar current={route} />
       <main className="flex-1">
         {newProject ? (
-          <RequireAuth>
+          <RequireAuth permission="projects.create">
             <ProjectFormPage />
           </RequireAuth>
         ) : editId ? (
-          <RequireAuth>
+          <RequireAuth permission={['projects.update_any', 'projects.update_own']}>
             <ProjectEditPage key={editId} id={editId} />
           </RequireAuth>
         ) : projectId ? (

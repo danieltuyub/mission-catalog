@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
+import { can } from '../services/permissions'
 import LocateControl from './LocateControl'
 import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
@@ -75,7 +76,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 export default function MapView() {
   const [savedView] = useState(loadMapView)
   const { status, position, locate } = useGeolocation()
-  const { isAdmin } = useAuth()
+  const canWritePins = can(useAuth(), 'pins.write')
   const { pins, error, addPin, editPin } = usePins()
   const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -117,7 +118,7 @@ export default function MapView() {
         <ClickHandler
           onClick={(lat, lng) => {
             if (selectedId) setSelectedId(null)
-            else if (isAdmin) setDraft({ lat, lng })
+            else if (canWritePins) setDraft({ lat, lng })
           }}
         />
 
@@ -136,7 +137,7 @@ export default function MapView() {
         ))}
       </MapContainer>
 
-      <PinCard pin={selected} onClose={() => setSelectedId(null)} onEdit={isAdmin ? (pin) => setEditingId(pin.id) : undefined} />
+      <PinCard pin={selected} onClose={() => setSelectedId(null)} onEdit={canWritePins ? (pin) => setEditingId(pin.id) : undefined} />
 
       {notice && (
         <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow">

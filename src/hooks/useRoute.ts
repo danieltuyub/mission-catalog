@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-export const ROUTES = ['mapa', 'proyectos', 'contacto', 'login'] as const
+export const ROUTES = ['mapa', 'proyectos', 'contacto', 'login', 'cuenta'] as const
 export type Route = (typeof ROUTES)[number]
 
 function subscribe(onChange: () => void) {

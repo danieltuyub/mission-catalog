@@ -2,15 +2,17 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabaseClient'
 
 export interface AuthState {
-  /** True until the stored session (and its role) has been resolved. */
+  /** True until the stored session (and its permissions) has been resolved. */
   loading: boolean
+  userId: string | null
   email: string | null
-  isAdmin: boolean
+  /** What the user may do (`'*'` for admins). Empty for guests. Use `can()` to check. */
+  permissions: string[]
 }
 
-const SIGNED_OUT: AuthState = { loading: false, email: null, isAdmin: false }
+const SIGNED_OUT: AuthState = { loading: false, userId: null, email: null, permissions: [] }
 
-let state: AuthState = { loading: true, email: null, isAdmin: false }
+let state: AuthState = { loading: true, userId: null, email: null, permissions: [] }
 let started = false
 let resolveId = 0
 const listeners = new Set<() => void>()
@@ -23,11 +25,13 @@ function setState(next: AuthState) {
 async function resolve(session: Session | null) {
   const id = ++resolveId
   if (!session) return setState(SIGNED_OUT)
+  const userId = session.user.id
   const email = session.user.email ?? null
-  setState({ loading: true, email, isAdmin: false })
-  const { data, error } = await supabase.rpc('is_admin')
+  setState({ loading: true, userId, email, permissions: [] })
+  const { data, error } = await supabase.rpc('my_permissions')
   if (id !== resolveId) return // a newer session change won
-  setState({ loading: false, email, isAdmin: !error && data === true })
+  const permissions = !error && Array.isArray(data?.permissions) ? (data.permissions as string[]) : []
+  setState({ loading: false, userId, email, permissions })
 }
 
 function start() {

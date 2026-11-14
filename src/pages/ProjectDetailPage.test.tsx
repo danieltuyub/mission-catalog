@@ -1,4 +1,5 @@
 import { act, render, screen, within } from '@testing-library/react'
+import { ADMIN, CREATOR, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Project } from '../types'
 
@@ -49,6 +50,12 @@ describe('ProjectDetailPage', () => {
     getProjectById.mockResolvedValue(project)
     clearProjectsView()
     vi.mocked(window.scrollTo).mockClear()
+    // Most tests look at the page as a member; guests have their own tests.
+    vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+  })
+
+  afterEach(() => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
   })
 
   it('shows the project data', async () => {
@@ -68,7 +75,7 @@ describe('ProjectDetailPage', () => {
       'href',
       'mailto:norte@example.com',
     )
-    expect(getProjectById).toHaveBeenCalledWith('abc')
+    expect(getProjectById).toHaveBeenCalledWith('abc', true)
   })
 
   describe('loading skeleton delay', () => {
@@ -109,24 +116,78 @@ describe('ProjectDetailPage', () => {
   })
 
   describe('edit shortcut', () => {
-    afterEach(() => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: null, isAdmin: false })
-    })
+    const own = { ...project, created_by: 'creator-1' }
 
-    it('is hidden for visitors', async () => {
+    it('is hidden for members without edit rights', async () => {
       render(<ProjectDetailPage id="abc" />)
       await screen.findByRole('heading', { name: 'Iglesia Norte' })
       expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
     })
 
     it('is an icon link to the edit page for admins', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       render(<ProjectDetailPage id="abc" />)
       await screen.findByRole('heading', { name: 'Iglesia Norte' })
       expect(screen.getByRole('link', { name: 'Editar proyecto' })).toHaveAttribute(
         'href',
         `#/proyectos/${project.id}/editar`,
       )
+    })
+
+    it('shows for a creator on their own project only', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+      getProjectById.mockResolvedValue(own)
+      const { unmount } = render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.getByRole('link', { name: 'Editar proyecto' })).toBeInTheDocument()
+      unmount()
+
+      getProjectById.mockResolvedValue({ ...project, created_by: 'someone-else' })
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('guests', () => {
+    const summary = { ...project, phone: undefined, mail: undefined, details: undefined }
+
+    beforeEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+      getProjectById.mockResolvedValue(summary)
+    })
+
+    it('ask for the summary only', async () => {
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(getProjectById).toHaveBeenCalledWith('abc', false)
+    })
+
+    it('do not see contact data or the long details, and are invited to sign in', async () => {
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.queryByText('Teléfono')).not.toBeInTheDocument()
+      expect(screen.queryByText('Mail')).not.toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Detalles' })).not.toBeInTheDocument()
+      expect(screen.getByText('País')).toBeInTheDocument()
+      const login = screen.getByRole('link', { name: 'Iniciar sesión' })
+      expect(login).toHaveAttribute('href', `#/login?next=${encodeURIComponent(`/proyectos/${project.id}`)}`)
+    })
+
+    it('members do not see the sign-in invitation', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      getProjectById.mockResolvedValue(project)
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
+      expect(screen.getByText('Teléfono')).toBeInTheDocument()
+    })
+
+    it('wait for the session before loading', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ ...SIGNED_OUT, loading: true })
+      render(<ProjectDetailPage id="abc" />)
+      await act(async () => {})
+      expect(getProjectById).not.toHaveBeenCalled()
     })
   })
 

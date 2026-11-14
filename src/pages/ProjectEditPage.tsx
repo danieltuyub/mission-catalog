@@ -3,14 +3,18 @@ import BackLink from '../components/BackLink'
 import PageHeader from '../components/PageHeader'
 import ProjectForm, { type ProjectFormData } from '../components/ProjectForm'
 import { useDelayed } from '../hooks/useDelayed'
+import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
 import { readEditOrigin } from '../services/editOrigin'
+import { canEditProject } from '../services/permissions'
 import { updateProjectWithImages } from '../services/projectAdmin'
 import { clearFilterOptionsCache } from '../services/projectService'
 import { SKELETON_DELAY_MS } from './projectsConfig'
 
 export default function ProjectEditPage({ id }: { id: string }) {
   const { project, loading, error } = useProject(id)
+  const auth = useAuth()
+  const allowed = !project || canEditProject(auth, project)
   const showPlaceholder = useDelayed(loading, SKELETON_DELAY_MS)
   // Back where the user came from: the list, or (by default) the project detail.
   const fromList = readEditOrigin() === 'lista'
@@ -49,7 +53,12 @@ export default function ProjectEditPage({ id }: { id: string }) {
       {!loading && !error && !project && (
         <p className="py-24 text-center text-stone-500">No existe un proyecto con ese enlace.</p>
       )}
-      {project && (
+      {project && !allowed && (
+        <p role="alert" className="py-24 text-center text-stone-500">
+          No tienes permiso para editar este proyecto
+        </p>
+      )}
+      {project && allowed && (
         <div className="animate-fade-in motion-reduce:animate-none">
           <ProjectForm
             project={project}

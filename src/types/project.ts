@@ -17,9 +17,12 @@ export interface Project {
   started_at: string | null
   country: string | null
   region: string | null
-  phone: string | null
-  mail: string | null
+  /** Contact data: only members get it (the guest query leaves it out). */
+  phone?: string | null
+  mail?: string | null
   status: ProjectStatus
+  /** Owner: the creator of the project (null for projects created before roles existed). */
+  created_by?: string | null
   created_at: string
   updated_at: string
   /** Long text for the detail page. Only loaded by the detail query, not the list. */

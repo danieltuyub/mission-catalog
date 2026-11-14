@@ -3,9 +3,10 @@ import { supabase } from './supabaseClient'
 
 const TABLE = 'projects'
 const IMAGES = 'project_images(id, path, alt, position)'
-// The list leaves out `details` (long text only the detail page needs).
-const LIST_SELECT = `id, name, responsible, description, started_at, country, region, phone, mail, status, created_at, updated_at, ${IMAGES}`
-const DETAIL_SELECT = `*, ${IMAGES}`
+// Summary columns: what the list shows and what guests may read. Contact data (phone, mail)
+// and `details` only come with the members' detail query (the database withholds them from guests).
+const SUMMARY_SELECT = `id, name, responsible, description, started_at, country, region, status, created_by, created_at, updated_at, ${IMAGES}`
+const FULL_SELECT = `*, ${IMAGES}`
 
 export const DEFAULT_PAGE_SIZE = 4
 
@@ -63,7 +64,7 @@ export async function getProjects({
   const from = (safePage - 1) * safeSize
 
   // Filters must be applied before order/range (PostgREST builder types).
-  let query = supabase.from(TABLE).select(LIST_SELECT, { count: 'exact' })
+  let query = supabase.from(TABLE).select(SUMMARY_SELECT, { count: 'exact' })
   for (const column of ['status', 'country', 'region', 'responsible'] as const) {
     const values = filters[column]
     if (values && values.length > 0) query = query.in(column, values)
@@ -114,10 +115,13 @@ export function clearFilterOptionsCache(): void {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/** Null when the id is not a valid uuid or no project has it. */
-export async function getProjectById(id: string): Promise<Project | null> {
+/**
+ * Null when the id is not a valid uuid or no project has it.
+ * `full` loads every column (members); without it only the summary (guests).
+ */
+export async function getProjectById(id: string, full = true): Promise<Project | null> {
   if (!UUID.test(id)) return null
-  const { data, error } = await supabase.from(TABLE).select(DETAIL_SELECT).eq('id', id).maybeSingle()
+  const { data, error } = await supabase.from(TABLE).select(full ? FULL_SELECT : SUMMARY_SELECT).eq('id', id).maybeSingle()
   if (error) throw error
   return (data as Project | null) ?? null
 }

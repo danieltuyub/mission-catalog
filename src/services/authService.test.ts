@@ -66,26 +66,39 @@ describe('auth state', () => {
     expect(getAuthSnapshot().loading).toBe(true)
   })
 
-  it('resolves the role from is_admin for a session and clears on sign out', async () => {
-    sb.rpc.mockResolvedValue({ data: true, error: null })
-    emit('INITIAL_SESSION', { user: { email: 'a@b.com' } })
+  it('resolves the permissions for a session and clears them on sign out', async () => {
+    sb.rpc.mockResolvedValue({ data: { roles: ['creator'], permissions: ['projects.create'] }, error: null })
+    emit('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.com' } })
     await vi.waitFor(() =>
-      expect(getAuthSnapshot()).toEqual({ loading: false, email: 'a@b.com', isAdmin: true }),
+      expect(getAuthSnapshot()).toEqual({
+        loading: false,
+        userId: 'u1',
+        email: 'a@b.com',
+        permissions: ['projects.create'],
+      }),
     )
-    expect(sb.rpc).toHaveBeenCalledWith('is_admin')
+    expect(sb.rpc).toHaveBeenCalledWith('my_permissions')
 
     emit('SIGNED_OUT', null)
     await vi.waitFor(() =>
-      expect(getAuthSnapshot()).toEqual({ loading: false, email: null, isAdmin: false }),
+      expect(getAuthSnapshot()).toEqual({ loading: false, userId: null, email: null, permissions: [] }),
     )
     expect(listener).toHaveBeenCalled()
   })
 
-  it('is not admin when the role check fails', async () => {
+  it('has no permissions when loading them fails', async () => {
     sb.rpc.mockResolvedValue({ data: null, error: new Error('x') })
-    emit('SIGNED_IN', { user: { email: 'c@d.com' } })
+    emit('SIGNED_IN', { user: { id: 'u2', email: 'c@d.com' } })
     await vi.waitFor(() =>
-      expect(getAuthSnapshot()).toEqual({ loading: false, email: 'c@d.com', isAdmin: false }),
+      expect(getAuthSnapshot()).toEqual({ loading: false, userId: 'u2', email: 'c@d.com', permissions: [] }),
+    )
+  })
+
+  it('has no permissions when the response is malformed', async () => {
+    sb.rpc.mockResolvedValue({ data: { permissions: 'nope' }, error: null })
+    emit('SIGNED_IN', { user: { id: 'u3', email: 'e@f.com' } })
+    await vi.waitFor(() =>
+      expect(getAuthSnapshot()).toEqual({ loading: false, userId: 'u3', email: 'e@f.com', permissions: [] }),
     )
   })
 })

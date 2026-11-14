@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { ADMIN, LOADING, SIGNED_OUT } from '../test/auth'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot, signOut } from '../services/authService'
@@ -22,12 +23,10 @@ describe('Navbar', () => {
   })
 
   describe('session', () => {
-    const signedOut = { loading: false, email: null, isAdmin: false }
-    const signedIn = { loading: false, email: 'a@b.com', isAdmin: true }
     // The panel stays mounted (so it can animate); `inert` marks it closed.
     const panel = () => document.getElementById('user-menu')!
     afterEach(() => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(signedOut)
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
       window.location.hash = ''
     })
 
@@ -40,14 +39,14 @@ describe('Navbar', () => {
     })
 
     it('shows neither the login nor the user menu while the session is loading', () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: true, email: null, isAdmin: false })
+      vi.mocked(getAuthSnapshot).mockReturnValue(LOADING)
       render(<Navbar current="mapa" />)
       expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Menú de usuario' })).not.toBeInTheDocument()
     })
 
     it('hides the login link and keeps the email out of sight until the user menu opens', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(signedIn)
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       render(<Navbar current="mapa" />)
       expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
       expect(panel()).toHaveAttribute('inert')
@@ -61,7 +60,7 @@ describe('Navbar', () => {
     })
 
     it('closes the user menu with Escape (returning focus) and with an outside click', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(signedIn)
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       render(<Navbar current="mapa" />)
       const trigger = screen.getByRole('button', { name: 'Menú de usuario' })
       await userEvent.click(trigger)
@@ -75,8 +74,18 @@ describe('Navbar', () => {
       expect(panel()).toHaveAttribute('inert')
     })
 
+    it('links to the account page from the user menu', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      render(<Navbar current="mapa" />)
+      await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
+      const link = screen.getByRole('link', { name: 'Mi cuenta' })
+      expect(link).toHaveAttribute('href', '#/cuenta')
+      await userEvent.click(link)
+      expect(panel()).toHaveAttribute('inert')
+    })
+
     it('signs out from the menu and goes to the map', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(signedIn)
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       vi.mocked(signOut).mockResolvedValue(undefined)
       window.location.hash = '#/proyectos'
       render(<Navbar current="proyectos" />)
@@ -88,7 +97,7 @@ describe('Navbar', () => {
     })
 
     it('never keeps the mobile menu and the user menu open together', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(signedIn)
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       render(<Navbar current="mapa" />)
       await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
       await userEvent.click(screen.getByRole('button', { name: 'Abrir menú' }))

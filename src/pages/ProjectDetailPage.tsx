@@ -7,6 +7,8 @@ import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
 import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
+import { loginUrl } from '../services/authRedirect'
+import { canEditProject } from '../services/permissions'
 import { projectPhotos } from '../services/projectImages'
 import { clearOpenedFromList, loadOpenedFromList, resetListContext } from '../services/projectsViewStorage'
 import { SKELETON_DELAY_MS } from './projectsConfig'
@@ -44,8 +46,8 @@ const linkClass =
   'underline decoration-stone-300 underline-offset-2 hover:decoration-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage'
 
 export default function ProjectDetailPage({ id }: { id: string }) {
-  const { project, loading, error } = useProject(id)
-  const { isAdmin } = useAuth()
+  const { project, loading, error, full } = useProject(id)
+  const auth = useAuth()
   const showSkeleton = useDelayed(loading, SKELETON_DELAY_MS)
   // True when opened from the list (its filters, sort and page are kept for the way back).
   const [fromList] = useState(() => loadOpenedFromList())
@@ -80,7 +82,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           </svg>
           Proyectos
         </a>
-        {isAdmin && project && <EditProjectLink id={project.id} className="ml-auto" />}
+        {project && canEditProject(auth, project) && <EditProjectLink id={project.id} className="ml-auto" />}
       </nav>
 
       {loading ? (
@@ -121,6 +123,8 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                     </Field>
                     <Field label="País">{project.country || EMPTY}</Field>
                     <Field label="Región">{project.region || EMPTY}</Field>
+                    {full && (
+                      <>
                     <Field label="Teléfono">
                       {project.phone ? (
                         <a href={`tel:${project.phone.replace(/[^\d+]/g, '')}`} className={linkClass}>
@@ -139,6 +143,8 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                         EMPTY
                       )}
                     </Field>
+                      </>
+                    )}
                     <Field label="Actualizado">
                       {formatDate(project.updated_at) || EMPTY}
                     </Field>
@@ -146,6 +152,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                 </div>
               </div>
 
+              {full ? (
               <section aria-labelledby="project-details" className="mt-8 border-t border-stone-100 pt-6">
                 <h2 id="project-details" className="text-lg font-semibold text-brand-primary">
                   Detalles
@@ -159,6 +166,20 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                   {paragraphs(project.details).length === 0 && <p className="text-stone-500">Sin detalles</p>}
                 </div>
               </section>
+              ) : (
+                <section
+                  aria-label="Acceso restringido"
+                  className="mt-8 border-t border-stone-100 pt-6 text-stone-600"
+                >
+                  <p>Inicia sesión para ver el detalle completo, la información de contacto y todas las fotos.</p>
+                  <a
+                    href={loginUrl(`/proyectos/${project.id}`)}
+                    className="mt-3 inline-flex h-10 items-center rounded-full bg-brand-primary px-5 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
+                  >
+                    Iniciar sesión
+                  </a>
+                </section>
+              )}
             </article>
           )}
         </div>

@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useFilterOptions } from '../hooks/useFilterOptions'
 import { useProjects } from '../hooks/useProjects'
 import { countActiveFilters } from '../services/filterUtils'
+import { canEditProject } from '../services/permissions'
 import {
   DEFAULT_DIRECTION,
   DEFAULT_PAGE_SIZE,
@@ -85,7 +86,7 @@ export default function ProjectsPage({
     filters: applied,
   })
   const filterOptions = useFilterOptions()
-  const { isAdmin } = useAuth()
+  const auth = useAuth()
 
   useEffect(() => () => window.clearTimeout(filterTimer.current), [])
 
@@ -272,7 +273,7 @@ export default function ProjectsPage({
             >
               {projects.map((project) => (
                 <li key={project.id}>
-                  <ProjectCard project={project} editable={isAdmin} onOpen={() => markOpenedFromList(window.scrollY)} />
+                  <ProjectCard project={project} editable={canEditProject(auth, project)} onOpen={() => markOpenedFromList(window.scrollY)} />
                 </li>
               ))}
             </ul>

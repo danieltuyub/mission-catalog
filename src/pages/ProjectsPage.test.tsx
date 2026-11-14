@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { ADMIN, CREATOR, SIGNED_OUT } from '../test/auth'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot } from '../services/authService'
@@ -79,12 +80,28 @@ describe('ProjectsPage', () => {
     expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
     unmount()
 
-    vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+    vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
     render(<ProjectsPage />)
     await screen.findByRole('heading', { name: 'Uno' })
     const links = screen.getAllByRole('link', { name: 'Editar proyecto' })
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['#/proyectos/1/editar?from=lista', '#/proyectos/2/editar?from=lista'])
-    vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: null, isAdmin: false })
+    vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+  })
+
+  it('shows the edit icon to a creator only on their own projects', async () => {
+    getProjects.mockResolvedValue(
+      page([
+        { ...project('1', 'Mio'), created_by: 'creator-1' },
+        { ...project('2', 'Ajeno'), created_by: 'someone-else' },
+        project('3', 'Sin dueño'),
+      ]),
+    )
+    vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+    render(<ProjectsPage />)
+    await screen.findByRole('heading', { name: 'Mio' })
+    const links = screen.getAllByRole('link', { name: 'Editar proyecto' })
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(['#/proyectos/1/editar?from=lista'])
+    vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
   })
 
   it('shows the total next to the title, with an accessible label', async () => {

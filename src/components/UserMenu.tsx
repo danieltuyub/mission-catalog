@@ -73,6 +73,14 @@ export default function UserMenu({ email, open, onOpenChange }: Props) {
           </p>
         </div>
         <div role="separator" className="my-1 h-px bg-white/10" />
+        <a
+          href="#/cuenta"
+          onClick={() => onOpenChange(false)}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand-sage"
+        >
+          <Icon d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M16 7a4 4 0 11-8 0 4 4 0 018 0z" className="size-4" />
+          Mi cuenta
+        </a>
         <button
           type="button"
           onClick={() => {

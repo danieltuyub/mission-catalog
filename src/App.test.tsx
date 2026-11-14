@@ -1,9 +1,14 @@
 import { render, screen, within } from '@testing-library/react'
+import { ADMIN, CREATOR, SIGNED_OUT, SUBSCRIBER } from './test/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot } from './services/authService'
 import App from './App'
 
 vi.mock('./components/MapView', () => ({ default: () => <div>map</div> }))
+vi.mock('./services/accountService', () => ({
+  getProfile: vi.fn().mockResolvedValue({ first_name: 'Ana', last_name: '' }),
+  MIN_PASSWORD_LENGTH: 8,
+}))
 
 const getProjectById = vi.hoisted(() => vi.fn())
 vi.mock('./services/projectService', async (importOriginal) => ({
@@ -26,7 +31,7 @@ describe('App', () => {
   it('shows the login without navbar or footer', () => {
     window.location.hash = '#/login'
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Acceso' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument()
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Volver al mapa/ })).toHaveAttribute('href', '#/mapa')
@@ -35,12 +40,12 @@ describe('App', () => {
   it('matches the login route even with a query string', () => {
     window.location.hash = '#/login?next=%2Fproyectos'
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Acceso' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
   })
 
   describe('#/proyectos/nuevo', () => {
     afterEach(() => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: null, isAdmin: false })
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
     })
 
     it('sends signed-out visitors to the login', () => {
@@ -61,7 +66,7 @@ describe('App', () => {
     })
 
     it('matches the edit route with a ?from query', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       getProjectById.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', name: 'Casa Norte', status: 'open' })
       window.location.hash = '#/proyectos/00000000-0000-0000-0000-000000000001/editar?from=lista'
       render(<App />)
@@ -69,7 +74,7 @@ describe('App', () => {
     })
 
     it('shows the edit form to admins, loaded from the project', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       getProjectById.mockResolvedValue({
         id: '00000000-0000-0000-0000-000000000001',
         name: 'Casa Norte',
@@ -81,13 +86,34 @@ describe('App', () => {
       expect(screen.getByLabelText('Nombre *')).toHaveValue('Casa Norte')
     })
 
+    it('lets a creator open the create form but not a subscriber', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+      window.location.hash = '#/proyectos/nuevo'
+      const { unmount } = render(<App />)
+      expect(screen.getByRole('form', { name: 'Nuevo proyecto' })).toBeInTheDocument()
+      unmount()
+
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      render(<App />)
+      expect(screen.queryByRole('form')).not.toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveTextContent('No tienes permiso')
+    })
+
     it('shows the form to admins and does not treat "nuevo" as a project id', () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue({ loading: false, email: 'a@b.com', isAdmin: true })
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       window.location.hash = '#/proyectos/nuevo'
       render(<App />)
       expect(screen.getByRole('heading', { name: 'Nuevo proyecto' })).toBeInTheDocument()
       expect(screen.getByRole('form', { name: 'Nuevo proyecto' })).toBeInTheDocument()
     })
+  })
+
+  it('shows the account page to a signed-in user', async () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+    window.location.hash = '#/cuenta'
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
+    vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
   })
 
   it('shows the contact page for #/contacto', () => {
@@ -115,7 +141,7 @@ describe('App', () => {
     window.location.hash = '#/proyectos/00000000-0000-0000-0000-000000000001'
     render(<App />)
     expect(await screen.findByRole('heading', { level: 1, name: 'Casa Norte' })).toBeInTheDocument()
-    expect(getProjectById).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001')
+    expect(getProjectById).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', false)
     expect(
       within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Proyectos' }),
     ).toHaveAttribute('aria-current', 'page')

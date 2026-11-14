@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getAuthSnapshot } from '../services/authService'
+import { ADMIN, CREATOR, SIGNED_OUT } from '../test/auth'
 import ProjectEditPage from './ProjectEditPage'
 import { SKELETON_DELAY_MS } from './projectsConfig'
 
@@ -20,9 +22,11 @@ beforeEach(() => {
   updateProjectWithImages.mockReset()
   updateProjectWithImages.mockResolvedValue(undefined)
   window.location.hash = ''
+  vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
 })
 afterEach(() => {
   vi.useRealTimers()
+  vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
 })
 
 describe('ProjectEditPage loading', () => {
@@ -102,5 +106,24 @@ describe('ProjectEditPage navigation', () => {
     await open('#/proyectos/abc/editar?from=otro')
     await press('Cancelar')
     expect(window.location.hash).toBe('#/proyectos/abc')
+  })
+})
+
+describe('ProjectEditPage permissions', () => {
+  it('lets a creator edit their own project', async () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+    getProjectById.mockResolvedValue({ ...project, created_by: 'creator-1' })
+    render(<ProjectEditPage id="abc" />)
+    await act(async () => {})
+    expect(screen.getByRole('form', { name: 'Editar proyecto' })).toBeInTheDocument()
+  })
+
+  it("does not show another creator's project in the form", async () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+    getProjectById.mockResolvedValue({ ...project, created_by: 'someone-else' })
+    render(<ProjectEditPage id="abc" />)
+    await act(async () => {})
+    expect(screen.queryByRole('form')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('No tienes permiso para editar este proyecto')
   })
 })
