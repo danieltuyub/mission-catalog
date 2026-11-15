@@ -26,6 +26,8 @@ export interface ProjectFilters {
   country: string[]
   region: string[]
   responsible: string[]
+  /** Only the projects the signed-in user created. */
+  mine?: boolean
 }
 
 export const EMPTY_FILTERS: ProjectFilters = { status: [], country: [], region: [], responsible: [] }
@@ -65,6 +67,14 @@ export async function getProjects({
 
   // Filters must be applied before order/range (PostgREST builder types).
   let query = supabase.from(TABLE).select(SUMMARY_SELECT, { count: 'exact' })
+  if (filters.mine) {
+    // getSession waits for the client to restore the session, so it is safe right after page load.
+    const { data: auth } = await supabase.auth.getSession()
+    const userId = auth.session?.user.id
+    // Without a session there is nothing of theirs to show.
+    if (!userId) return { data: [], total: 0, page: safePage, pageSize: safeSize, totalPages: 0 }
+    query = query.eq('created_by', userId)
+  }
   for (const column of ['status', 'country', 'region', 'responsible'] as const) {
     const values = filters[column]
     if (values && values.length > 0) query = query.in(column, values)

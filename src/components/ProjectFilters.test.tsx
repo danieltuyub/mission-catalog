@@ -28,6 +28,25 @@ const setup = (over: Partial<Parameters<typeof ProjectFilters>[0]> = {}) => {
 }
 
 describe('ProjectFilters', () => {
+  describe('"Solo míos"', () => {
+    it('is only offered when asked for', () => {
+      setup()
+      expect(screen.queryByRole('checkbox', { name: 'Solo míos' })).not.toBeInTheDocument()
+    })
+
+    it('toggles', async () => {
+      const { onChange } = setup({ showMine: true })
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Solo míos' }))
+      expect(onChange).toHaveBeenLastCalledWith({ ...EMPTY_FILTERS, mine: true })
+    })
+
+    it('is checked and counted as an active filter when on', () => {
+      setup({ showMine: true, filters: { ...EMPTY_FILTERS, mine: true } })
+      expect(screen.getByRole('checkbox', { name: 'Solo míos' })).toBeChecked()
+      expect(screen.getByLabelText('1 filtros activos')).toBeInTheDocument()
+    })
+  })
+
   it('has a title and the four groups', () => {
     setup()
     expect(screen.getByRole('heading', { name: 'Filtros' })).toBeInTheDocument()

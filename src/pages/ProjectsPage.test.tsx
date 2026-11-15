@@ -25,6 +25,7 @@ import {
   loadOpenedFromList,
   loadScroll,
   markOpenedFromList,
+  saveFilters,
 } from '../services/projectsViewStorage'
 import ProjectsPage from './ProjectsPage'
 
@@ -104,6 +105,60 @@ describe('ProjectsPage', () => {
     const links = screen.getAllByRole('link', { name: 'Editar proyecto' })
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['#/proyectos/1/editar?from=lista'])
     vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+  })
+
+  describe('"Solo míos" and new project', () => {
+    beforeEach(() => {
+      getProjects.mockResolvedValue(page([project('1', 'Uno')]))
+    })
+    afterEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+    })
+
+    it.each([
+      ['guests', SIGNED_OUT],
+      ['subscribers', SUBSCRIBER],
+    ])('are not offered to %s', async (_, state) => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(state)
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      expect(screen.queryByRole('checkbox', { name: 'Solo míos' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Nuevo proyecto' })).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['creators', CREATOR],
+      ['admins', ADMIN],
+    ])('are offered to %s, the button leading to the form', async (_, state) => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(state)
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      expect(screen.getByRole('checkbox', { name: 'Solo míos' })).not.toBeChecked()
+      expect(screen.getByRole('link', { name: 'Nuevo proyecto' })).toHaveAttribute('href', '#/proyectos/nuevo')
+    })
+
+    it('"Solo míos" queries only their projects, counts as a filter and goes back to page 1', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+      render(<ProjectsPage filterDebounceMs={0} />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Solo míos' }))
+      await waitFor(() => expect(lastOptions().filters.mine).toBe(true))
+      expect(lastOptions().page).toBe(1)
+      expect(screen.getByLabelText('1 filtros activos')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Limpiar' }))
+      await waitFor(() => expect(lastOptions().filters.mine).toBeUndefined())
+      expect(screen.getByRole('checkbox', { name: 'Solo míos' })).not.toBeChecked()
+    })
+
+    it('ignores a leftover "Solo míos" once the user cannot create projects', async () => {
+      saveFilters({ status: [], country: [], region: [], responsible: [], mine: true })
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      render(<ProjectsPage />)
+      await screen.findByRole('heading', { name: 'Uno' })
+      expect(lastOptions().filters.mine).toBe(false)
+      expect(screen.queryByLabelText(/filtros activos/)).not.toBeInTheDocument()
+    })
   })
 
   describe('saved projects', () => {

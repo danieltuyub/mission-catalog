@@ -89,6 +89,8 @@ interface Props {
   optionsError: string | null
   onChange: (next: Filters) => void
   onClear: () => void
+  /** Offers "Solo míos" (people who can own projects). */
+  showMine?: boolean
 }
 
 export default function ProjectFilters({
@@ -98,6 +100,7 @@ export default function ProjectFilters({
   optionsError,
   onChange,
   onClear,
+  showMine = false,
 }: Props) {
   const active = countActiveFilters(filters)
   const note = optionsError
@@ -150,6 +153,20 @@ export default function ProjectFilters({
           </svg>
         </button>
       </div>
+
+      {showMine && (
+        <div className="border-t border-stone-100 pt-4">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg py-1 text-sm font-medium text-brand-primary hover:bg-brand-blush/40">
+            <input
+              type="checkbox"
+              checked={!!filters.mine}
+              onChange={() => onChange({ ...filters, mine: !filters.mine })}
+              className="size-4 shrink-0 cursor-pointer rounded accent-brand-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
+            />
+            Solo míos
+          </label>
+        </div>
+      )}
 
       <CheckboxGroup
         legend="Estado"

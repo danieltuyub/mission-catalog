@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { range, order, inFilter, rpc, select, maybeSingle } = vi.hoisted(() => ({
+const { range, order, inFilter, rpc, select, maybeSingle, eq, getSession } = vi.hoisted(() => ({
+  eq: vi.fn(),
+  getSession: vi.fn(),
   select: vi.fn(),
   maybeSingle: vi.fn(),
   range: vi.fn(),
@@ -12,12 +14,13 @@ const { range, order, inFilter, rpc, select, maybeSingle } = vi.hoisted(() => ({
 vi.mock('./supabaseClient', () => {
   const query = {
     select: select.mockImplementation(() => query),
-    eq: vi.fn(() => ({ maybeSingle })),
+    eq: eq.mockImplementation(() => query),
+    maybeSingle,
     in: inFilter.mockImplementation(() => query),
     order: order.mockImplementation(() => query),
     range,
   }
-  return { supabase: { from: vi.fn(() => query), rpc } }
+  return { supabase: { from: vi.fn(() => query), rpc, auth: { getSession } } }
 })
 
 import { clearFilterOptionsCache, getProjectById, getProjectFilterOptions, getProjects } from './projectService'
@@ -27,7 +30,28 @@ describe('getProjects', () => {
     range.mockReset()
     order.mockClear()
     inFilter.mockClear()
+    eq.mockClear()
+    getSession.mockReset()
     range.mockResolvedValue({ data: [], error: null, count: 10 })
+  })
+
+  it('only lists the signed-in user\'s projects with the "mine" filter', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    await getProjects({ filters: { mine: true } })
+    expect(eq).toHaveBeenCalledWith('created_by', 'u1')
+  })
+
+  it('does not filter by creator without the "mine" filter', async () => {
+    await getProjects({ filters: { mine: false, status: ['open'] } })
+    expect(eq).not.toHaveBeenCalled()
+    expect(getSession).not.toHaveBeenCalled()
+  })
+
+  it('returns nothing for "mine" without a session, without querying', async () => {
+    getSession.mockResolvedValue({ data: { session: null } })
+    const res = await getProjects({ page: 2, pageSize: 5, filters: { mine: true } })
+    expect(res).toEqual({ data: [], total: 0, page: 2, pageSize: 5, totalPages: 0 })
+    expect(range).not.toHaveBeenCalled()
   })
 
   it('defaults to page 1 with 4 items', async () => {

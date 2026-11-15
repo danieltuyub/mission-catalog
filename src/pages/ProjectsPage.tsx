@@ -11,7 +11,7 @@ import { useFilterOptions } from '../hooks/useFilterOptions'
 import { useProjects } from '../hooks/useProjects'
 import { useSavedProjects } from '../hooks/useSavedProjects'
 import { countActiveFilters } from '../services/filterUtils'
-import { canEditProject } from '../services/permissions'
+import { can, canEditProject } from '../services/permissions'
 import {
   DEFAULT_DIRECTION,
   DEFAULT_PAGE_SIZE,
@@ -59,6 +59,8 @@ interface Props {
   filterDebounceMs?: number
 }
 
+const withoutMine = (f: Filters): Filters => (f.mine ? { ...f, mine: false } : f)
+
 export default function ProjectsPage({
   pageSize: initialPageSize = DEFAULT_PAGE_SIZE,
   minSlots = DEFAULT_MIN_SLOTS,
@@ -79,15 +81,17 @@ export default function ProjectsPage({
   const scrollToRestore = useRef<number | null>(loadScroll())
   const headerRef = useRef<HTMLDivElement>(null)
 
+  const auth = useAuth()
+  // "Solo míos" only exists for people who can own projects: otherwise a leftover one is ignored.
+  const canCreate = can(auth, 'projects.create')
   const { projects, pagination, loading, error } = useProjects({
     page,
     pageSize,
     sort,
     direction,
-    filters: applied,
+    filters: canCreate ? applied : withoutMine(applied),
   })
   const filterOptions = useFilterOptions()
-  const auth = useAuth()
   const { isSaved, toggle: toggleSaved, loading: savedLoading } = useSavedProjects()
 
   useEffect(() => () => window.clearTimeout(filterTimer.current), [])
@@ -153,8 +157,9 @@ export default function ProjectsPage({
     : [...PAGE_SIZE_OPTIONS, pageSize].sort((a, b) => a - b)
   const sizeSelectOptions = sizeOptions.map((n) => ({ value: String(n), label: String(n) }))
   const reserved = `calc(${minSlots} * ${CARD_HEIGHT_REM}rem + ${Math.max(minSlots - 1, 0)} * ${CARD_GAP_REM}rem)`
-  const activeFilters = countActiveFilters(filters)
-  const filtered = countActiveFilters(applied) > 0
+  const shownFilters = canCreate ? filters : withoutMine(filters)
+  const activeFilters = countActiveFilters(shownFilters)
+  const filtered = countActiveFilters(canCreate ? applied : withoutMine(applied)) > 0
 
   return (
     <div className="mx-auto w-[94%] md:w-4/5">
@@ -182,7 +187,8 @@ export default function ProjectsPage({
           </button>
           <div id="project-filters" className={`${filtersOpen ? 'block' : 'hidden'} mb-5 xl:mb-0 xl:block`}>
             <ProjectFilters
-              filters={filters}
+              filters={shownFilters}
+              showMine={canCreate}
               options={filterOptions.options}
               optionsLoading={filterOptions.loading}
               optionsError={filterOptions.error}
@@ -210,6 +216,18 @@ export default function ProjectsPage({
             }
           >
             <div className="flex flex-wrap items-center justify-end gap-3">
+              {canCreate && (
+                <a
+                  href="#/proyectos/nuevo"
+                  aria-label="Nuevo proyecto"
+                  title="Nuevo proyecto"
+                  className="inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </a>
+              )}
               <div
                 role="group"
                 aria-label="Orden de proyectos"
