@@ -106,6 +106,34 @@ describe('ProjectFilters', () => {
     expect(screen.getAllByText('Sin opciones')).toHaveLength(3)
   })
 
+  describe('long lists', () => {
+    const seven = Array.from({ length: 7 }, (_, i) => `Lugar ${i + 1}`)
+    const country = () => screen.getByRole('group', { name: 'País' })
+    const names = () => within(country()).getAllByRole('checkbox').map((c) => c.closest('label')?.textContent)
+
+    it('shows 5 options and a "Ver 2 más" button that expands and collapses', async () => {
+      setup({ options: { ...options, country: seven } })
+      expect(names()).toEqual(seven.slice(0, 5))
+      const more = within(country()).getByRole('button', { name: 'Ver 2 más' })
+      expect(more).toHaveAttribute('aria-expanded', 'false')
+      await userEvent.click(more)
+      expect(names()).toEqual(seven)
+      await userEvent.click(within(country()).getByRole('button', { name: 'Ver menos' }))
+      expect(names()).toEqual(seven.slice(0, 5))
+    })
+
+    it('has no button with 5 options or fewer', () => {
+      setup({ options: { ...options, country: seven.slice(0, 5) } })
+      expect(within(country()).queryByRole('button')).not.toBeInTheDocument()
+    })
+
+    it('keeps selected options visible while collapsed', () => {
+      setup({ options: { ...options, country: seven }, filters: { ...EMPTY_FILTERS, country: ['Lugar 7'] } })
+      expect(names()).toEqual([...seven.slice(0, 5), 'Lugar 7'])
+      expect(within(country()).getByRole('button', { name: 'Ver 1 más' })).toBeInTheDocument()
+    })
+  })
+
   it('adds a search box for long lists and filters ignoring accents', async () => {
     const many = Array.from({ length: 9 }, (_, i) => `Lugar ${i}`)
     setup({ options: { country: [...many, 'Perú'], region: [], responsible: [] } })

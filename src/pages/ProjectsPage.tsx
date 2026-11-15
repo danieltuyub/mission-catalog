@@ -163,7 +163,7 @@ export default function ProjectsPage({
 
   return (
     <div className="mx-auto w-[94%] md:w-4/5">
-      <div className="xl:grid xl:grid-cols-[18rem_minmax(0,1fr)] xl:items-start xl:gap-6">
+      <div className="xl:grid xl:grid-cols-[17rem_minmax(0,1fr)] xl:items-start xl:gap-6">
         <aside className="xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:p-1 xl:-m-1">
           <button
             type="button"

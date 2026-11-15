@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { FilterOptions, ProjectFilters as Filters } from '../services/projectService'
 import { countActiveFilters } from '../services/filterUtils'
 import { FILTER_SEARCH_THRESHOLD } from '../pages/projectsConfig'
@@ -10,6 +10,43 @@ interface Option {
   dot?: string
 }
 
+/** Options shown before "Ver más". */
+const COLLAPSED_COUNT = 5
+
+// Icons next to the group titles (stroke paths, 24x24).
+const ICONS = {
+  status: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  country: <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" />,
+  region: (
+    <>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </>
+  ),
+  responsible: (
+    <>
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </>
+  ),
+}
+
+function Legend({ icon, children }: { icon: keyof typeof ICONS; children: ReactNode }) {
+  return (
+    <legend className="mb-2 flex items-center gap-2 text-sm font-medium text-brand-primary">
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 text-stone-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {ICONS[icon]}
+      </svg>
+      {children}
+    </legend>
+  )
+}
+
 const normalize = (s: string) =>
   s
     .normalize('NFD')
@@ -18,6 +55,7 @@ const normalize = (s: string) =>
 
 function CheckboxGroup({
   legend,
+  icon,
   options,
   selected,
   onToggle,
@@ -25,6 +63,7 @@ function CheckboxGroup({
   note,
 }: {
   legend: string
+  icon: keyof typeof ICONS
   options: Option[]
   selected: string[]
   onToggle: (value: string) => void
@@ -32,16 +71,21 @@ function CheckboxGroup({
   note?: string
 }) {
   const [query, setQuery] = useState('')
+  const [expanded, setExpanded] = useState(false)
   const q = normalize(query.trim())
-  // Selected values stay visible while searching.
+  const collapsible = !q && options.length > COLLAPSED_COUNT
+  // Selected values stay visible while searching and while collapsed.
   const visible = q
     ? options.filter((o) => selected.includes(o.value) || normalize(o.label).includes(q))
-    : options
+    : collapsible && !expanded
+      ? options.filter((o, i) => i < COLLAPSED_COUNT || selected.includes(o.value))
+      : options
+  const hidden = options.length - visible.length
 
   return (
     <div className="border-t border-stone-100 pt-4">
       <fieldset className="min-w-0">
-        <legend className="mb-2 text-sm font-medium text-brand-primary">{legend}</legend>
+        <Legend icon={icon}>{legend}</Legend>
         {searchable && (
           <input
             type="search"
@@ -53,7 +97,7 @@ function CheckboxGroup({
           />
         )}
         {note && <p className="text-sm text-stone-400">{note}</p>}
-        <ul className="max-h-44 space-y-1 overflow-y-auto pr-1">
+        <ul className={`space-y-1 ${q || expanded ? 'max-h-44 overflow-y-auto pr-1' : ''}`}>
           {visible.map((o) => (
             <li key={o.value}>
               <label className="flex cursor-pointer items-center gap-2 rounded-lg py-1 text-sm text-brand-primary hover:bg-brand-blush/40">
@@ -72,8 +116,42 @@ function CheckboxGroup({
           ))}
         </ul>
         {q && visible.length === 0 && <p className="text-sm text-stone-400">Sin resultados</p>}
+        {collapsible && (hidden > 0 || expanded) && (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((e) => !e)}
+            className="mt-1 rounded-full px-2 py-1 text-xs text-stone-500 underline underline-offset-2 hover:bg-brand-blush/50 hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
+          >
+            {expanded ? 'Ver menos' : `Ver ${hidden} más`}
+          </button>
+        )}
       </fieldset>
     </div>
+  )
+}
+
+/** Pill toggle: a checkbox in disguise, so keyboard and screen readers work as for any checkbox. */
+function Chip({
+  checked,
+  onChange,
+  dot,
+  icon,
+  children,
+}: {
+  checked: boolean
+  onChange: () => void
+  dot?: string
+  icon?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full bg-stone-50 px-2.5 text-xs font-medium text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush/60 has-checked:bg-brand-primary has-checked:text-brand-blush has-checked:hover:bg-brand-primary/90 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-sage">
+      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+      {dot && <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${dot}`} />}
+      {icon}
+      {children}
+    </label>
   )
 }
 
@@ -156,26 +234,40 @@ export default function ProjectFilters({
 
       {showMine && (
         <div className="border-t border-stone-100 pt-4">
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg py-1 text-sm font-medium text-brand-primary hover:bg-brand-blush/40">
-            <input
-              type="checkbox"
-              checked={!!filters.mine}
-              onChange={() => onChange({ ...filters, mine: !filters.mine })}
-              className="size-4 shrink-0 cursor-pointer rounded accent-brand-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
-            />
+          <Chip
+            checked={!!filters.mine}
+            onChange={() => onChange({ ...filters, mine: !filters.mine })}
+            icon={
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {ICONS.responsible}
+              </svg>
+            }
+          >
             Solo míos
-          </label>
+          </Chip>
         </div>
       )}
 
-      <CheckboxGroup
-        legend="Estado"
-        options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_META[s].label, dot: STATUS_META[s].dot }))}
-        selected={filters.status}
-        onToggle={(v) => onChange({ ...filters, status: toggle(filters.status, v as Filters['status'][number]) })}
-      />
+      <div className="border-t border-stone-100 pt-4">
+        <fieldset className="min-w-0">
+          <Legend icon="status">Estado</Legend>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_ORDER.map((status) => (
+              <Chip
+                key={status}
+                dot={STATUS_META[status].dot}
+                checked={filters.status.includes(status)}
+                onChange={() => onChange({ ...filters, status: toggle(filters.status, status) })}
+              >
+                {STATUS_META[status].label}
+              </Chip>
+            ))}
+          </div>
+        </fieldset>
+      </div>
       <CheckboxGroup
         legend="País"
+        icon="country"
         options={asOptions(options?.country)}
         selected={filters.country}
         onToggle={(v) => onChange({ ...filters, country: toggle(filters.country, v) })}
@@ -184,6 +276,7 @@ export default function ProjectFilters({
       />
       <CheckboxGroup
         legend="Región"
+        icon="region"
         options={asOptions(options?.region)}
         selected={filters.region}
         onToggle={(v) => onChange({ ...filters, region: toggle(filters.region, v) })}
@@ -192,6 +285,7 @@ export default function ProjectFilters({
       />
       <CheckboxGroup
         legend="Encargado"
+        icon="responsible"
         options={asOptions(options?.responsible)}
         selected={filters.responsible}
         onToggle={(v) => onChange({ ...filters, responsible: toggle(filters.responsible, v) })}
