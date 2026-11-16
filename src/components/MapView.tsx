@@ -12,9 +12,12 @@ import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import { can } from '../services/permissions'
+import { requestPin } from '../services/pinRequests'
+import { showToast } from '../services/toast'
 import LocateControl from './LocateControl'
 import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
+import RequestPinButton from './RequestPinButton'
 import TrackpadNavigation from './TrackpadNavigation'
 
 const DEFAULT_CENTER: LatLngTuple = [20, 0]
@@ -76,9 +79,13 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 export default function MapView() {
   const [savedView] = useState(loadMapView)
   const { status, position, locate } = useGeolocation()
-  const canWritePins = can(useAuth(), 'pins.write')
+  const auth = useAuth()
+  const canWritePins = can(auth, 'pins.write')
+  // Admins create pins directly; everyone else with the permission proposes them.
+  const canRequestPins = !canWritePins && can(auth, 'pins.request')
   const { pins, error, addPin, editPin } = usePins()
-  const [draft, setDraft] = useState<{ lat: number; lng: number } | null>(null)
+  const [placing, setPlacing] = useState(false)
+  const [draft, setDraft] = useState<{ lat: number; lng: number; request: boolean } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = pins.find((p) => p.id === selectedId) ?? null
@@ -97,7 +104,14 @@ export default function MapView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [selectedId, draft, editingId])
 
-  const notice = error ?? GEO_MESSAGES[status]
+  useEffect(() => {
+    if (!placing) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPlacing(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [placing])
+
+  const notice = placing ? 'Toca el mapa para elegir la ubicación' : (error ?? GEO_MESSAGES[status])
 
   return (
     <div className="relative h-full w-full">
@@ -105,7 +119,7 @@ export default function MapView() {
         center={savedView?.center ?? DEFAULT_CENTER}
         zoom={savedView?.zoom ?? DEFAULT_ZOOM}
         scrollWheelZoom={false}
-        className="h-full w-full"
+        className={`h-full w-full ${placing ? '[&.leaflet-grab]:cursor-crosshair' : ''}`}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -117,8 +131,12 @@ export default function MapView() {
         <LocateControl onLocate={locate} zoom={LOCATED_ZOOM} disabled={status === 'unsupported'} />
         <ClickHandler
           onClick={(lat, lng) => {
-            if (selectedId) setSelectedId(null)
-            else if (canWritePins) setDraft({ lat, lng })
+            if (placing) {
+              setSelectedId(null)
+              setPlacing(false)
+              setDraft({ lat, lng, request: true })
+            } else if (selectedId) setSelectedId(null)
+            else if (canWritePins) setDraft({ lat, lng, request: false })
           }}
         />
 
@@ -138,6 +156,16 @@ export default function MapView() {
       </MapContainer>
 
       <PinCard pin={selected} onClose={() => setSelectedId(null)} onEdit={canWritePins ? (pin) => setEditingId(pin.id) : undefined} />
+
+      {canRequestPins && (
+        <RequestPinButton
+          active={placing}
+          onToggle={() => {
+            setSelectedId(null)
+            setPlacing((p) => !p)
+          }}
+        />
+      )}
 
       {notice && (
         <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow">
@@ -163,9 +191,17 @@ export default function MapView() {
         <PinFormModal
           lat={draft.lat}
           lng={draft.lng}
+          request={draft.request}
           onCancel={() => setDraft(null)}
           onSubmit={async ({ image, ...data }) => {
-            await addPin({ ...draft, ...data }, image)
+            const place = { lat: draft.lat, lng: draft.lng }
+            if (draft.request) {
+              if (!auth.userId) throw new Error('Inicia sesión para solicitar un pin')
+              await requestPin(auth.userId, { ...place, ...data }, image)
+              showToast('Solicitud enviada. Un administrador la revisará.')
+            } else {
+              await addPin({ ...place, ...data }, image)
+            }
             setDraft(null)
           }}
         />

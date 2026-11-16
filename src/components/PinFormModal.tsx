@@ -8,6 +8,8 @@ interface Props {
   lng: number
   /** When set, the form edits this pin instead of creating one. */
   pin?: Pin
+  /** The pin is proposed, not published: an admin reviews it first. */
+  request?: boolean
   onSubmit: (data: {
     title: string
     description: string
@@ -17,7 +19,8 @@ interface Props {
   onCancel: () => void
 }
 
-export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Props) {
+export default function PinFormModal({ lat, lng, pin, request = false, onSubmit, onCancel }: Props) {
+  const heading = pin ? 'Editar pin' : request ? 'Solicitar pin' : 'Nuevo pin'
   const [title, setTitle] = useState(pin?.title ?? '')
   const [description, setDescription] = useState(pin?.description ?? '')
   const [removed, setRemoved] = useState(false)
@@ -61,7 +64,7 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
         removeImage: removed && !image ? true : undefined,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the pin')
+      setError(err instanceof Error ? err.message : request ? 'No se pudo enviar la solicitud' : 'No se pudo guardar el pin')
       setSaving(false)
     }
   }
@@ -73,17 +76,22 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
     >
       <form
         role="dialog"
-        aria-label={pin ? 'Edit pin' : 'New pin'}
+        aria-label={heading}
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 shadow-xl"
       >
-        <h2 className="text-lg font-semibold text-gray-900">{pin ? 'Edit pin' : 'New pin'}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{heading}</h2>
         <p className="text-xs text-gray-500">
           {lat.toFixed(5)}, {lng.toFixed(5)}
         </p>
+        {request && (
+          <p className="rounded-md bg-brand-blush/40 px-3 py-2 text-sm text-brand-primary">
+            Un administrador revisará tu solicitud antes de publicar el pin.
+          </p>
+        )}
 
         <label className="block text-sm text-gray-700">
-          Title
+          Título
           <input
             autoFocus
             required
@@ -94,7 +102,7 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
         </label>
 
         <label className="block text-sm text-gray-700">
-          Description
+          Descripción
           <textarea
             rows={3}
             value={description}
@@ -104,7 +112,7 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
         </label>
 
         <label className="block text-sm text-gray-700">
-          Image
+          Imagen
           <input
             type="file"
             accept="image/*"
@@ -113,14 +121,14 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
           />
         </label>
         {image ? (
-          <img src={image.url} alt="Preview" className="h-32 w-full rounded-lg object-cover" />
+          <img src={image.url} alt="Vista previa" className="h-32 w-full rounded-lg object-cover" />
         ) : (
           pin?.image_path &&
           !removed && (
             <div className="relative">
               <img
                 src={pinImageUrl(pin.image_path)}
-                alt="Current image"
+                alt="Imagen actual"
                 className="h-32 w-full rounded-lg object-cover"
               />
               <button
@@ -128,7 +136,7 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
                 onClick={() => setRemoved(true)}
                 className="absolute right-2 top-2 rounded-full bg-white/90 px-3 py-1 text-xs text-gray-700 shadow hover:bg-white"
               >
-                Remove image
+                Quitar imagen
               </button>
             </div>
           )
@@ -143,14 +151,14 @@ export default function PinFormModal({ lat, lng, pin, onSubmit, onCancel }: Prop
             disabled={saving}
             className="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             type="submit"
             disabled={saving || !title.trim()}
             className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90 disabled:opacity-50"
           >
-            {saving ? 'Saving…' : 'Save'}
+            {request ? (saving ? 'Enviando…' : 'Enviar solicitud') : saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </form>
