@@ -12,7 +12,9 @@ vi.mock('./services/accountService', () => ({
 
 vi.mock('./services/pinRequests', () => ({
   countPendingRequests: vi.fn().mockResolvedValue(0),
-  listAllRequests: vi.fn().mockResolvedValue([]),
+  listRequestsPage: vi.fn().mockResolvedValue({ requests: [], total: 0 }),
+  countReviewedRequests: vi.fn().mockResolvedValue(0),
+  REVIEW_PAGE_SIZE: 10,
 }))
 
 const getProjectById = vi.hoisted(() => vi.fn())

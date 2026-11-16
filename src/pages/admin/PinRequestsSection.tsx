@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
+import Pagination from '../../components/Pagination'
 import { useUsers } from '../../hooks/useUsers'
-import { approveRequest, listAllRequests, rejectRequest } from '../../services/pinRequests'
+import {
+  approveRequest,
+  countPendingRequests,
+  countReviewedRequests,
+  listRequestsPage,
+  rejectRequest,
+  REVIEW_PAGE_SIZE,
+  type ReviewFilter,
+} from '../../services/pinRequests'
 import { showToast } from '../../services/toast'
 import type { PinRequest } from '../../types'
 import { RequestImage } from '../account/RequestsSection'
 import { Chips, ConfirmButton, Empty, LoadError, Loading } from './ui'
 import { card, dateFormat, primaryButton } from './styles'
-
-type Filter = 'pending' | 'reviewed'
 
 const STATUS_CHIP = {
   approved: { label: 'Aprobada', chip: 'bg-green-100 text-green-800' },
@@ -17,63 +24,71 @@ const STATUS_CHIP = {
 /** "Solicitudes de pines": what members propose. Approving publishes the pin on the map. */
 export default function PinRequestsSection() {
   const { nameOf } = useUsers()
-  const [requests, setRequests] = useState<PinRequest[] | null>(null)
+  const [filter, setFilter] = useState<ReviewFilter>('pending')
+  const [page, setPage] = useState(1)
+  const [data, setData] = useState<{ requests: PinRequest[]; total: number; pending: number; reviewed: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<Filter>('pending')
   const [busy, setBusy] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
+  // The page and the two chip counts come from the server; the previous page stays until the next arrives.
   useEffect(() => {
     let cancelled = false
-    listAllRequests().then(
-      (list) => {
+    Promise.all([listRequestsPage(filter, page), countPendingRequests(), countReviewedRequests()]).then(
+      ([{ requests, total }, pending, reviewed]) => {
         if (cancelled) return
-        setRequests(list)
-        setError(null)
+        // Reviewing the last request of a page leaves it empty: step back.
+        if (requests.length === 0 && page > 1) setPage(Math.max(Math.ceil(total / REVIEW_PAGE_SIZE), 1))
+        else {
+          setData({ requests, total, pending, reviewed })
+          setError(null)
+        }
       },
       (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : 'Error'),
     )
     return () => {
       cancelled = true
     }
-  }, [version])
+  }, [filter, page, version])
 
   async function review(request: PinRequest, action: 'approve' | 'reject') {
     setBusy(request.id)
     try {
       if (action === 'approve') await approveRequest(request)
       else await rejectRequest(request.id)
-      setRequests((list) =>
-        (list ?? []).map((r) => (r.id === request.id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r)),
-      )
       showToast(action === 'approve' ? 'Pin publicado en el mapa' : 'Solicitud rechazada')
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo completar la acción')
-      // Someone else may have reviewed it: show what is true now.
-      reload()
     }
+    // Moved to the other list, or reviewed by someone else already: show what is true now.
+    reload()
     setBusy(null)
   }
 
-  if (error && !requests) return <LoadError message={error} onRetry={reload} />
-  if (!requests) return <Loading />
+  if (error && !data) return <LoadError message={error} onRetry={reload} />
+  if (!data) return <Loading />
 
-  const pending = requests.filter((r) => r.status === 'pending')
-  const reviewed = requests.filter((r) => r.status !== 'pending')
-  const shown = filter === 'pending' ? pending : reviewed
+  const { requests: shown, total, pending, reviewed } = data
+  const totalPages = Math.max(Math.ceil(total / REVIEW_PAGE_SIZE), 1)
 
   return (
     <section aria-label="Solicitudes de pines" className="space-y-4">
-      <Chips
-        label="Estado"
-        value={filter}
-        onChange={setFilter}
-        options={[
-          { id: 'pending', label: 'Pendientes', count: pending.length },
-          { id: 'reviewed', label: 'Revisadas', count: reviewed.length },
-        ]}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <Chips
+          label="Estado"
+          value={filter}
+          onChange={(next) => {
+            setFilter(next)
+            setPage(1)
+          }}
+          options={[
+            { id: 'pending', label: 'Pendientes', count: pending },
+            { id: 'reviewed', label: 'Revisadas', count: reviewed },
+          ]}
+        />
+        {totalPages > 1 && <Pagination page={Math.min(page, totalPages)} totalPages={totalPages} onChange={setPage} />}
+      </div>
       {shown.length === 0 ? (
         <Empty>{filter === 'pending' ? 'No hay solicitudes pendientes.' : 'Aún no hay solicitudes revisadas.'}</Empty>
       ) : (

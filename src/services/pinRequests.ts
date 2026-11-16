@@ -86,20 +86,35 @@ export async function requestImageUrl(path: string): Promise<string> {
 
 // --- Review (admins) -------------------------------------------------------------------------
 
-/** Most recent requests shown to reviewers. */
-const MAX_REVIEW_REQUESTS = 200
+/** Requests per page in the review list. */
+export const REVIEW_PAGE_SIZE = 10
 const REVIEW_FAILED = 'No se pudo completar la acción. Inténtalo de nuevo.'
 const ALREADY_REVIEWED = 'Esta solicitud ya fue revisada.'
 
-/** Everyone's requests, newest first (reviewers only: others only ever see their own). */
-export async function listAllRequests(): Promise<PinRequest[]> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('*')
+export type ReviewFilter = 'pending' | 'reviewed'
+
+/** One page of everyone's requests, newest first (reviewers only: others only ever see their own). */
+export async function listRequestsPage(
+  filter: ReviewFilter,
+  page: number,
+): Promise<{ requests: PinRequest[]; total: number }> {
+  const base = supabase.from(TABLE).select('*', { count: 'exact' })
+  const from = (page - 1) * REVIEW_PAGE_SIZE
+  const { data, error, count } = await (filter === 'pending' ? base.eq('status', 'pending') : base.neq('status', 'pending'))
     .order('created_at', { ascending: false })
-    .limit(MAX_REVIEW_REQUESTS)
+    .range(from, from + REVIEW_PAGE_SIZE - 1)
   if (error) throw new Error('No se pudieron cargar las solicitudes. Inténtalo de nuevo.')
-  return data as PinRequest[]
+  return { requests: data as PinRequest[], total: count ?? 0 }
+}
+
+/** How many requests have been reviewed (approved or rejected). */
+export async function countReviewedRequests(): Promise<number> {
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select('id', { count: 'exact', head: true })
+    .neq('status', 'pending')
+  if (error) throw new Error(error.message)
+  return count ?? 0
 }
 
 /** How many wait for review (the badge on the admin tab). */

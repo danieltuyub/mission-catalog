@@ -6,7 +6,9 @@ const svc = vi.hoisted(() => ({
   listUsers: vi.fn(),
   setUserRole: vi.fn(),
   updateUserName: vi.fn(),
-  listAllRequests: vi.fn(),
+  listRequestsPage: vi.fn(),
+  countPendingRequests: vi.fn(),
+  countReviewedRequests: vi.fn(),
   approveRequest: vi.fn(),
   rejectRequest: vi.fn(),
   requestImageUrl: vi.fn(),
@@ -27,7 +29,10 @@ vi.mock('../../services/adminUsers', async (importOriginal) => ({
   updateUserName: svc.updateUserName,
 }))
 vi.mock('../../services/pinRequests', () => ({
-  listAllRequests: svc.listAllRequests,
+  listRequestsPage: svc.listRequestsPage,
+  countPendingRequests: svc.countPendingRequests,
+  countReviewedRequests: svc.countReviewedRequests,
+  REVIEW_PAGE_SIZE: 10,
   approveRequest: svc.approveRequest,
   rejectRequest: svc.rejectRequest,
   requestImageUrl: svc.requestImageUrl,
@@ -130,26 +135,54 @@ const request = (over: object) => ({
 })
 
 describe('PinRequestsSection', () => {
+  // The server splits by status: a stateful fake so a review moves a request between the lists.
+  let rows: ReturnType<typeof request>[]
   beforeEach(() => {
-    svc.listAllRequests.mockResolvedValue([request({}), request({ id: 'r2', title: 'Viejo', status: 'approved' })])
+    rows = [request({}), request({ id: 'r2', title: 'Viejo', status: 'approved' })]
+    svc.listRequestsPage.mockImplementation(async (filter: string) => {
+      const list = rows.filter((r) => (filter === 'pending') === (r.status === 'pending'))
+      return { requests: list, total: list.length }
+    })
+    svc.countPendingRequests.mockImplementation(async () => rows.filter((r) => r.status === 'pending').length)
+    svc.countReviewedRequests.mockImplementation(async () => rows.filter((r) => r.status !== 'pending').length)
   })
 
-  it('shows pending requests first, with who asked', async () => {
+  it('shows pending requests first, with who asked and the counts', async () => {
     render(<PinRequestsSection />)
     expect(await screen.findByText('Pozo nuevo')).toBeInTheDocument()
     expect(screen.queryByText('Viejo')).not.toBeInTheDocument()
     expect(await screen.findByText(/Ana Paz/)).toBeInTheDocument()
+    expect(svc.listRequestsPage).toHaveBeenCalledWith('pending', 1)
+    expect(screen.getByRole('button', { name: /Revisadas/ })).toHaveTextContent('1')
   })
 
   it('approves and moves it to the reviewed ones', async () => {
-    svc.approveRequest.mockResolvedValue(undefined)
+    svc.approveRequest.mockImplementation(async (r: { id: string }) => {
+      rows = rows.map((x) => (x.id === r.id ? { ...x, status: 'approved' } : x))
+    })
     render(<PinRequestsSection />)
     await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }))
     expect(svc.approveRequest).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }))
     expect(getToast()?.message).toBe('Pin publicado en el mapa')
-    expect(screen.getByText('No hay solicitudes pendientes.')).toBeInTheDocument()
+    expect(await screen.findByText('No hay solicitudes pendientes.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Revisadas/ }))
-    expect(screen.getByText('Pozo nuevo')).toBeInTheDocument()
+    expect(await screen.findByText('Pozo nuevo')).toBeInTheDocument()
+    expect(svc.listRequestsPage).toHaveBeenCalledWith('reviewed', 1)
+  })
+
+  it('pages the reviewed ones on the server', async () => {
+    svc.listRequestsPage.mockImplementation(async (_f: string, page: number) => ({
+      requests: [request({ id: `p${page}`, title: `Revisada ${page}`, status: 'approved' })],
+      total: 25,
+    }))
+    svc.countPendingRequests.mockResolvedValue(0)
+    svc.countReviewedRequests.mockResolvedValue(25)
+    render(<PinRequestsSection />)
+    await userEvent.click(await screen.findByRole('button', { name: /Revisadas/ }))
+    expect(await screen.findByText('Revisada 1')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }))
+    expect(await screen.findByText('Revisada 2')).toBeInTheDocument()
+    expect(svc.listRequestsPage).toHaveBeenLastCalledWith('reviewed', 2)
   })
 
   it('asks before rejecting', async () => {
@@ -166,7 +199,7 @@ describe('PinRequestsSection', () => {
     render(<PinRequestsSection />)
     await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }))
     expect(getToast()?.message).toBe('Esta solicitud ya fue revisada.')
-    expect(svc.listAllRequests).toHaveBeenCalledTimes(2)
+    await vi.waitFor(() => expect(svc.listRequestsPage).toHaveBeenCalledTimes(2))
   })
 })
 

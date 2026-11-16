@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const svc = vi.hoisted(() => ({ countPendingRequests: vi.fn() }))
 vi.mock('../services/pinRequests', () => ({
   countPendingRequests: svc.countPendingRequests,
-  listAllRequests: vi.fn().mockResolvedValue([]),
+  listRequestsPage: vi.fn().mockResolvedValue({ requests: [], total: 0 }),
+  countReviewedRequests: vi.fn().mockResolvedValue(0),
+  REVIEW_PAGE_SIZE: 10,
 }))
 
 import { getAuthSnapshot } from '../services/authService'
