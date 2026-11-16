@@ -387,6 +387,12 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('Sin descripción')).toBeInTheDocument()
   })
 
+  it('offers to share the project', async () => {
+    render(<ProjectDetailPage id="abc" />)
+    await screen.findByRole('heading', { name: 'Iglesia Norte' })
+    expect(screen.getByRole('button', { name: 'Compartir proyecto' })).toBeInTheDocument()
+  })
+
   it('shows a not-found state', async () => {
     getProjectById.mockResolvedValue(null)
     render(<ProjectDetailPage id="zzz" />)

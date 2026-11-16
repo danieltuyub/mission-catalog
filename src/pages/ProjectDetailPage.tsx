@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader'
 import PhotoCarousel from '../components/PhotoCarousel'
 import SaveProjectButton from '../components/SaveProjectButton'
 import SendMessageButton from '../components/SendMessageButton'
+import ShareProjectButton from '../components/ShareProjectButton'
 import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
 import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
@@ -113,6 +114,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
               onToggle={() => toggleSaved(project.id)}
               disabled={savedLoading}
             />
+            <ShareProjectButton id={project.id} name={project.name} />
             {canEditProject(auth, project) && <EditProjectLink id={project.id} />}
           </div>
         )}
