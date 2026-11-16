@@ -35,9 +35,9 @@ function Panel() {
   return (
     <div className="mx-auto w-[94%] pb-10 md:w-4/5">
       <PageHeader title="Mi espacio" />
-      {/* Same pill language as the navbar and the filters; scrolls sideways on narrow screens. */}
-      <nav aria-label="Mi espacio" className="-mx-1 mb-6 overflow-x-auto px-1 pb-1">
-        <ul className="flex w-max gap-2">
+      {/* Underlined tabs: the pills are for the choices inside a section. Scrolls sideways on narrow screens. */}
+      <nav aria-label="Mi espacio" className="mb-6 overflow-x-auto border-b border-stone-200">
+        <ul className="flex w-max gap-6">
           {sections.map(({ id, label }) => {
             const active = id === current.id
             return (
@@ -45,8 +45,10 @@ function Panel() {
                 <a
                   href={`#/cuenta/${id}`}
                   aria-current={active ? 'page' : undefined}
-                  className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm ring-1 ring-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
-                    active ? 'bg-brand-primary font-medium text-brand-blush' : 'bg-white text-brand-primary hover:bg-brand-blush'
+                  className={`-mb-px inline-flex h-11 items-center gap-2 border-b-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-sage ${
+                    active
+                      ? 'border-brand-primary font-medium text-brand-primary'
+                      : 'border-transparent text-stone-500 hover:border-stone-300 hover:text-brand-primary'
                   }`}
                 >
                   {label}

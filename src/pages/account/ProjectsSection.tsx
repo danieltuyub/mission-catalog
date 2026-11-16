@@ -1,11 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import Pagination from '../../components/Pagination'
 import ProjectCard from '../../components/ProjectCard'
 import { useAuth } from '../../hooks/useAuth'
+import { useProjectTab } from '../../hooks/useRoute'
 import { useSavedProjects } from '../../hooks/useSavedProjects'
 import { can, canEditProject } from '../../services/permissions'
 import { getCreatedProjects, getProjectsByIds } from '../../services/projectService'
 import { listSavedProjectIds } from '../../services/savedProjects'
 import type { Project } from '../../types'
+
+/** Cards per page. */
+export const PAGE_SIZE = 4
 
 interface Loaded {
   userId: string
@@ -17,15 +22,24 @@ interface Loaded {
 const linkButton =
   'mt-4 inline-flex h-10 items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage'
 
-function Block({ id, title, count, children }: { id: string; title: string; count: number; children: ReactNode }) {
+/** One list, a page at a time. Remounted per tab, so each starts on its first page. */
+function PagedCards({ projects, render }: { projects: Project[]; render: (project: Project) => ReactNode }) {
+  const [page, setPage] = useState(1)
+  const totalPages = Math.ceil(projects.length / PAGE_SIZE)
+  const shown = projects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   return (
-    <section aria-labelledby={id}>
-      <h2 id={id} className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-        {title}
-        <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[11px] text-stone-600">{count}</span>
-      </h2>
-      {children}
-    </section>
+    <>
+      <ul className="space-y-4">
+        {shown.map((project) => (
+          <li key={project.id}>{render(project)}</li>
+        ))}
+      </ul>
+      {totalPages > 1 && (
+        <div className="mt-5 flex justify-center">
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </div>
+      )}
+    </>
   )
 }
 
@@ -36,6 +50,7 @@ export default function ProjectsSection() {
   const isCreator = can(auth, 'projects.create')
   const canSave = can(auth, 'projects.save')
   const { isSaved, toggle, loading: savedLoading } = useSavedProjects()
+  const requested = useProjectTab()
   const [result, setResult] = useState<Loaded | null>(null)
 
   // The saved ones are read once: unsaving a card here leaves it in place, so "Deshacer" still has a card to restore.
@@ -63,47 +78,65 @@ export default function ProjectsSection() {
       </p>
     )
 
-  const list = (projects: Project[]) => (
-    <ul className="space-y-4">
-      {projects.map((project) => (
-        <li key={project.id}>
-          <ProjectCard
-            project={project}
-            editable={canEditProject(auth, project)}
-            saved={isSaved(project.id)}
-            onToggleSaved={canSave ? () => toggle(project.id) : undefined}
-            saveDisabled={savedLoading}
-          />
-        </li>
-      ))}
-    </ul>
-  )
+  const tabs = [
+    ...(isCreator ? [{ id: 'creados' as const, label: 'Creados por mí', projects: current.created }] : []),
+    ...(canSave ? [{ id: 'guardados' as const, label: 'Guardados', projects: current.saved }] : []),
+  ]
+  const tab = tabs.find((t) => t.id === requested) ?? tabs[0]
+  if (!tab) return null
 
   return (
-    <div className="space-y-8">
-      {isCreator && (
-        <Block id="account-created" title="Creados por mí" count={current.created.length}>
-          {current.created.length > 0 ? (
-            list(current.created)
-          ) : (
-            <p className="rounded-2xl bg-white p-6 text-sm text-stone-500 shadow ring-1 ring-black/5">Aún no has creado proyectos.</p>
-          )}
-        </Block>
+    <div>
+      {/* Only worth choosing when there is more than one list. */}
+      {tabs.length > 1 && (
+        <nav aria-label="Proyectos" className="mb-4">
+          <ul className="flex flex-wrap gap-2">
+            {tabs.map((t) => (
+              <li key={t.id}>
+                <a
+                  href={`#/cuenta/proyectos/${t.id}`}
+                  aria-current={t.id === tab.id ? 'page' : undefined}
+                  className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm ring-1 ring-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
+                    t.id === tab.id ? 'bg-brand-primary font-medium text-brand-blush' : 'bg-white text-brand-primary hover:bg-brand-blush'
+                  }`}
+                >
+                  {t.label}
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${t.id === tab.id ? 'bg-white/15' : 'bg-stone-200 text-stone-600'}`}>
+                    {t.projects.length}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       )}
-      {canSave && (
-        <Block id="account-saved" title="Guardados" count={current.saved.length}>
-          {current.saved.length > 0 ? (
-            list(current.saved)
-          ) : (
-            <div className="rounded-2xl bg-white p-6 text-stone-600 shadow ring-1 ring-black/5">
-              <p>Aún no has guardado proyectos.</p>
-              <p className="mt-1 text-sm text-stone-500">Toca el corazón de un proyecto para verlo aquí.</p>
-              <a href="#/proyectos" className={linkButton}>
-                Ver proyectos
-              </a>
-            </div>
+
+      {tab.projects.length === 0 ? (
+        tab.id === 'creados' ? (
+          <p className="rounded-2xl bg-white p-6 text-sm text-stone-500 shadow ring-1 ring-black/5">Aún no has creado proyectos.</p>
+        ) : (
+          <div className="rounded-2xl bg-white p-6 text-stone-600 shadow ring-1 ring-black/5">
+            <p>Aún no has guardado proyectos.</p>
+            <p className="mt-1 text-sm text-stone-500">Toca el corazón de un proyecto para verlo aquí.</p>
+            <a href="#/proyectos" className={linkButton}>
+              Ver proyectos
+            </a>
+          </div>
+        )
+      ) : (
+        <PagedCards
+          key={tab.id}
+          projects={tab.projects}
+          render={(project) => (
+            <ProjectCard
+              project={project}
+              editable={canEditProject(auth, project)}
+              saved={isSaved(project.id)}
+              onToggleSaved={canSave ? () => toggle(project.id) : undefined}
+              saveDisabled={savedLoading}
+            />
           )}
-        </Block>
+        />
       )}
     </div>
   )

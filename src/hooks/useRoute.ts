@@ -70,6 +70,18 @@ export function useAccountSection(): AccountSection | null {
   })
 }
 
+/** Lists inside the account's Proyectos section, `#/cuenta/proyectos/<tab>`. */
+export const PROJECT_TABS = ['creados', 'guardados'] as const
+export type ProjectTab = (typeof PROJECT_TABS)[number]
+
+/** Tab of `#/cuenta/proyectos/<tab>`; null when absent or unknown (the section then picks its default). */
+export function useProjectTab(): ProjectTab | null {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section, tab] = segments()
+    return name === 'cuenta' && section === 'proyectos' ? (PROJECT_TABS.find((t) => t === tab) ?? null) : null
+  })
+}
+
 /** `#/cuenta/mensajes/<id>` -> the open conversation's id; null otherwise. */
 export function useConversationId(): string | null {
   return useSyncExternalStore(subscribe, () => {
