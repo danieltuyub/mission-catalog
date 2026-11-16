@@ -84,6 +84,12 @@ describe('ProjectCard', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+  it('carries the list it is in to the project and to its edit page', () => {
+    render(<ProjectCard project={base} from="guardados" editable />)
+    expect(screen.getByRole('link', { name: 'Iglesia Norte' })).toHaveAttribute('href', '#/proyectos/1?from=guardados')
+    expect(screen.getByRole('link', { name: 'Editar proyecto' })).toHaveAttribute('href', '#/proyectos/1/editar?from=guardados')
+  })
+
   describe('save heart', () => {
     it('is not shown without a handler', () => {
       render(<ProjectCard project={base} />)

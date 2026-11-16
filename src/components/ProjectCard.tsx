@@ -1,3 +1,4 @@
+import { projectUrl, type EditOrigin } from '../services/editOrigin'
 import { projectPhotos } from '../services/projectImages'
 import type { Project } from '../types'
 import EditProjectLink from './EditProjectLink'
@@ -20,6 +21,8 @@ interface Props {
   project: Project
   /** Called on a plain click on the card link (not for new-tab clicks). */
   onOpen?: () => void
+  /** The list the card is in, so the project and its edit page lead back to it. Defaults to the public list. */
+  from?: EditOrigin
   /** Shows the edit icon (admins only). */
   editable?: boolean
   /** Shows the heart when `onToggleSaved` is given. */
@@ -32,6 +35,7 @@ interface Props {
 export default function ProjectCard({
   project,
   onOpen,
+  from,
   editable = false,
   saved = false,
   onToggleSaved,
@@ -72,7 +76,7 @@ export default function ProjectCard({
           {onToggleSaved && (
             <SaveProjectButton saved={saved} onToggle={onToggleSaved} disabled={saveDisabled} className="shadow-sm" />
           )}
-          {editable && <EditProjectLink id={project.id} from="lista" className="shadow-sm" />}
+          {editable && <EditProjectLink id={project.id} from={from ?? 'lista'} className="shadow-sm" />}
         </div>
       )}
 
@@ -84,7 +88,7 @@ export default function ProjectCard({
         >
           {/* The whole card is the click target (stretched link). */}
           <a
-            href={`#/proyectos/${project.id}`}
+            href={projectUrl(project.id, from)}
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
               onOpen?.()

@@ -12,6 +12,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
 import { useSavedProjects } from '../hooks/useSavedProjects'
 import { loginToastAction, loginUrl } from '../services/authRedirect'
+import { originBack, readEditOrigin } from '../services/editOrigin'
 import { sendProjectMessage } from '../services/messages'
 import { can, canEditProject } from '../services/permissions'
 import { projectPhotos } from '../services/projectImages'
@@ -68,12 +69,14 @@ export default function ProjectDetailPage({ id }: { id: string }) {
   }, [fromList])
 
   const status = project ? STATUS_META[project.status] : null
+  // Back to the list it was opened from (a list in "Mi espacio", or the public one by default).
+  const back = originBack(readEditOrigin() ?? 'lista')
 
   return (
     <div className="mx-auto w-[94%] md:w-4/5">
       <nav aria-label="Volver" className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-4">
         <a
-          href="#/proyectos"
+          href={back.href}
           className="inline-flex h-10 items-center gap-2 rounded-full bg-white pl-3 pr-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
         >
           <svg
@@ -88,7 +91,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Proyectos
+          {back.label}
         </a>
         {project && (
           <div className="ml-auto flex items-center gap-2">

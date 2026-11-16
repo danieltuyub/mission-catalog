@@ -5,7 +5,7 @@ import ProjectForm, { type ProjectFormData } from '../components/ProjectForm'
 import { useDelayed } from '../hooks/useDelayed'
 import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
-import { readEditOrigin } from '../services/editOrigin'
+import { originBack, readEditOrigin } from '../services/editOrigin'
 import { canEditProject } from '../services/permissions'
 import { updateProjectWithImages } from '../services/projectAdmin'
 import { clearFilterOptionsCache } from '../services/projectService'
@@ -16,9 +16,9 @@ export default function ProjectEditPage({ id }: { id: string }) {
   const auth = useAuth()
   const allowed = !project || canEditProject(auth, project)
   const showPlaceholder = useDelayed(loading, SKELETON_DELAY_MS)
-  // Back where the user came from: the list, or (by default) the project detail.
-  const fromList = readEditOrigin() === 'lista'
-  const back = fromList ? '#/proyectos' : `#/proyectos/${id}`
+  // Back where the user came from: a list, or (by default) the project detail.
+  const origin = readEditOrigin()
+  const back = origin ? originBack(origin).href : `#/proyectos/${id}`
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -34,7 +34,7 @@ export default function ProjectEditPage({ id }: { id: string }) {
   return (
     <div className="mx-auto w-[94%] max-w-3xl">
       <nav aria-label="Volver" className="pb-4">
-        <BackLink href={back}>{fromList ? 'Proyectos' : 'Proyecto'}</BackLink>
+        <BackLink href={back}>{origin ? originBack(origin).label : 'Proyecto'}</BackLink>
       </nav>
       <PageHeader title="Editar proyecto" />
       {loading && (

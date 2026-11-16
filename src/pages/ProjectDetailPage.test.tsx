@@ -406,6 +406,23 @@ describe('ProjectDetailPage', () => {
     expect(window.scrollTo).toHaveBeenCalledWith(0, 0)
   })
 
+  describe('opened from Mi espacio', () => {
+    afterEach(() => {
+      window.location.hash = ''
+    })
+
+    it.each([
+      ['creados', 'Creados por mí'],
+      ['guardados', 'Guardados'],
+    ])('leads back to %s, not to the public list', async (origin, label) => {
+      window.location.hash = `#/proyectos/abc?from=${origin}`
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', `#/cuenta/proyectos/${origin}`)
+      expect(screen.queryByRole('link', { name: 'Proyectos' })).not.toBeInTheDocument()
+    })
+  })
+
   describe('opened from the list', () => {
     beforeEach(() => {
       saveFilters({ ...filters, region: ['Norte'] })

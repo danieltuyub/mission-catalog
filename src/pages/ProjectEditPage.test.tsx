@@ -102,6 +102,16 @@ describe('ProjectEditPage navigation', () => {
     expect(window.location.hash).toBe('#/proyectos/abc')
   })
 
+  it.each([
+    ['creados', 'Creados por mí'],
+    ['guardados', 'Guardados'],
+  ])('goes back to %s in Mi espacio when opened from there', async (origin, label) => {
+    await open(`#/proyectos/abc/editar?from=${origin}`)
+    expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', `#/cuenta/proyectos/${origin}`)
+    await press('Guardar cambios')
+    expect(window.location.hash).toBe(`#/cuenta/proyectos/${origin}`)
+  })
+
   it('ignores an unknown origin', async () => {
     await open('#/proyectos/abc/editar?from=otro')
     await press('Cancelar')

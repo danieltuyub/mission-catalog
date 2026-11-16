@@ -75,7 +75,14 @@ describe('ProjectsSection', () => {
       render(<ProjectsSection />)
       expect(await screen.findByRole('link', { name: 'Guardado' })).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Mío' })).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Guardado' })).toHaveAttribute('href', '#/proyectos/p2?from=guardados')
       expect(screen.queryByRole('link', { name: 'Editar proyecto' })).not.toBeInTheDocument()
+    })
+
+    it('opens each project, and its edit page, remembering the list it came from', async () => {
+      render(<ProjectsSection />)
+      expect(await screen.findByRole('link', { name: 'Mío' })).toHaveAttribute('href', '#/proyectos/p1?from=creados')
+      expect(screen.getByRole('link', { name: 'Editar proyecto' })).toHaveAttribute('href', '#/proyectos/p1/editar?from=creados')
     })
 
     it('falls back to the first list on an unknown tab', async () => {
@@ -120,5 +127,29 @@ describe('ProjectsSection', () => {
     render(<ProjectsSection />)
     await screen.findByRole('link', { name: 'Proyecto 0' })
     expect(screen.queryByRole('button', { name: 'Página siguiente' })).not.toBeInTheDocument()
+  })
+
+  it('puts the pages above the list, level with the chips', async () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+    svc.getCreatedProjects.mockResolvedValue(Array.from({ length: 6 }, (_, i) => project(String(i), `Proyecto ${i}`, 'creator-1')))
+    render(<ProjectsSection />)
+    await screen.findByRole('link', { name: 'Proyecto 0' })
+    const chips = screen.getByRole('navigation', { name: 'Proyectos' })
+    const pages = screen.getByRole('button', { name: 'Página siguiente' })
+    expect(pages.closest('div')).toBe(chips.parentElement)
+    expect(chips.compareDocumentPosition(screen.getAllByRole('article')[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('starts the other list on its first page', async () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(CREATOR)
+    svc.getCreatedProjects.mockResolvedValue(Array.from({ length: 6 }, (_, i) => project(String(i), `Mío ${i}`, 'creator-1')))
+    vi.mocked(listSavedProjectIds).mockResolvedValue(['1'])
+    svc.getProjectsByIds.mockResolvedValue(Array.from({ length: 6 }, (_, i) => project(`s${i}`, `Guardado ${i}`)))
+    render(<ProjectsSection />)
+    await screen.findByRole('link', { name: 'Mío 0' })
+    await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }))
+    expect(screen.getByRole('link', { name: 'Mío 5' })).toBeInTheDocument()
+    window.location.hash = '#/cuenta/proyectos/guardados'
+    expect(await screen.findByRole('link', { name: 'Guardado 0' })).toBeInTheDocument()
   })
 })
