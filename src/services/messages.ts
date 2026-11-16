@@ -65,6 +65,8 @@ export async function listConversations(userId: string): Promise<ConversationSum
     supabase
       .from('conversations')
       .select('id, user_a, user_b, project_id, last_message_at, projects(name), messages(body, sender_id, sender_name, created_at)')
+      // Admins can read every conversation: the inbox is still only the ones they take part in.
+      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
       .order('last_message_at', { ascending: false })
       .limit(MAX_CONVERSATIONS)
       .order('created_at', { referencedTable: 'messages', ascending: false })
@@ -128,4 +130,39 @@ export async function markConversationRead(conversationId: string, userId: strin
     .eq('recipient_id', userId)
     .is('read_at', null)
   if (error) throw new Error(error.message)
+}
+
+/** A conversation as moderators see it: both people, no unread counts. */
+export interface ModerationConversation {
+  id: string
+  userA: string
+  userB: string
+  projectId: string | null
+  projectName: string | null
+  lastBody: string
+  lastMessageAt: string
+}
+
+/** Every conversation, latest activity first (admins only: the database refuses anyone else). */
+export async function listAllConversations(): Promise<ModerationConversation[]> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('id, user_a, user_b, project_id, last_message_at, projects(name), messages(body, created_at)')
+    .order('last_message_at', { ascending: false })
+    .limit(MAX_CONVERSATIONS * 4)
+    .order('created_at', { referencedTable: 'messages', ascending: false })
+    .limit(1, { referencedTable: 'messages' })
+  if (error) throw new Error('No se pudieron cargar las conversaciones. Inténtalo de nuevo.')
+  return (data as unknown as (Omit<ConversationRow, 'messages'> & { messages: { body: string }[] })[]).map((row) => {
+    const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
+    return {
+      id: row.id,
+      userA: row.user_a,
+      userB: row.user_b,
+      projectId: row.project_id,
+      projectName: project?.name ?? null,
+      lastBody: row.messages[0]?.body ?? '',
+      lastMessageAt: row.last_message_at,
+    }
+  })
 }

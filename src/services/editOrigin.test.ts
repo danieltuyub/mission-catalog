@@ -38,3 +38,11 @@ describe('account origins', () => {
     expect(originBack('lista')).toEqual({ href: '#/proyectos', label: 'Proyectos' })
   })
 })
+
+describe('admin origin', () => {
+  it('leads back to the admin projects and is read from the url', () => {
+    expect(originBack('admin')).toEqual({ href: '#/admin/proyectos', label: 'Administración' })
+    expect(readEditOrigin('#/proyectos/p1?from=admin')).toBe('admin')
+    expect(editUrl('p1', 'admin')).toBe('#/proyectos/p1/editar?from=admin')
+  })
+})

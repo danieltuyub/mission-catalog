@@ -10,6 +10,11 @@ vi.mock('./services/accountService', () => ({
   MIN_PASSWORD_LENGTH: 8,
 }))
 
+vi.mock('./services/pinRequests', () => ({
+  countPendingRequests: vi.fn().mockResolvedValue(0),
+  listAllRequests: vi.fn().mockResolvedValue([]),
+}))
+
 const getProjectById = vi.hoisted(() => vi.fn())
 vi.mock('./services/projectService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./services/projectService')>()),
@@ -85,12 +90,13 @@ describe('App', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('No tienes permiso')
     })
 
-    it('shows the placeholder to admins, with the account within reach', () => {
+    it('shows the panel to admins on its first section, with their own space within reach', async () => {
       vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       window.location.hash = '#/admin'
       render(<App />)
-      expect(screen.getByRole('heading', { name: 'Administración' })).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Ir a Mi cuenta' })).toHaveAttribute('href', '#/cuenta')
+      expect(await screen.findByRole('heading', { name: 'Administración' })).toBeInTheDocument()
+      expect(window.location.hash).toBe('#/admin/solicitudes')
+      expect(screen.getByRole('link', { name: 'Mi espacio' })).toHaveAttribute('href', '#/cuenta')
     })
   })
 

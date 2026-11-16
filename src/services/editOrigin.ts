@@ -1,13 +1,14 @@
 /** Where a project page was opened from, so it can lead back there: the public list or a list in "Mi espacio". */
-export type EditOrigin = 'lista' | 'creados' | 'guardados'
+export type EditOrigin = 'lista' | 'creados' | 'guardados' | 'admin'
 
-const ORIGINS: readonly EditOrigin[] = ['lista', 'creados', 'guardados']
+const ORIGINS: readonly EditOrigin[] = ['lista', 'creados', 'guardados', 'admin']
 
 /** Where "back" goes, and what the button says. */
 const BACK: Record<EditOrigin, { href: string; label: string }> = {
   lista: { href: '#/proyectos', label: 'Proyectos' },
   creados: { href: '#/cuenta/proyectos/creados', label: 'Creados por mí' },
   guardados: { href: '#/cuenta/proyectos/guardados', label: 'Guardados' },
+  admin: { href: '#/admin/proyectos', label: 'Administración' },
 }
 
 export const originBack = (origin: EditOrigin) => BACK[origin]

@@ -12,7 +12,7 @@ const STATUS: Record<PinRequestStatus, { label: string; chip: string }> = {
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long' })
 
 /** The private image, through a link that expires: no picture when it cannot be loaded. */
-function RequestImage({ path }: { path: string }) {
+export function RequestImage({ path }: { path: string }) {
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false

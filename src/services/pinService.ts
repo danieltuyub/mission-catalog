@@ -56,3 +56,10 @@ export async function createPin(pin: NewPin): Promise<Pin> {
   if (error) throw error
   return data as Pin
 }
+
+/** Removes the pin and, when it has one, its photo. */
+export async function deletePin(pin: Pick<Pin, 'id' | 'image_path'>): Promise<void> {
+  const { error } = await supabase.from(TABLE).delete().eq('id', pin.id)
+  if (error) throw error
+  if (pin.image_path) void removePinImage(pin.image_path).catch(() => {})
+}

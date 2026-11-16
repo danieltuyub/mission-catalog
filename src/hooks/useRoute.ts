@@ -107,3 +107,28 @@ export function useEditProjectId(): string | null {
     }
   })
 }
+
+/** Sections of the admin area, `#/admin/<section>`. */
+export const ADMIN_SECTIONS = ['solicitudes', 'pines', 'proyectos', 'usuarios', 'mensajes'] as const
+export type AdminSection = (typeof ADMIN_SECTIONS)[number]
+
+/** Section of `#/admin/<section>`; null on `#/admin`, on an unknown section or on any other route. */
+export function useAdminSection(): AdminSection | null {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section] = segments()
+    return name === 'admin' ? (ADMIN_SECTIONS.find((s) => s === section) ?? null) : null
+  })
+}
+
+/** `#/admin/mensajes/<id>` -> the conversation being read; null otherwise. */
+export function useAdminConversationId(): string | null {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section, id] = segments()
+    if (name !== 'admin' || section !== 'mensajes' || !id) return null
+    try {
+      return decodeURIComponent(id)
+    } catch {
+      return id
+    }
+  })
+}

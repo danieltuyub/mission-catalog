@@ -13,7 +13,7 @@ vi.mock('./supabaseClient', () => ({
         then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
           Promise.resolve(sb.results[table]).then(resolve, reject),
       }
-      for (const method of ['select', 'eq', 'is', 'order', 'limit', 'insert', 'update', 'single']) {
+      for (const method of ['select', 'eq', 'is', 'or', 'order', 'limit', 'insert', 'update', 'single']) {
         builder[method] = (...args: unknown[]) => {
           sb.calls.push({ table, method, args })
           return builder
@@ -72,6 +72,12 @@ describe('listConversations', () => {
     }
     const [c] = await listConversations('me')
     expect(c).toMatchObject({ otherName: '', lastMessage: { fromMe: true } })
+  })
+
+  it('only lists conversations the user takes part in (admins can read all of them)', async () => {
+    sb.results = { conversations: ok([]), messages: ok([]) }
+    await listConversations('me')
+    expect(called('or')).toContainEqual(['user_a.eq.me,user_b.eq.me'])
   })
 
   it('counts only what the user received and has not read', async () => {

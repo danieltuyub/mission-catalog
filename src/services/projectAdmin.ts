@@ -94,3 +94,31 @@ export async function updateProjectWithImages(id: string, patch: NewProject, ima
     throw e
   }
 }
+
+/** What the admin table shows: no long texts. */
+export type AdminProject = Pick<Project, 'id' | 'name' | 'status' | 'country' | 'region' | 'created_by' | 'updated_at'>
+
+/** Every project by name, for the admin table (the catalog is small: no paging). */
+export async function listAdminProjects(): Promise<AdminProject[]> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('id, name, status, country, region, created_by, updated_at')
+    .order('name')
+    .order('id')
+  if (error) throw error
+  return data as AdminProject[]
+}
+
+/** Gives a project an owner (or none). Admins only: the database checks. */
+export async function assignProjectCreator(id: string, userId: string | null): Promise<void> {
+  const { data, error } = await supabase.from(TABLE).update({ created_by: userId }).eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('No se pudo asignar el creador')
+}
+
+/** Deletes a project and its photos (the rows go with it; the files are removed afterwards). */
+export async function deleteProjectWithImages(id: string): Promise<void> {
+  const paths = (await listProjectImages(id)).map((i) => i.path)
+  await deleteProject(id)
+  if (paths.length > 0) await removeProjectImageFiles(paths).catch(() => {})
+}
