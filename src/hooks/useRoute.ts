@@ -32,6 +32,15 @@ function getProjectIdSnapshot(): string | null {
   }
 }
 
+/**
+ * True on pages that only make sense signed in: the account area and the project forms.
+ * Reads the current hash (not a hook): used at the moment of signing out.
+ */
+export function isPrivateRoute(): boolean {
+  const [name, id, action] = segments()
+  return name === 'cuenta' || (name === 'proyectos' && (id === NEW_PROJECT || action === EDIT))
+}
+
 export function useRoute(): Route {
   return useSyncExternalStore(subscribe, getRouteSnapshot)
 }

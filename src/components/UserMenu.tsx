@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { isPrivateRoute } from '../hooks/useRoute'
 import { signOut } from '../services/authService'
 import { fullName, initials } from '../services/displayName'
+import { showToast } from '../services/toast'
 
 interface Props {
   email: string
@@ -119,11 +121,17 @@ export default function UserMenu({ email, firstName, lastName, loading, open, on
         </a>
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             onOpenChange(false)
-            void signOut().then(() => {
-              window.location.hash = '#/mapa'
-            })
+            try {
+              await signOut()
+            } catch {
+              showToast('No se pudo cerrar la sesión. Inténtalo de nuevo.')
+              return
+            }
+            // Public pages stay as they are (they just turn into the guest view); private ones cannot.
+            if (isPrivateRoute()) window.location.hash = '#/mapa'
+            showToast('Sesión cerrada')
           }}
           className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand-sage"
         >

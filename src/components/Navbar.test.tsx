@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
 import { ADMIN, LOADING, NAMED, SIGNED_OUT } from '../test/auth'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot, signOut } from '../services/authService'
+import { getToast } from '../services/toast'
 import Navbar from './Navbar'
 
 describe('Navbar', () => {
@@ -121,16 +122,39 @@ describe('Navbar', () => {
       expect(panel()).toHaveAttribute('inert')
     })
 
-    it('signs out from the menu and goes to the map', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
-      vi.mocked(signOut).mockResolvedValue(undefined)
-      window.location.hash = '#/proyectos'
-      render(<Navbar current="proyectos" />)
-      await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
-      await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
-      expect(signOut).toHaveBeenCalled()
-      await vi.waitFor(() => expect(window.location.hash).toBe('#/mapa'))
-      expect(panel()).toHaveAttribute('inert')
+    describe('signing out', () => {
+      const signOutFrom = async (hash: string) => {
+        vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+        window.location.hash = hash
+        render(<Navbar current="proyectos" />)
+        await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
+        await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+        expect(signOut).toHaveBeenCalled()
+        expect(panel()).toHaveAttribute('inert')
+      }
+
+      beforeEach(() => vi.mocked(signOut).mockReset().mockResolvedValue(undefined))
+      afterEach(() => {
+        window.location.hash = ''
+      })
+
+      it.each(['#/proyectos', '#/proyectos/abc', '#/proyectos?x=1', '#/mapa', '#/contacto'])(
+        'stays on the public page %s and confirms with a toast',
+        async (hash) => {
+          await signOutFrom(hash)
+          await vi.waitFor(() => expect(getToast()?.message).toBe('Sesión cerrada'))
+          expect(window.location.hash).toBe(hash)
+        },
+      )
+
+      it.each(['#/cuenta', '#/cuenta/mensajes', '#/proyectos/nuevo', '#/proyectos/abc/editar'])(
+        'leaves the private page %s for the map',
+        async (hash) => {
+          await signOutFrom(hash)
+          await vi.waitFor(() => expect(window.location.hash).toBe('#/mapa'))
+          expect(getToast()?.message).toBe('Sesión cerrada')
+        },
+      )
     })
 
     it('never keeps the mobile menu and the user menu open together', async () => {
