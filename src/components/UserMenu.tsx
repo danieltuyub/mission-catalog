@@ -14,6 +14,8 @@ interface Props {
   unread: number
   /** Admins get the admin area; everyone else their own space. */
   isAdmin: boolean
+  /** On the account or admin pages: the avatar says so. */
+  active: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -24,7 +26,7 @@ const Icon = ({ d, className }: { d: string; className: string }) => (
   </svg>
 )
 
-export default function UserMenu({ email, firstName, lastName, loading, unread, isAdmin, open, onOpenChange }: Props) {
+export default function UserMenu({ email, firstName, lastName, loading, unread, isAdmin, active, open, onOpenChange }: Props) {
   const name = fullName(firstName, lastName)
   const letters = initials(firstName, lastName)
   const unreadLabel = unread > 0 ? `${unread} ${unread === 1 ? 'mensaje sin leer' : 'mensajes sin leer'}` : ''
@@ -65,7 +67,7 @@ export default function UserMenu({ email, firstName, lastName, loading, unread, 
         aria-controls="user-menu"
         onClick={() => onOpenChange(!open)}
         className={`relative flex size-10 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
-          open ? 'bg-brand-sage text-brand-primary' : 'bg-white/10 text-brand-blush hover:bg-white/20'
+          open ? 'bg-brand-sage text-brand-primary' : `bg-white/10 text-brand-blush hover:bg-white/20 ${active ? 'ring-2 ring-brand-sage' : ''}`
         }`}
       >
         {letters ? (
@@ -114,7 +116,7 @@ export default function UserMenu({ email, firstName, lastName, loading, unread, 
               </p>
               {!loading && !firstName.trim() && (
                 <a
-                  href="#/cuenta"
+                  href="#/cuenta/perfil"
                   onClick={() => onOpenChange(false)}
                   className="text-xs text-brand-blush/70 underline underline-offset-2 hover:text-brand-blush focus-visible:outline-2 focus-visible:outline-brand-sage"
                 >

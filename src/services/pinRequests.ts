@@ -64,3 +64,21 @@ export async function requestPin(userId: string, input: NewPinRequest, image?: F
   }
   return data as PinRequest
 }
+
+/** The user's own requests, newest first (admins would otherwise see everyone's). */
+export async function listMyRequests(userId: string): Promise<PinRequest[]> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('requested_by', userId)
+    .order('created_at', { ascending: false })
+  if (error) throw new Error('No se pudieron cargar tus solicitudes. Inténtalo de nuevo.')
+  return data as PinRequest[]
+}
+
+/** The bucket is private: a link that works for an hour. */
+export async function requestImageUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600)
+  if (error || !data) throw new Error('No se pudo cargar la imagen')
+  return data.signedUrl
+}

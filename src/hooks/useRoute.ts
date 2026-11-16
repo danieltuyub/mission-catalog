@@ -58,11 +58,28 @@ export function useIsNewProject(): boolean {
   })
 }
 
-/** True on `#/cuenta/mensajes` (the inbox, inside the account area). */
-export function useIsMessagesRoute(): boolean {
+/** Sections of the account area, `#/cuenta/<section>`. */
+export const ACCOUNT_SECTIONS = ['mensajes', 'solicitudes', 'proyectos', 'perfil'] as const
+export type AccountSection = (typeof ACCOUNT_SECTIONS)[number]
+
+/** Section of `#/cuenta/<section>`; null on `#/cuenta`, on an unknown section or on any other route. */
+export function useAccountSection(): AccountSection | null {
   return useSyncExternalStore(subscribe, () => {
     const [name, section] = segments()
-    return name === 'cuenta' && section === 'mensajes'
+    return name === 'cuenta' ? (ACCOUNT_SECTIONS.find((s) => s === section) ?? null) : null
+  })
+}
+
+/** `#/cuenta/mensajes/<id>` -> the open conversation's id; null otherwise. */
+export function useConversationId(): string | null {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section, id] = segments()
+    if (name !== 'cuenta' || section !== 'mensajes' || !id) return null
+    try {
+      return decodeURIComponent(id)
+    } catch {
+      return id
+    }
   })
 }
 

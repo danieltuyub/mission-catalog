@@ -13,13 +13,17 @@ export async function countUnreadMessages(userId: string): Promise<number> {
   return count ?? 0
 }
 
+// supabase-js hands back the existing channel for a repeated name, and a channel that is already
+// subscribed refuses new listeners: every subscription needs its own name.
+let subscriptions = 0
+
 /**
  * Calls `onChange` whenever a message to the user arrives or is updated (e.g. read).
  * Realtime only delivers rows the user may read. Returns the function that stops listening.
  */
 export function subscribeToMessages(userId: string, onChange: () => void): () => void {
   const channel = supabase
-    .channel(`messages-for-${userId}`)
+    .channel(`messages-for-${userId}-${++subscriptions}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: TABLE, filter: `recipient_id=eq.${userId}` }, onChange)
     .subscribe()
   return () => {

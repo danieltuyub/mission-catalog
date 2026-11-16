@@ -97,6 +97,21 @@ export async function getProjects({
   }
 }
 
+/** Every project the user created, by name. The catalog is small: no paging. */
+export async function getCreatedProjects(userId: string): Promise<Project[]> {
+  const { data, error } = await supabase.from(TABLE).select(SUMMARY_SELECT).eq('created_by', userId).order('name').order('id')
+  if (error) throw error
+  return data as Project[]
+}
+
+/** The projects with these ids, by name (ids of deleted projects simply do not come back). */
+export async function getProjectsByIds(ids: string[]): Promise<Project[]> {
+  if (ids.length === 0) return []
+  const { data, error } = await supabase.from(TABLE).select(SUMMARY_SELECT).in('id', ids).order('name').order('id')
+  if (error) throw error
+  return data as Project[]
+}
+
 const byAlphabet = (a: string, b: string) => a.localeCompare(b, 'es', { sensitivity: 'base' })
 
 // Options do not depend on page, sort or filters: fetch once per session.

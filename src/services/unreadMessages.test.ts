@@ -55,7 +55,7 @@ describe('subscribeToMessages', () => {
   it('listens to changes of the user\'s own incoming messages and can stop', () => {
     const onChange = vi.fn()
     const stop = subscribeToMessages('u1', onChange)
-    expect(sb.channel).toHaveBeenCalledWith('messages-for-u1')
+    expect(sb.channel).toHaveBeenCalledWith(expect.stringMatching(/^messages-for-u1-\d+$/))
     expect(sb.on).toHaveBeenCalledWith(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'messages', filter: 'recipient_id=eq.u1' },
@@ -65,5 +65,12 @@ describe('subscribeToMessages', () => {
     expect(sb.removeChannel).not.toHaveBeenCalled()
     stop()
     expect(sb.removeChannel).toHaveBeenCalled()
+  })
+
+  it('gives every subscription its own channel (a shared one refuses listeners after subscribe)', () => {
+    subscribeToMessages('u1', vi.fn())
+    subscribeToMessages('u1', vi.fn())
+    const [first, second] = sb.channel.mock.calls.map((c) => c[0])
+    expect(first).not.toBe(second)
   })
 })

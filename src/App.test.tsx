@@ -43,7 +43,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
   })
 
-  describe('#/cuenta/mensajes', () => {
+  describe('#/cuenta', () => {
     afterEach(() => {
       vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
     })
@@ -51,17 +51,17 @@ describe('App', () => {
     it('sends signed-out visitors to the login', () => {
       window.location.hash = '#/cuenta/mensajes'
       render(<App />)
-      expect(screen.queryByRole('heading', { name: 'Mensajes' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Mi espacio' })).not.toBeInTheDocument()
       expect(window.location.hash).toBe('#/login?next=%2Fcuenta%2Fmensajes')
     })
 
-    it('shows the placeholder to members, apart from the account page', () => {
+    it('keeps the navbar and marks the avatar as active', () => {
       vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
-      window.location.hash = '#/cuenta/mensajes'
+      window.location.hash = '#/cuenta/perfil'
       render(<App />)
-      expect(screen.getByRole('heading', { name: 'Mensajes' })).toBeInTheDocument()
-      expect(screen.getByText('Esta sección estará disponible pronto.')).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Mi cuenta' })).not.toBeInTheDocument()
+      const nav = within(screen.getByRole('navigation', { name: 'Principal' }))
+      expect(nav.getByRole('link', { name: 'Proyectos' })).toBeInTheDocument()
+      expect(nav.getByRole('button', { name: /Menú de usuario/ })).toHaveClass('ring-2')
     })
   })
 
@@ -161,9 +161,10 @@ describe('App', () => {
 
   it('shows the account page to a signed-in user', async () => {
     vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
-    window.location.hash = '#/cuenta'
+    window.location.hash = '#/cuenta/perfil'
     render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Mi espacio' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('Nombre')).toBeInTheDocument()
     vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
   })
 

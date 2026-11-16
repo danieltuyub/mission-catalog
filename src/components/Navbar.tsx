@@ -91,6 +91,7 @@ export default function Navbar({ current }: { current: Route }) {
               loading={loading}
               unread={unread}
               isAdmin={can(auth, 'users.manage')}
+              active={current === 'cuenta' || current === 'admin'}
               open={userOpen}
               onOpenChange={changeUserOpen}
             />

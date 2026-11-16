@@ -100,7 +100,7 @@ describe('Navbar', () => {
       vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
       render(<Navbar current="mapa" />)
       const nudge = within(panel()).getByRole('link', { name: 'Completa tu nombre' })
-      expect(nudge).toHaveAttribute('href', '#/cuenta')
+      expect(nudge).toHaveAttribute('href', '#/cuenta/perfil')
       expect(within(panel()).getByText('a@b.com')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
       await userEvent.click(nudge)
