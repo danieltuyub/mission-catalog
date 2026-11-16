@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
+import { loginToastAction } from '../services/authRedirect'
 import { can } from '../services/permissions'
 import { listSavedProjectIds, saveProject, unsaveProject } from '../services/savedProjects'
 import { showToast } from '../services/toast'
@@ -111,7 +112,7 @@ export function useSavedProjects() {
     loading: auth.loading || (!!auth.userId && canSave && !mine?.ready),
     isSaved: (projectId: string) => !!mine?.ids.has(projectId),
     toggle: (projectId: string) => {
-      if (!auth.userId) showToast('Inicia sesión para guardar proyectos')
+      if (!auth.userId) showToast('Inicia sesión para guardar proyectos', loginToastAction())
       else if (!canSave) showToast('Tu cuenta no tiene permiso para guardar proyectos')
       else void toggleSaved(projectId)
     },

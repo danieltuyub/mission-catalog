@@ -67,6 +67,7 @@ describe('useSavedProjects', () => {
     expect(result.current.loading).toBe(false)
     act(() => result.current.toggle('a'))
     expect(getToast()?.message).toBe('Inicia sesión para guardar proyectos')
+    expect(getToast()?.action?.label).toBe('Iniciar sesión')
     expect(save).not.toHaveBeenCalled()
     expect(list).not.toHaveBeenCalled()
   })

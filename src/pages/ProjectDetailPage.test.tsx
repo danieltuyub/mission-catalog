@@ -168,10 +168,15 @@ describe('ProjectDetailPage', () => {
 
     it('asks guests to sign in, without opening anything', async () => {
       vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+      window.location.hash = '#/proyectos/abc'
       render(<ProjectDetailPage id="abc" />)
       await screen.findByRole('heading', { name: 'Iglesia Norte' })
       await userEvent.click(button())
       expect(getToast()?.message).toBe('Inicia sesión para enviar mensajes')
+      // The way out is one click away, and only if they choose it.
+      expect(window.location.hash).not.toContain('login')
+      getToast()?.action?.onClick()
+      expect(window.location.hash).toBe('#/login?next=%2Fproyectos%2Fabc')
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 

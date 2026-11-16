@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { dismissToast, getToast, subscribeToast, type Toast } from '../services/toast'
 
+// Light card with a ring: a dark one vanished over the (dark) footer.
 // Long enough to read; the ones with a button get more time to reach it.
 const DURATION_MS = 4000
 const DURATION_WITH_ACTION_MS = 6000
@@ -37,7 +38,7 @@ export default function Toaster() {
           onFocus={() => toast && setPausedId(toast.id)}
           onBlur={() => setPausedId(null)}
           // `invisible` only flips once the fade-out ends, so the closed toast is also gone for screen readers.
-          className={`flex max-w-md items-center gap-4 rounded-2xl bg-brand-primary px-4 py-3 text-sm text-brand-blush shadow-lg shadow-brand-primary/25 ring-1 ring-white/10 transition-[opacity,translate,visibility] ease-out motion-reduce:translate-y-0 motion-reduce:transition-opacity ${
+          className={`flex max-w-md items-center gap-4 rounded-2xl bg-white px-4 py-3 text-sm text-brand-primary shadow-xl shadow-black/20 ring-1 ring-black/10 transition-[opacity,translate,visibility] ease-out motion-reduce:translate-y-0 motion-reduce:transition-opacity ${
             open ? 'pointer-events-auto visible translate-y-0 opacity-100 duration-200' : 'invisible translate-y-2 opacity-0 duration-150'
           }`}
         >
@@ -49,7 +50,7 @@ export default function Toaster() {
                 shown.action?.onClick()
                 dismissToast(shown.id)
               }}
-              className="shrink-0 rounded-full px-2 py-1 font-medium text-brand-sage underline underline-offset-2 hover:text-brand-blush focus-visible:outline-2 focus-visible:outline-brand-sage"
+              className="shrink-0 rounded-full px-3 py-1 font-medium text-brand-primary underline underline-offset-2 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-brand-sage"
             >
               {shown.action.label}
             </button>

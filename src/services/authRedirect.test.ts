@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loginUrl, readNext } from './authRedirect'
+import { loginToastAction, loginUrl, readNext } from './authRedirect'
 
 describe('loginUrl', () => {
   it('encodes the return path', () => {
@@ -21,5 +21,16 @@ describe('readNext', () => {
     '#/login?next=javascript%3Aalert(1)',
   ])('falls back to Proyectos for %s', (hash) => {
     expect(readNext(hash)).toBe('/proyectos')
+  })
+})
+
+describe('loginToastAction', () => {
+  it('goes to the login and comes back to the current page', () => {
+    window.location.hash = '#/proyectos/abc'
+    const action = loginToastAction()
+    expect(action.label).toBe('Iniciar sesión')
+    action.onClick()
+    expect(window.location.hash).toBe('#/login?next=%2Fproyectos%2Fabc')
+    window.location.hash = ''
   })
 })

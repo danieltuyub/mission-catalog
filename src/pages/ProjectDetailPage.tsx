@@ -11,7 +11,7 @@ import { useDelayed } from '../hooks/useDelayed'
 import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
 import { useSavedProjects } from '../hooks/useSavedProjects'
-import { loginUrl } from '../services/authRedirect'
+import { loginToastAction, loginUrl } from '../services/authRedirect'
 import { sendProjectMessage } from '../services/messages'
 import { can, canEditProject } from '../services/permissions'
 import { projectPhotos } from '../services/projectImages'
@@ -99,7 +99,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                 title={project.created_by ? 'Enviar mensaje' : 'Este proyecto aún no tiene un contacto asignado'}
                 onClick={() => {
                   if (auth.loading) return
-                  if (!auth.userId) showToast('Inicia sesión para enviar mensajes')
+                  if (!auth.userId) showToast('Inicia sesión para enviar mensajes', loginToastAction())
                   else if (!can(auth, 'messages.send')) showToast('Tu cuenta no puede enviar mensajes')
                   else setComposing(true)
                 }}
