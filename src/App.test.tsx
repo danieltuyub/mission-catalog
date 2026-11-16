@@ -43,6 +43,28 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
   })
 
+  describe('#/cuenta/mensajes', () => {
+    afterEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+    })
+
+    it('sends signed-out visitors to the login', () => {
+      window.location.hash = '#/cuenta/mensajes'
+      render(<App />)
+      expect(screen.queryByRole('heading', { name: 'Mensajes' })).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/login?next=%2Fcuenta%2Fmensajes')
+    })
+
+    it('shows the placeholder to members, apart from the account page', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      window.location.hash = '#/cuenta/mensajes'
+      render(<App />)
+      expect(screen.getByRole('heading', { name: 'Mensajes' })).toBeInTheDocument()
+      expect(screen.getByText('Esta sección estará disponible pronto.')).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Mi cuenta' })).not.toBeInTheDocument()
+    })
+  })
+
   describe('#/proyectos/nuevo', () => {
     afterEach(() => {
       vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)

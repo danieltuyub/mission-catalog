@@ -49,6 +49,14 @@ export function useIsNewProject(): boolean {
   })
 }
 
+/** True on `#/cuenta/mensajes` (the inbox, inside the account area). */
+export function useIsMessagesRoute(): boolean {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section] = segments()
+    return name === 'cuenta' && section === 'mensajes'
+  })
+}
+
 /** `#/proyectos/<id>/editar` -> id; null on any other route. */
 export function useEditProjectId(): string | null {
   return useSyncExternalStore(subscribe, () => {

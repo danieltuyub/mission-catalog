@@ -10,6 +10,12 @@ vi.mock('../services/projectService', async (importOriginal) => ({
   getProjectById,
 }))
 
+const sendProjectMessage = vi.hoisted(() => vi.fn())
+vi.mock('../services/messages', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/messages')>()),
+  sendProjectMessage,
+}))
+
 import {
   clearProjectsView,
   loadDirection,
@@ -115,6 +121,93 @@ describe('ProjectDetailPage', () => {
         await vi.advanceTimersByTimeAsync(500)
       })
       expect(screen.queryByRole('status', { hidden: true })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('send message', () => {
+    const contact = { ...project, created_by: 'creator-9' }
+    const button = () => screen.getByRole('button', { name: 'Enviar mensaje' })
+
+    beforeEach(() => {
+      getProjectById.mockResolvedValue(contact)
+      sendProjectMessage.mockReset().mockResolvedValue({})
+    })
+
+    it('opens the composer for members, sends and confirms with a link to the inbox', async () => {
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      await userEvent.click(button())
+      expect(screen.getByRole('dialog', { name: 'Enviar mensaje' })).toHaveTextContent('Sobre Iglesia Norte')
+      await userEvent.type(screen.getByLabelText('Mensaje'), 'Hola, me interesa')
+      await userEvent.click(screen.getByRole('button', { name: 'Enviar' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(sendProjectMessage).toHaveBeenCalledWith(project.id, 'Hola, me interesa')
+      expect(getToast()).toMatchObject({ message: 'Mensaje enviado', action: { label: 'Ver mensajes' } })
+      getToast()?.action?.onClick()
+      expect(window.location.hash).toBe('#/cuenta/mensajes')
+    })
+
+    it('keeps the composer open and shows why when sending fails', async () => {
+      sendProjectMessage.mockRejectedValue(new Error('Tu cuenta no puede enviar mensajes a este contacto.'))
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      await userEvent.click(button())
+      await userEvent.type(screen.getByLabelText('Mensaje'), 'Hola')
+      await userEvent.click(screen.getByRole('button', { name: 'Enviar' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('Tu cuenta no puede enviar mensajes')
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('works for admins too', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      await userEvent.click(button())
+      expect(screen.getByRole('dialog', { name: 'Enviar mensaje' })).toBeInTheDocument()
+    })
+
+    it('asks guests to sign in, without opening anything', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      await userEvent.click(button())
+      expect(getToast()?.message).toBe('Inicia sesión para enviar mensajes')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('tells a signed-in user without the permission they cannot write', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue({ ...SUBSCRIBER, permissions: [] })
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      await userEvent.click(button())
+      expect(getToast()?.message).toBe('Tu cuenta no puede enviar mensajes')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('is disabled, with the reason, when the project has no contact', async () => {
+      getProjectById.mockResolvedValue(project)
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(button()).toHaveAttribute('aria-disabled', 'true')
+      expect(button()).toHaveAttribute('title', 'Este proyecto aún no tiene un contacto asignado')
+      await userEvent.click(button())
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('is hidden on your own project', async () => {
+      getProjectById.mockResolvedValue({ ...project, created_by: SUBSCRIBER.userId })
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      expect(screen.queryByRole('button', { name: 'Enviar mensaje' })).not.toBeInTheDocument()
+    })
+
+    it('comes before the heart and the edit icon', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      render(<ProjectDetailPage id="abc" />)
+      await screen.findByRole('heading', { name: 'Iglesia Norte' })
+      const follows = (a: HTMLElement, b: HTMLElement) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING
+      expect(follows(button(), screen.getByRole('button', { name: 'Guardar proyecto' }))).toBeTruthy()
+      expect(follows(button(), screen.getByRole('link', { name: 'Editar proyecto' }))).toBeTruthy()
     })
   })
 

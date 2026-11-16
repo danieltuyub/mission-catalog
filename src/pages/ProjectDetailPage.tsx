@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import EditProjectLink from '../components/EditProjectLink'
+import MessageComposer from '../components/MessageComposer'
 import PageHeader from '../components/PageHeader'
 import PhotoCarousel from '../components/PhotoCarousel'
 import SaveProjectButton from '../components/SaveProjectButton'
+import SendMessageButton from '../components/SendMessageButton'
 import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
 import { STATUS_META } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
@@ -10,9 +12,11 @@ import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
 import { useSavedProjects } from '../hooks/useSavedProjects'
 import { loginUrl } from '../services/authRedirect'
-import { canEditProject } from '../services/permissions'
+import { sendProjectMessage } from '../services/messages'
+import { can, canEditProject } from '../services/permissions'
 import { projectPhotos } from '../services/projectImages'
 import { clearOpenedFromList, loadOpenedFromList, resetListContext } from '../services/projectsViewStorage'
+import { showToast } from '../services/toast'
 import { SKELETON_DELAY_MS } from './projectsConfig'
 
 const EMPTY = '—'
@@ -51,6 +55,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
   const { project, loading, error, full } = useProject(id)
   const auth = useAuth()
   const { isSaved, toggle: toggleSaved, loading: savedLoading } = useSavedProjects()
+  const [composing, setComposing] = useState(false)
   const showSkeleton = useDelayed(loading, SKELETON_DELAY_MS)
   // True when opened from the list (its filters, sort and page are kept for the way back).
   const [fromList] = useState(() => loadOpenedFromList())
@@ -87,6 +92,19 @@ export default function ProjectDetailPage({ id }: { id: string }) {
         </a>
         {project && (
           <div className="ml-auto flex items-center gap-2">
+            {/* You cannot write to yourself. */}
+            {(!project.created_by || project.created_by !== auth.userId) && (
+              <SendMessageButton
+                unavailable={!project.created_by}
+                title={project.created_by ? 'Enviar mensaje' : 'Este proyecto aún no tiene un contacto asignado'}
+                onClick={() => {
+                  if (auth.loading) return
+                  if (!auth.userId) showToast('Inicia sesión para enviar mensajes')
+                  else if (!can(auth, 'messages.send')) showToast('Tu cuenta no puede enviar mensajes')
+                  else setComposing(true)
+                }}
+              />
+            )}
             <SaveProjectButton
               saved={isSaved(project.id)}
               onToggle={() => toggleSaved(project.id)}
@@ -96,6 +114,23 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           </div>
         )}
       </nav>
+
+      {composing && project && (
+        <MessageComposer
+          projectName={project.name}
+          onCancel={() => setComposing(false)}
+          onSend={async (body) => {
+            await sendProjectMessage(project.id, body)
+            setComposing(false)
+            showToast('Mensaje enviado', {
+              label: 'Ver mensajes',
+              onClick: () => {
+                window.location.hash = '#/cuenta/mensajes'
+              },
+            })
+          }}
+        />
+      )}
 
       {loading ? (
         <ProjectDetailSkeleton visible={showSkeleton} />
