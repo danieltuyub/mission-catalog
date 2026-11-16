@@ -11,6 +11,12 @@ afterEach(() => {
   dismissToast()
 })
 
+// No unread messages and no live connection by default.
+vi.mock('../services/unreadMessages', () => ({
+  countUnreadMessages: vi.fn(async () => 0),
+  subscribeToMessages: vi.fn(() => () => {}),
+}))
+
 // Nothing saved by default and every request succeeds; individual tests override the mocks.
 vi.mock('../services/savedProjects', () => ({
   listSavedProjectIds: vi.fn(async () => []),

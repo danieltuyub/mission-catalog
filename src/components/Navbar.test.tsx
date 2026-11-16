@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
-import { ADMIN, LOADING, NAMED, SIGNED_OUT } from '../test/auth'
+import { ADMIN, LOADING, NAMED, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot, signOut } from '../services/authService'
+import { countUnreadMessages } from '../services/unreadMessages'
 import { getToast } from '../services/toast'
 import Navbar from './Navbar'
 
@@ -112,14 +113,73 @@ describe('Navbar', () => {
       expect(within(panel()).queryByText('Completa tu nombre')).not.toBeInTheDocument()
     })
 
-    it('links to the account page from the user menu', async () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
-      render(<Navbar current="mapa" />)
-      await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
-      const link = screen.getByRole('link', { name: 'Mi cuenta' })
-      expect(link).toHaveAttribute('href', '#/cuenta')
-      await userEvent.click(link)
-      expect(panel()).toHaveAttribute('inert')
+    describe('access by role', () => {
+      it('gives members their own space', async () => {
+        vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+        render(<Navbar current="mapa" />)
+        await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
+        const link = screen.getByRole('link', { name: 'Mi espacio' })
+        expect(link).toHaveAttribute('href', '#/cuenta')
+        expect(screen.queryByRole('link', { name: 'Administración' })).not.toBeInTheDocument()
+        await userEvent.click(link)
+        expect(panel()).toHaveAttribute('inert')
+      })
+
+      it('gives admins the admin area instead', async () => {
+        vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+        render(<Navbar current="mapa" />)
+        await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
+        expect(screen.getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '#/admin')
+        expect(screen.queryByRole('link', { name: 'Mi espacio' })).not.toBeInTheDocument()
+      })
+    })
+
+    describe('unread messages', () => {
+      const unreadBadge = (n: number) => vi.mocked(countUnreadMessages).mockResolvedValue(n)
+
+      afterEach(() => vi.mocked(countUnreadMessages).mockResolvedValue(0))
+
+      it('shows nothing without unread messages', async () => {
+        vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+        render(<Navbar current="mapa" />)
+        await screen.findByRole('button', { name: 'Menú de usuario' })
+        expect(screen.queryByText(/sin leer/)).not.toBeInTheDocument()
+        expect(screen.getByRole('link', { name: 'Mi espacio' })).toBeInTheDocument()
+      })
+
+      it('shows the count on the avatar and next to the access, and says it to screen readers', async () => {
+        unreadBadge(3)
+        vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+        render(<Navbar current="mapa" />)
+        const avatar = await screen.findByRole('button', { name: 'Menú de usuario, 3 mensajes sin leer' })
+        expect(avatar).toHaveTextContent('3')
+        expect(screen.getByLabelText('3 mensajes sin leer')).toHaveTextContent('3')
+        // The row's name keeps the label plus the badge.
+        expect(screen.getByRole('link', { name: /Mi espacio/ })).toHaveTextContent('3')
+      })
+
+      it('uses the singular for one', async () => {
+        unreadBadge(1)
+        vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+        render(<Navbar current="mapa" />)
+        expect(await screen.findByRole('button', { name: 'Menú de usuario, 1 mensaje sin leer' })).toBeInTheDocument()
+      })
+
+      it('caps the number at 9+', async () => {
+        unreadBadge(25)
+        vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+        render(<Navbar current="mapa" />)
+        const avatar = await screen.findByRole('button', { name: 'Menú de usuario, 25 mensajes sin leer' })
+        expect(avatar).toHaveTextContent('9+')
+      })
+
+      it('also shows it to admins, next to their area', async () => {
+        unreadBadge(2)
+        vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+        render(<Navbar current="mapa" />)
+        await screen.findByRole('button', { name: 'Menú de usuario, 2 mensajes sin leer' })
+        expect(screen.getByRole('link', { name: /Administración/ })).toHaveTextContent('2')
+      })
     })
 
     describe('signing out', () => {
@@ -147,7 +207,7 @@ describe('Navbar', () => {
         },
       )
 
-      it.each(['#/cuenta', '#/cuenta/mensajes', '#/proyectos/nuevo', '#/proyectos/abc/editar'])(
+      it.each(['#/cuenta', '#/cuenta/mensajes', '#/admin', '#/proyectos/nuevo', '#/proyectos/abc/editar'])(
         'leaves the private page %s for the map',
         async (hash) => {
           await signOutFrom(hash)

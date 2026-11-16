@@ -10,6 +10,10 @@ interface Props {
   lastName: string
   /** True while the session (and the profile) is still being resolved. */
   loading: boolean
+  /** Messages not read yet. */
+  unread: number
+  /** Admins get the admin area; everyone else their own space. */
+  isAdmin: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -20,9 +24,11 @@ const Icon = ({ d, className }: { d: string; className: string }) => (
   </svg>
 )
 
-export default function UserMenu({ email, firstName, lastName, loading, open, onOpenChange }: Props) {
+export default function UserMenu({ email, firstName, lastName, loading, unread, isAdmin, open, onOpenChange }: Props) {
   const name = fullName(firstName, lastName)
   const letters = initials(firstName, lastName)
+  const unreadLabel = unread > 0 ? `${unread} ${unread === 1 ? 'mensaje sin leer' : 'mensajes sin leer'}` : ''
+  const unreadText = unread > 9 ? '9+' : String(unread)
   // The first name is required in "Mi cuenta", so an empty one means the profile is not filled in.
   // Not while loading: the names are not known yet.
   const root = useRef<HTMLDivElement>(null)
@@ -54,11 +60,11 @@ export default function UserMenu({ email, firstName, lastName, loading, open, on
       <button
         ref={trigger}
         type="button"
-        aria-label={name ? `Menú de usuario de ${name}` : 'Menú de usuario'}
+        aria-label={`${name ? `Menú de usuario de ${name}` : 'Menú de usuario'}${unreadLabel ? `, ${unreadLabel}` : ''}`}
         aria-expanded={open}
         aria-controls="user-menu"
         onClick={() => onOpenChange(!open)}
-        className={`flex size-10 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
+        className={`relative flex size-10 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
           open ? 'bg-brand-sage text-brand-primary' : 'bg-white/10 text-brand-blush hover:bg-white/20'
         }`}
       >
@@ -72,6 +78,14 @@ export default function UserMenu({ email, firstName, lastName, loading, open, on
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
+        )}
+        {unread > 0 && (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-semibold leading-none text-white ring-2 ring-brand-primary"
+          >
+            {unreadText}
+          </span>
         )}
       </button>
 
@@ -112,12 +126,27 @@ export default function UserMenu({ email, firstName, lastName, loading, open, on
         </div>
         <div role="separator" className="my-1 h-px bg-white/10" />
         <a
-          href="#/cuenta"
+          href={isAdmin ? '#/admin' : '#/cuenta'}
           onClick={() => onOpenChange(false)}
           className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand-sage"
         >
-          <Icon d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M16 7a4 4 0 11-8 0 4 4 0 018 0z" className="size-4" />
-          Mi cuenta
+          <Icon
+            d={
+              isAdmin
+                ? 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'
+                : 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z'
+            }
+            className="size-4"
+          />
+          {isAdmin ? 'Administración' : 'Mi espacio'}
+          {unread > 0 && (
+            <span
+              aria-label={unreadLabel}
+              className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold leading-none text-white"
+            >
+              {unreadText}
+            </span>
+          )}
         </a>
         <button
           type="button"

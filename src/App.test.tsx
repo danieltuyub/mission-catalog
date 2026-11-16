@@ -65,6 +65,35 @@ describe('App', () => {
     })
   })
 
+  describe('#/admin', () => {
+    afterEach(() => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+    })
+
+    it('sends signed-out visitors to the login', () => {
+      window.location.hash = '#/admin'
+      render(<App />)
+      expect(screen.queryByRole('heading', { name: 'Administración' })).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/login?next=%2Fadmin')
+    })
+
+    it('is not for members', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      window.location.hash = '#/admin'
+      render(<App />)
+      expect(screen.queryByRole('heading', { name: 'Administración' })).not.toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveTextContent('No tienes permiso')
+    })
+
+    it('shows the placeholder to admins, with the account within reach', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      window.location.hash = '#/admin'
+      render(<App />)
+      expect(screen.getByRole('heading', { name: 'Administración' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Ir a Mi cuenta' })).toHaveAttribute('href', '#/cuenta')
+    })
+  })
+
   describe('#/proyectos/nuevo', () => {
     afterEach(() => {
       vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)

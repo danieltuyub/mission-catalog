@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useUnreadMessages } from '../hooks/useUnreadMessages'
 import type { Route } from '../hooks/useRoute'
+import { can } from '../services/permissions'
 import UserMenu from './UserMenu'
 
 const LINKS: { route: Route; label: string }[] = [
@@ -12,7 +14,9 @@ const LINKS: { route: Route; label: string }[] = [
 export default function Navbar({ current }: { current: Route }) {
   const [open, setOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
-  const { email, loading, firstName, lastName } = useAuth()
+  const auth = useAuth()
+  const { email, loading, firstName, lastName } = auth
+  const unread = useUnreadMessages()
 
   // The mobile menu and the user menu never stay open together.
   const changeUserOpen = (next: boolean) => {
@@ -85,6 +89,8 @@ export default function Navbar({ current }: { current: Route }) {
               firstName={firstName}
               lastName={lastName}
               loading={loading}
+              unread={unread}
+              isAdmin={can(auth, 'users.manage')}
               open={userOpen}
               onOpenChange={changeUserOpen}
             />

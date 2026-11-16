@@ -5,6 +5,7 @@ import RequireAuth from './components/RequireAuth'
 import Toaster from './components/Toaster'
 import { useEditProjectId, useIsMessagesRoute, useIsNewProject, useProjectId, useRoute, type Route } from './hooks/useRoute'
 import AccountPage from './pages/AccountPage'
+import AdminPage from './pages/AdminPage'
 import ContactPage from './pages/ContactPage'
 import LoginPage from './pages/LoginPage'
 import MapPage from './pages/MapPage'
@@ -19,6 +20,11 @@ const PAGES: Record<Exclude<Route, 'login'>, ComponentType> = {
   proyectos: ProjectsPage,
   contacto: ContactPage,
   cuenta: AccountPage,
+  admin: () => (
+    <RequireAuth permission="users.manage">
+      <AdminPage />
+    </RequireAuth>
+  ),
 }
 
 export default function App() {

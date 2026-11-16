@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-export const ROUTES = ['mapa', 'proyectos', 'contacto', 'login', 'cuenta'] as const
+export const ROUTES = ['mapa', 'proyectos', 'contacto', 'login', 'cuenta', 'admin'] as const
 export type Route = (typeof ROUTES)[number]
 
 function subscribe(onChange: () => void) {
@@ -33,12 +33,12 @@ function getProjectIdSnapshot(): string | null {
 }
 
 /**
- * True on pages that only make sense signed in: the account area and the project forms.
+ * True on pages that only make sense signed in: the account and admin areas and the project forms.
  * Reads the current hash (not a hook): used at the moment of signing out.
  */
 export function isPrivateRoute(): boolean {
   const [name, id, action] = segments()
-  return name === 'cuenta' || (name === 'proyectos' && (id === NEW_PROJECT || action === EDIT))
+  return name === 'cuenta' || name === 'admin' || (name === 'proyectos' && (id === NEW_PROJECT || action === EDIT))
 }
 
 export function useRoute(): Route {
