@@ -183,6 +183,11 @@ describe('ProjectsAdminSection', () => {
     expect(screen.getAllByRole('link', { name: 'Editar' })[0]).toHaveAttribute('href', '#/proyectos/p1/editar?from=admin')
   })
 
+  it('creates a project coming back to this list', async () => {
+    render(<ProjectsAdminSection />)
+    expect(await screen.findByRole('link', { name: 'Nuevo proyecto' })).toHaveAttribute('href', '#/proyectos/nuevo?from=admin')
+  })
+
   it('offers creators and admins as owners, and assigns one', async () => {
     svc.assignProjectCreator.mockResolvedValue(undefined)
     render(<ProjectsAdminSection />)

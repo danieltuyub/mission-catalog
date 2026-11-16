@@ -84,7 +84,7 @@ export default function ProjectsAdminSection() {
         />
         <div className="flex items-center gap-3">
           {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
-          <a href="#/proyectos/nuevo" className={primaryButton}>
+          <a href="#/proyectos/nuevo?from=admin" className={primaryButton}>
             Nuevo proyecto
           </a>
         </div>
