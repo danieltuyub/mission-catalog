@@ -19,6 +19,9 @@ const svc = vi.hoisted(() => ({
   updatePin: vi.fn(),
   deletePin: vi.fn(),
   listAllConversations: vi.fn(),
+  listPinContacts: vi.fn(),
+  setPinContact: vi.fn(),
+  updatePinWithImage: vi.fn(),
   listThread: vi.fn(),
 }))
 
@@ -50,6 +53,11 @@ vi.mock('../../services/pinService', () => ({
   deletePin: svc.deletePin,
   pinImageUrl: (p: string) => `https://img/${p}`,
 }))
+vi.mock('../../services/pinContacts', () => ({
+  listPinContacts: svc.listPinContacts,
+  setPinContact: svc.setPinContact,
+}))
+vi.mock('../../services/pinEdit', () => ({ updatePinWithImage: svc.updatePinWithImage }))
 vi.mock('../../services/messages', () => ({
   listAllConversations: svc.listAllConversations,
   listThread: svc.listThread,
@@ -82,6 +90,7 @@ beforeEach(() => {
   svc.listUsers.mockResolvedValue(USERS)
   svc.requestImageUrl.mockResolvedValue('https://signed')
   svc.getPins.mockResolvedValue([])
+  svc.listPinContacts.mockResolvedValue(new Map())
 })
 
 describe('UsersSection', () => {
@@ -132,6 +141,8 @@ const request = (over: object) => ({
   country: 'México',
   region: 'Yucatán',
   city: 'Mérida',
+  languages: ['es'],
+  kind: 'family',
   image_path: null,
   status: 'pending',
   created_at: '2026-11-10T12:00:00Z',
@@ -166,7 +177,7 @@ describe('PinRequestsSection', () => {
     })
     render(<PinRequestsSection />)
     await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }))
-    expect(svc.approveRequest).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }), { country: 'México', region: 'Yucatán', city: 'Mérida' })
+    expect(svc.approveRequest).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }), { country: 'México', region: 'Yucatán', city: 'Mérida', kind: 'family', languages: ['es'] })
     expect(getToast()?.message).toBe('Pin publicado en el mapa')
     expect(await screen.findByText('No hay solicitudes pendientes.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Revisadas/ }))
@@ -185,7 +196,21 @@ describe('PinRequestsSection', () => {
     await userEvent.clear(screen.getByLabelText('Ciudad'))
     await userEvent.type(screen.getByLabelText('Ciudad'), 'antigua')
     await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }))
-    expect(svc.approveRequest).toHaveBeenCalledWith(expect.anything(), { country: 'Guatemala', region: '', city: 'Antigua' })
+    expect(svc.approveRequest).toHaveBeenCalledWith(expect.anything(), { country: 'Guatemala', region: '', city: 'Antigua', kind: 'family', languages: ['es'] })
+  })
+
+  it('lets the reviewer settle the type and languages, and needs a type', async () => {
+    rows = [request({ kind: null, languages: [] })]
+    svc.approveRequest.mockResolvedValue(undefined)
+    render(<PinRequestsSection />)
+    const approve = await screen.findByRole('button', { name: 'Aprobar' })
+    expect(approve).toBeDisabled()
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'church')
+    const search = screen.getByLabelText('Idiomas')
+    await userEvent.type(search, 'quec')
+    await userEvent.click(screen.getByRole('option', { name: 'Quechua' }))
+    await userEvent.click(approve)
+    expect(svc.approveRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: 'church', languages: ['qu'] }))
   })
 
   it('cannot approve without a country', async () => {
@@ -276,20 +301,43 @@ describe('ProjectsAdminSection', () => {
 })
 
 describe('PinsSection', () => {
-  const pin = { id: 'k1', title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, created_at: 'x', image_path: null, country: 'México', region: 'Yucatán', city: 'Mérida' }
+  const pin = { id: 'k1', title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, created_at: 'x', image_path: null, country: 'México', region: 'Yucatán', city: 'Mérida', languages: ['es'], kind: 'family' }
 
-  it('edits the text of a pin', async () => {
+  it('edits a pin in the same form as the map, photo included', async () => {
     svc.getPins.mockResolvedValue([pin])
-    svc.updatePin.mockResolvedValue({ ...pin, title: 'Pozo 2' })
+    svc.updatePinWithImage.mockResolvedValue({ ...pin, title: 'Pozo 2' })
     render(<PinsSection />)
     await screen.findByText('Pozo')
     await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
     const title = screen.getByLabelText('Título')
     await userEvent.clear(title)
     await userEvent.type(title, 'Pozo 2')
+    const file = new File(['x'], 'nueva.png', { type: 'image/png' })
+    await userEvent.upload(screen.getByLabelText('Imagen'), file)
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
-    expect(svc.updatePin).toHaveBeenCalledWith('k1', { title: 'Pozo 2', description: 'Cerca', country: 'México', region: 'Yucatán', city: 'Mérida' })
+    expect(svc.updatePinWithImage).toHaveBeenCalledWith(
+      pin,
+      { title: 'Pozo 2', description: 'Cerca', country: 'México', region: 'Yucatán', city: 'Mérida', kind: 'family', languages: ['es'] },
+      file,
+      undefined,
+    )
     expect(await screen.findByText('Pozo 2')).toBeInTheDocument()
+  })
+
+  it('shows the type and languages of each pin and lets the admin choose its contact', async () => {
+    svc.getPins.mockResolvedValue([{ ...pin, languages: ['es', 'quc'] }])
+    svc.listPinContacts.mockResolvedValue(new Map([['k1', 'u2']]))
+    svc.setPinContact.mockResolvedValue(undefined)
+    render(<PinsSection />)
+    await screen.findByText('Pozo')
+    expect(screen.getByText(/Familia · Mérida, Yucatán, México/)).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Idiomas' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual(["Español", "K'iche'"])
+    const select = await screen.findByRole('combobox', { name: 'Contacto de Pozo' })
+    await vi.waitFor(() => expect(select).toHaveValue('u2'))
+    await userEvent.selectOptions(select, 'u1')
+    expect(svc.setPinContact).toHaveBeenCalledWith('k1', 'u1')
+    await userEvent.selectOptions(select, '')
+    expect(svc.setPinContact).toHaveBeenLastCalledWith('k1', null)
   })
 
   it('shows where each pin is and filters by country, with those still without one', async () => {
@@ -300,8 +348,8 @@ describe('PinsSection', () => {
     ])
     render(<PinsSection />)
     await screen.findByText('Pozo')
-    expect(screen.getByText('Mérida, Yucatán, México')).toBeInTheDocument()
-    expect(screen.getByText('Antigua, Guatemala')).toBeInTheDocument()
+    expect(screen.getByText(/Mérida, Yucatán, México/)).toBeInTheDocument()
+    expect(screen.getByText(/Antigua, Guatemala/)).toBeInTheDocument()
     const select = screen.getByRole('combobox', { name: 'Filtrar por país' })
     await userEvent.selectOptions(select, 'Guatemala')
     expect(screen.queryByText('Pozo')).not.toBeInTheDocument()

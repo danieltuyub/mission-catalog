@@ -23,7 +23,7 @@ vi.mock('./supabaseClient', () => ({
 
 import { MAX_PENDING_REQUESTS, requestPin } from './pinRequests'
 
-const input = { title: 'Base', description: 'Camp', lat: 1, lng: 2, country: 'México', region: 'Yucatán', city: 'Mérida' }
+const input = { title: 'Base', description: 'Camp', lat: 1, lng: 2, country: 'México', region: 'Yucatán', city: 'Mérida', kind: 'family' as const, languages: ['es'] }
 const saved = { id: 'r1', ...input, status: 'pending', requested_by: 'u1', image_path: null }
 
 beforeEach(() => {

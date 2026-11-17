@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import Pagination from '../../components/Pagination'
+import PinAttributeFields from '../../components/PinAttributeFields'
 import PlaceFields from '../../components/PlaceFields'
 import { useUsers } from '../../hooks/useUsers'
 import {
   approveRequest,
+  type PinEdits,
   countPendingRequests,
   countReviewedRequests,
   listRequestsPage,
@@ -12,10 +14,11 @@ import {
   type ReviewFilter,
 } from '../../services/pinRequests'
 import { isValidCountry } from '../../services/countries'
+import { isPinKind } from '../../services/pinKinds'
 import { canonicalPlace, placeLabel, type Place } from '../../services/pinPlace'
 import { getPins } from '../../services/pinService'
 import { showToast } from '../../services/toast'
-import type { Pin, PinRequest } from '../../types'
+import type { Pin, PinKind, PinRequest } from '../../types'
 import { RequestImage } from '../account/RequestsSection'
 import { Chips, ConfirmButton, Empty, LoadError, Loading } from './ui'
 import { card, dateFormat, inputClass, primaryButton } from './styles'
@@ -36,10 +39,11 @@ function RequestReview({
   request: PinRequest
   known: Pin[]
   busy: string | null
-  onApprove: (place: Place) => void
+  onApprove: (edits: PinEdits) => void
   onReject: () => void
 }) {
   const [place, setPlace] = useState<Place>(request)
+  const [attrs, setAttrs] = useState({ kind: request.kind ?? '', languages: request.languages })
   return (
     <div className="mt-3 space-y-3">
       <PlaceFields
@@ -51,11 +55,18 @@ function RequestReview({
         labelClassName="block text-xs text-stone-500"
         inputClassName={`${inputClass} mt-1 w-full`}
       />
+      <PinAttributeFields
+        value={attrs}
+        onChange={setAttrs}
+        className="grid gap-3 sm:grid-cols-2"
+        labelClassName="block text-xs text-stone-500"
+        inputClassName={`${inputClass} mt-1 w-full bg-white`}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={busy !== null || !isValidCountry(place.country, request.country)}
-          onClick={() => onApprove(canonicalPlace(place, known))}
+          disabled={busy !== null || !isValidCountry(place.country, request.country) || !isPinKind(attrs.kind)}
+          onClick={() => onApprove({ ...canonicalPlace(place, known), kind: attrs.kind as PinKind, languages: attrs.languages })}
           className={primaryButton}
         >
           {busy === request.id ? 'Publicando…' : 'Aprobar'}
@@ -110,10 +121,10 @@ export default function PinRequestsSection() {
     }
   }, [filter, page, version])
 
-  async function review(request: PinRequest, action: 'approve' | 'reject', place?: Place) {
+  async function review(request: PinRequest, action: 'approve' | 'reject', edits?: PinEdits) {
     setBusy(request.id)
     try {
-      if (action === 'approve') await approveRequest(request, place)
+      if (action === 'approve') await approveRequest(request, edits)
       else await rejectRequest(request.id)
       showToast(action === 'approve' ? 'Pin publicado en el mapa' : 'Solicitud rechazada')
     } catch (e) {
@@ -176,7 +187,7 @@ export default function PinRequestsSection() {
                     request={r}
                     known={known}
                     busy={busy}
-                    onApprove={(place) => review(r, 'approve', place)}
+                    onApprove={(edits) => review(r, 'approve', edits)}
                     onReject={() => review(r, 'reject')}
                   />
                 )}

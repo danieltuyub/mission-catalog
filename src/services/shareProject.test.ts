@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { projectShareUrl, shareProject } from './shareProject'
+import { pinShareUrl, projectShareUrl, readSharedPinId, sharePin, shareProject } from './shareProject'
 
 const share = vi.fn()
 const writeText = vi.fn()
@@ -51,5 +51,25 @@ describe('shareProject', () => {
     Reflect.deleteProperty(navigator, 'share')
     writeText.mockRejectedValue(new Error('denied'))
     await expect(shareProject('abc', 'Casa Azul')).resolves.toBe('failed')
+  })
+})
+
+describe('pin links', () => {
+  it('points the map at the pin, without the visitor’s own navigation', () => {
+    expect(pinShareUrl('k 1')).toMatch(/#\/mapa\?pin=k%201$/)
+  })
+
+  it('reads the pin of a shared link, if any', () => {
+    expect(readSharedPinId('#/mapa?pin=k1')).toBe('k1')
+    expect(readSharedPinId('#/mapa?pin=')).toBeNull()
+    expect(readSharedPinId('#/mapa')).toBeNull()
+    expect(readSharedPinId('#/mapa?x=1&pin=k2')).toBe('k2')
+  })
+
+  it('shares the pin link with the sheet when there is one', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true })
+    await expect(sharePin('k1', 'Casa')).resolves.toBe('shared')
+    expect(share).toHaveBeenCalledWith({ title: 'Casa', url: expect.stringMatching(/#\/mapa\?pin=k1$/) })
   })
 })

@@ -7,6 +7,7 @@ const sb = vi.hoisted(() => ({
   download: vi.fn(),
   upload: vi.fn(),
   createPin: vi.fn(),
+  setPinContact: vi.fn(),
   removePinImage: vi.fn(),
 }))
 
@@ -34,6 +35,7 @@ vi.mock('./supabaseClient', () => ({
   },
 }))
 vi.mock('./pinService', () => ({ createPin: sb.createPin, removePinImage: sb.removePinImage }))
+vi.mock('./pinContacts', () => ({ setPinContact: sb.setPinContact }))
 
 import { approveRequest, rejectRequest } from './pinRequests'
 import type { PinRequest } from '../types'
@@ -48,6 +50,8 @@ const request: PinRequest = {
   country: 'México',
   region: 'Yucatán',
   city: 'Mérida',
+  languages: ['es'],
+  kind: 'family',
   image_path: null,
   status: 'pending',
   created_at: 'x',
@@ -58,7 +62,8 @@ beforeEach(() => {
   sb.statuses = []
   sb.download.mockReset().mockResolvedValue({ data: new Blob(['x'], { type: 'image/webp' }), error: null })
   sb.upload.mockReset().mockResolvedValue({ error: null })
-  sb.createPin.mockReset().mockResolvedValue({})
+  sb.createPin.mockReset().mockResolvedValue({ id: 'k1' })
+  sb.setPinContact.mockReset().mockResolvedValue(undefined)
   sb.removePinImage.mockReset().mockResolvedValue(undefined)
 })
 
@@ -66,13 +71,20 @@ describe('approveRequest', () => {
   it('claims the request, then publishes the pin without a photo', async () => {
     await approveRequest(request)
     expect(sb.statuses).toEqual(['approved'])
-    expect(sb.createPin).toHaveBeenCalledWith({ title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, country: 'México', region: 'Yucatán', city: 'Mérida', image_path: undefined })
+    expect(sb.createPin).toHaveBeenCalledWith({ title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, country: 'México', region: 'Yucatán', city: 'Mérida', kind: 'family', languages: ['es'], image_path: undefined })
     expect(sb.download).not.toHaveBeenCalled()
   })
 
+  it('makes the person who proposed it the pin\'s contact, without failing when that cannot be saved', async () => {
+    await approveRequest(request)
+    expect(sb.setPinContact).toHaveBeenCalledWith('k1', 'u1')
+    sb.setPinContact.mockRejectedValue(new Error('x'))
+    await expect(approveRequest(request)).resolves.toBeUndefined()
+  })
+
   it('publishes in the place the reviewer settled on', async () => {
-    await approveRequest(request, { country: 'Guatemala', region: '', city: 'Antigua' })
-    expect(sb.createPin).toHaveBeenCalledWith(expect.objectContaining({ country: 'Guatemala', region: '', city: 'Antigua' }))
+    await approveRequest(request, { country: 'Guatemala', region: '', city: 'Antigua', kind: 'church', languages: ['quc', 'es'] })
+    expect(sb.createPin).toHaveBeenCalledWith(expect.objectContaining({ country: 'Guatemala', region: '', city: 'Antigua', kind: 'church', languages: ['quc', 'es'] }))
   })
 
   it('copies the photo from the private bucket to the public one', async () => {

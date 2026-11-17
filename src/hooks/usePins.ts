@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createPin, getPins, removePinImage, updatePin, uploadPinImage, type NewPin } from '../services/pinService'
+import { updatePinWithImage } from '../services/pinEdit'
+import { createPin, getPins, removePinImage, uploadPinImage, type NewPin, type PinPatch } from '../services/pinService'
 import type { Pin } from '../types'
 
 export function usePins() {
@@ -29,23 +30,11 @@ export function usePins() {
     }
   }, [])
 
-  const editPin = useCallback(
-    async (pin: Pin, patch: { title: string; description: string; country: string; region: string; city: string }, image?: File, removeImage = false) => {
-      const uploaded = image ? await uploadPinImage(image) : undefined
-      const image_path = uploaded ?? (removeImage ? null : undefined)
-      try {
-        const updated = await updatePin(pin.id, image_path === undefined ? patch : { ...patch, image_path })
-        setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-        // Only now is it safe to drop the previous file.
-        if (image_path !== undefined && pin.image_path) void removePinImage(pin.image_path).catch(() => {})
-        return updated
-      } catch (e) {
-        if (uploaded) void removePinImage(uploaded).catch(() => {})
-        throw e
-      }
-    },
-    [],
-  )
+  const editPin = useCallback(async (pin: Pin, patch: PinPatch, image?: File, removeImage = false) => {
+    const updated = await updatePinWithImage(pin, patch, image, removeImage)
+    setPins((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+    return updated
+  }, [])
 
   return { pins, error, addPin, editPin }
 }

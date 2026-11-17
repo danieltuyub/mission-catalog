@@ -14,6 +14,8 @@ describe('Pin type', () => {
       country: string
       region: string
       city: string
+      languages: string[]
+      kind: 'person' | 'family' | 'house_church' | 'church' | null
     }>()
   })
 })

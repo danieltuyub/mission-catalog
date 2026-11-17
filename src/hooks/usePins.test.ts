@@ -23,8 +23,10 @@ const pin: Pin = {
   country: 'México',
   region: 'Yucatán',
   city: 'Mérida',
+  languages: ['es'],
+  kind: 'family',
 }
-const patch = { title: 'Nuevo', description: '', country: 'México', region: 'Yucatán', city: 'Mérida' }
+const patch = { title: 'Nuevo', description: '', country: 'México', region: 'Yucatán', city: 'Mérida', languages: ['es'], kind: 'family' as const }
 const file = new File(['x'], 'a.png', { type: 'image/png' })
 
 async function setup() {

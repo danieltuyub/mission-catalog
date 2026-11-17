@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { pinImageUrl } from '../services/pinService'
+import PinDetails from './PinDetails'
 import type { Pin } from '../types'
 
 // Must be >= the longest exit transition below (duration-[120ms]).
@@ -148,6 +149,8 @@ export default function PinCard({ pin, onClose, onEdit }: Props) {
           )}
 
           <p className="mt-3 text-sm text-gray-700">{shown.description || 'Sin descripción'}</p>
+
+          <PinDetails pin={shown} />
         </div>
       </div>
     </aside>

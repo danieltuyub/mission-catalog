@@ -1,3 +1,5 @@
+export type PinKind = 'person' | 'family' | 'house_church' | 'church'
+
 export interface Pin {
   id: string
   title: string
@@ -10,6 +12,10 @@ export interface Pin {
   country: string
   region: string
   city: string
+  /** ISO 639 codes, at most 5. */
+  languages: string[]
+  /** Null for pins from before the type existed. */
+  kind: PinKind | null
 }
 
 export type PinRequestStatus = 'pending' | 'approved' | 'rejected'
@@ -27,6 +33,8 @@ export interface PinRequest {
   country: string
   region: string
   city: string
+  languages: string[]
+  kind: PinKind | null
   status: PinRequestStatus
   created_at: string
 }

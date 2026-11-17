@@ -1,5 +1,6 @@
-import type { PinRequest } from '../types'
+import type { PinKind, PinRequest } from '../types'
 import { compressImage } from './imageUtils'
+import { setPinContact } from './pinContacts'
 import type { Place } from './pinPlace'
 import { createPin, removePinImage } from './pinService'
 import { supabase } from './supabaseClient'
@@ -22,6 +23,8 @@ export interface NewPinRequest {
   country: string
   region: string
   city: string
+  kind: PinKind
+  languages: string[]
 }
 
 /** Uploads under the user's own folder, as the bucket policy requires. */
@@ -155,27 +158,36 @@ async function publishRequestImage(path: string): Promise<string> {
 }
 
 /**
- * Publishes the pin, in the place the reviewer settled on (the requester's by default). The request is claimed first (pending -> approved), so two admins cannot
+ * Publishes the pin, with what the reviewer settled on (the requester's by default). The request is claimed first (pending -> approved), so two admins cannot
  * publish it twice; if the pin cannot be created the request goes back to pending.
  */
-export async function approveRequest(request: PinRequest, place: Place = request): Promise<void> {
+/** What the reviewer settles before publishing: the place, the type and the languages. */
+export type PinEdits = Place & { kind: PinKind | null; languages: string[] }
+
+export async function approveRequest(request: PinRequest, edits: PinEdits = request): Promise<void> {
   if (!(await setStatus(request.id, 'pending', 'approved'))) throw new Error(ALREADY_REVIEWED)
   let imagePath: string | undefined
+  let pinId: string
   try {
     if (request.image_path) imagePath = await publishRequestImage(request.image_path)
-    await createPin({
+    const pin = await createPin({
       title: request.title,
       description: request.description,
       lat: request.lat,
       lng: request.lng,
-      country: place.country,
-      region: place.region,
-      city: place.city,
+      country: edits.country,
+      region: edits.region,
+      city: edits.city,
+      kind: edits.kind,
+      languages: edits.languages,
       image_path: imagePath,
     })
+    pinId = pin.id
   } catch {
     if (imagePath) void removePinImage(imagePath).catch(() => {})
     await setStatus(request.id, 'approved', 'pending').catch(() => {})
     throw new Error('No se pudo publicar el pin. La solicitud sigue pendiente.')
   }
+  // Whoever proposed it answers for it. Not essential: the admin can set it later.
+  await setPinContact(pinId, request.requested_by).catch(() => {})
 }

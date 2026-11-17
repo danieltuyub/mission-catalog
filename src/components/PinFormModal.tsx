@@ -3,8 +3,10 @@ import { validateImage } from '../services/imageUtils'
 import { isValidCountry } from '../services/countries'
 import { canonicalPlace, EMPTY_PLACE } from '../services/pinPlace'
 import { pinImageUrl } from '../services/pinService'
+import { isPinKind } from '../services/pinKinds'
+import PinAttributeFields from './PinAttributeFields'
 import PlaceFields from './PlaceFields'
-import type { Pin } from '../types'
+import type { Pin, PinKind } from '../types'
 
 interface Props {
   lat: number
@@ -21,6 +23,8 @@ interface Props {
     country: string
     region: string
     city: string
+    kind: PinKind
+    languages: string[]
     image?: File
     removeImage?: boolean
   }) => Promise<void>
@@ -32,6 +36,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
   const [title, setTitle] = useState(pin?.title ?? '')
   const [description, setDescription] = useState(pin?.description ?? '')
   const [place, setPlace] = useState(pin ?? EMPTY_PLACE)
+  const [attrs, setAttrs] = useState({ kind: pin?.kind ?? '', languages: pin?.languages ?? [] })
   const [removed, setRemoved] = useState(false)
   const [image, setImage] = useState<{ file: File; url: string } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -63,7 +68,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!isValidCountry(place.country, pin?.country)) return
+    if (!isValidCountry(place.country, pin?.country) || !isPinKind(attrs.kind)) return
     setSaving(true)
     setError(null)
     try {
@@ -71,6 +76,8 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
         title: title.trim(),
         description: description.trim(),
         ...canonicalPlace(place, known),
+        kind: attrs.kind as PinKind,
+        languages: attrs.languages,
         image: image?.file,
         removeImage: removed && !image ? true : undefined,
       })
@@ -131,6 +138,13 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
           inputClassName="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
         />
 
+        <PinAttributeFields
+          value={attrs}
+          onChange={setAttrs}
+          labelClassName="block text-sm text-gray-700"
+          inputClassName="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
+        />
+
         <label className="block text-sm text-gray-700">
           Imagen
           <input
@@ -175,7 +189,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
           </button>
           <button
             type="submit"
-            disabled={saving || !title.trim() || !isValidCountry(place.country, pin?.country)}
+            disabled={saving || !title.trim() || !isValidCountry(place.country, pin?.country) || !isPinKind(attrs.kind)}
             className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90 disabled:opacity-50"
           >
             {request ? (saving ? 'Enviando…' : 'Enviar solicitud') : saving ? 'Guardando…' : 'Guardar'}

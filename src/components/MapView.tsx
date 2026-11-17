@@ -1,5 +1,5 @@
 import L, { type LatLngTuple } from 'leaflet'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   Marker,
@@ -13,6 +13,7 @@ import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import { can } from '../services/permissions'
 import { requestPin } from '../services/pinRequests'
+import { readSharedPinId } from '../services/shareProject'
 import { showToast } from '../services/toast'
 import LocateControl from './LocateControl'
 import PinCard from './PinCard'
@@ -61,6 +62,15 @@ function FlyToPosition({ position }: { position: LatLngTuple | null }) {
   return null
 }
 
+/** Centers the map on a pin opened from a shared link. */
+function FocusPin({ target }: { target: LatLngTuple | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (target) map.setView(target, LOCATED_ZOOM)
+  }, [map, target])
+  return null
+}
+
 function ViewPersistor() {
   const map = useMapEvents({
     moveend: () => {
@@ -87,9 +97,26 @@ export default function MapView() {
   const [placing, setPlacing] = useState(false)
   const [draft, setDraft] = useState<{ lat: number; lng: number; request: boolean } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // A shared link (`#/mapa?pin=<id>`) opens on that pin as soon as the pins are loaded.
+  const [sharedId] = useState(readSharedPinId)
+  const [selectedId, setSelectedId] = useState<string | null>(sharedId)
+  const sharedPin = sharedId ? pins.find((p) => p.id === sharedId) : undefined
+  const sharedLat = sharedPin?.lat
+  const sharedLng = sharedPin?.lng
+  // By value: editing the pin must not pull the map back to it.
+  const focus = useMemo<LatLngTuple | null>(
+    () => (sharedLat !== undefined && sharedLng !== undefined ? [sharedLat, sharedLng] : null),
+    [sharedLat, sharedLng],
+  )
+  const missingShown = useRef(false)
   const selected = pins.find((p) => p.id === selectedId) ?? null
   const editing = pins.find((p) => p.id === editingId) ?? null
+
+  useEffect(() => {
+    if (!sharedId || sharedPin || pins.length === 0 || missingShown.current) return
+    missingShown.current = true
+    showToast('No se encontró ese pin')
+  }, [sharedId, sharedPin, pins.length])
 
   useEffect(() => {
     if (!selectedId || draft || editingId) return
@@ -125,7 +152,8 @@ export default function MapView() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FlyToPosition position={savedView ? null : position} />
+        <FlyToPosition position={savedView || sharedId ? null : position} />
+        <FocusPin target={focus} />
         <ViewPersistor />
         <TrackpadNavigation />
         <LocateControl onLocate={locate} zoom={LOCATED_ZOOM} disabled={status === 'unsupported'} />

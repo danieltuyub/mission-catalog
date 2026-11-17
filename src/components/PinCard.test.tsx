@@ -1,7 +1,8 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Pin } from '../types'
+import { getToast } from '../services/toast'
 import PinCard from './PinCard'
 
 const pin: Pin = {
@@ -15,6 +16,8 @@ const pin: Pin = {
   country: 'México',
   region: 'Yucatán',
   city: 'Mérida',
+  languages: ['es'],
+  kind: 'family',
 }
 
 describe('PinCard', () => {
@@ -138,5 +141,47 @@ describe('PinCard transitions', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+
+  describe('details', () => {
+    const full: Pin = { ...pin, kind: 'house_church', languages: ['es', 'quc'], created_at: '2021-11-02T00:00:00Z' }
+
+    it('shows the languages as chips, the type, the place and since when', () => {
+      render(<PinCard pin={full} onClose={vi.fn()} />)
+      const languages = screen.getByText('Idiomas').closest('div')!
+      expect(within(languages).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Español', "K'iche'"])
+      expect(screen.getByText('Iglesia en casa')).toBeInTheDocument()
+      expect(screen.getByText('Mérida, Yucatán, México')).toBeInTheDocument()
+      expect(screen.getByText('noviembre de 2021')).toBeInTheDocument()
+    })
+
+    it('leaves out what the pin does not have', () => {
+      render(<PinCard pin={{ ...full, languages: [], kind: null, country: '', region: '', city: '' }} onClose={vi.fn()} />)
+      expect(screen.queryByText('Idiomas')).not.toBeInTheDocument()
+      expect(screen.queryByText('Idioma')).not.toBeInTheDocument()
+      expect(screen.queryByText('Tipo')).not.toBeInTheDocument()
+      expect(screen.queryByText('Lugar')).not.toBeInTheDocument()
+      expect(screen.getByText('En el mapa desde')).toBeInTheDocument()
+    })
+
+    it('says "Idioma" for a single one', () => {
+      render(<PinCard pin={{ ...full, languages: ['es'] }} onClose={vi.fn()} />)
+      expect(screen.getByText('Idioma')).toBeInTheDocument()
+    })
+
+    it('copies the link that opens the map on this pin', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+      render(<PinCard pin={full} onClose={vi.fn()} />)
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }))
+      expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/#\/mapa\?pin=1$/))
+      expect(getToast()?.message).toBe('Enlace copiado')
+    })
+
+    it('has the message button, not available yet', () => {
+      render(<PinCard pin={full} onClose={vi.fn()} />)
+      expect(screen.getByRole('button', { name: /Enviar mensaje/ })).toBeDisabled()
+    })
   })
 })
