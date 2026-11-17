@@ -6,10 +6,13 @@ import { requestPin } from '../services/pinRequests'
 import { getToast } from '../services/toast'
 import { ADMIN, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 
-const map = vi.hoisted(() => ({ click: null as null | ((e: { latlng: { lat: number; lng: number } }) => void) }))
+const map = vi.hoisted(() => ({
+  click: null as null | ((e: { latlng: { lat: number; lng: number } }) => void),
+  events: {} as Record<string, () => void>,
+}))
 const { addPin, editPin } = vi.hoisted(() => ({ addPin: vi.fn(), editPin: vi.fn() }))
 const shown = vi.hoisted(() => ({ pins: [] as unknown[] }))
-const leaflet = vi.hoisted(() => ({ setView: vi.fn() }))
+const leaflet = vi.hoisted(() => ({ setView: vi.fn(), zoom: 12, getZoom() { return this.zoom } }))
 
 // Leaflet needs a real browser: replace the map with a div and capture the click handler.
 vi.mock('react-leaflet', () => ({
@@ -24,8 +27,9 @@ vi.mock('react-leaflet', () => ({
     <div data-testid="area" data-center={center.join(',')} data-radius={radius} />
   ),
   useMap: () => leaflet,
-  useMapEvents: (handlers: { click?: typeof map.click }) => {
+  useMapEvents: (handlers: { click?: typeof map.click } & Record<string, unknown>) => {
     if (handlers.click) map.click = handlers.click
+    for (const name of ['zoomstart', 'zoomend']) if (typeof handlers[name] === 'function') map.events[name] = handlers[name] as () => void
     return {}
   },
 }))
@@ -158,12 +162,59 @@ describe('MapView shared link', () => {
     await waitFor(() => expect(getToast()?.message).toBe('No se encontró ese pin'))
   })
 
-  it('draws an approximate area around each pin, never a precise spot', () => {
+  it('draws the approximate area only around the selected pin, at half the old size', async () => {
     shown.pins = [pin, { ...pin, id: 'k2', lat: 7, lng: 8 }]
+    window.location.hash = '#/mapa?pin=k2'
     render(<MapView />)
-    const areas = screen.getAllByTestId('area')
-    expect(areas.map((a) => a.getAttribute('data-center'))).toEqual(['5,6', '7,8'])
-    expect(areas.every((a) => a.getAttribute('data-radius') === '2000')).toBe(true)
+    const area = await screen.findByTestId('area')
+    expect(screen.getAllByTestId('area')).toHaveLength(1)
+    expect(area).toHaveAttribute('data-center', '7,8')
+    expect(area).toHaveAttribute('data-radius', '1000')
+  })
+
+  it('draws no area while no pin is selected', () => {
+    shown.pins = [pin, { ...pin, id: 'k2', lat: 7, lng: 8 }]
+    window.location.hash = '#/mapa'
+    render(<MapView />)
+    expect(screen.queryByTestId('area')).not.toBeInTheDocument()
+  })
+
+  describe('approximate area', () => {
+    beforeEach(() => {
+      shown.pins = [pin]
+      window.location.hash = '#/mapa?pin=k1'
+      leaflet.zoom = 12
+    })
+    afterEach(() => {
+      leaflet.zoom = 12
+    })
+
+    it('is not drawn on a far-away map, where it would be smaller than a pixel', () => {
+      leaflet.zoom = 6
+      render(<MapView />)
+      expect(screen.getByRole('heading', { name: 'Casa de Ana' })).toBeInTheDocument()
+      expect(screen.queryByTestId('area')).not.toBeInTheDocument()
+    })
+
+    it('is not drawn while the map zooms (the browser would blow it up as a blurry blob) and comes back after', () => {
+      render(<MapView />)
+      expect(screen.getByTestId('area')).toBeInTheDocument()
+      act(() => map.events.zoomstart())
+      expect(screen.queryByTestId('area')).not.toBeInTheDocument()
+      act(() => map.events.zoomend())
+      expect(screen.getByTestId('area')).toBeInTheDocument()
+    })
+
+    it('appears once the zoom gets close enough', () => {
+      leaflet.zoom = 6
+      render(<MapView />)
+      act(() => {
+        leaflet.zoom = 11
+        map.events.zoomstart()
+        map.events.zoomend()
+      })
+      expect(screen.getByTestId('area')).toBeInTheDocument()
+    })
   })
 
   it('opens nothing without a link', () => {

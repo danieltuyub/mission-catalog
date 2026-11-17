@@ -13,6 +13,7 @@ import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import { can } from '../services/permissions'
+import type { Pin } from '../types'
 import { PIN_PRIVACY_RADIUS_M } from '../services/pinPrivacy'
 import { requestPin } from '../services/pinRequests'
 import { readSharedPinId } from '../services/shareProject'
@@ -57,6 +58,38 @@ function FocusPin({ target }: { target: LatLngTuple | null }) {
     if (target) map.setView(target, LOCATED_ZOOM)
   }, [map, target])
   return null
+}
+
+/** Below this zoom a 1 km circle is smaller than a few pixels: the marker alone says where the pin is. */
+const MIN_AREA_ZOOM = 11
+
+/**
+ * The approximate area of the selected pin, and only of it: nothing is drawn while no pin is selected.
+ * Not drawn while the map zooms either: the browser scales the vector layer as a bitmap during the
+ * animation, and a tiny circle of a far-away map turns into a huge pixelated blob.
+ */
+function PrivacyArea({ pin }: { pin: Pin | null }) {
+  const map = useMap()
+  const [zoom, setZoom] = useState(() => map.getZoom())
+  const [zooming, setZooming] = useState(false)
+  useMapEvents({
+    zoomstart: () => setZooming(true),
+    zoomend: () => {
+      setZoom(map.getZoom())
+      setZooming(false)
+    },
+  })
+
+  if (!pin || zooming || zoom < MIN_AREA_ZOOM) return null
+  return (
+    <Circle
+      key={pin.id}
+      center={[pin.lat, pin.lng]}
+      radius={PIN_PRIVACY_RADIUS_M}
+      interactive={false}
+      pathOptions={{ color: '#7b9e89', weight: 1, opacity: 0.6, fillOpacity: 0.16 }}
+    />
+  )
 }
 
 function ViewPersistor() {
@@ -160,21 +193,7 @@ export default function MapView() {
           <Marker position={position} icon={userIcon} interactive={false} keyboard={false} />
         )}
 
-        {/* The place is approximate: the circle says so, and the real one is always inside it. */}
-        {pins.map((pin) => (
-          <Circle
-            key={`area-${pin.id}`}
-            center={[pin.lat, pin.lng]}
-            radius={PIN_PRIVACY_RADIUS_M}
-            interactive={false}
-            pathOptions={{
-              color: pin.id === selectedId ? '#7b9e89' : '#0e1428',
-              weight: 1,
-              opacity: 0.5,
-              fillOpacity: pin.id === selectedId ? 0.18 : 0.08,
-            }}
-          />
-        ))}
+        <PrivacyArea pin={selected} />
         {pins.map((pin) => (
           <Marker
             key={pin.id}
