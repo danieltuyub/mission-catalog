@@ -302,13 +302,47 @@ describe('PinsSection', () => {
     await screen.findByText('Pozo')
     expect(screen.getByText('Mérida, Yucatán, México')).toBeInTheDocument()
     expect(screen.getByText('Antigua, Guatemala')).toBeInTheDocument()
-    const select = screen.getByRole('combobox', { name: 'País' })
+    const select = screen.getByRole('combobox', { name: 'Filtrar por país' })
     await userEvent.selectOptions(select, 'Guatemala')
     expect(screen.queryByText('Pozo')).not.toBeInTheDocument()
     expect(screen.getByText('Escuela')).toBeInTheDocument()
     await userEvent.selectOptions(select, screen.getByRole('option', { name: 'Sin país (1)' }))
     expect(screen.getByText('Puente')).toBeInTheDocument()
     expect(screen.queryByText('Escuela')).not.toBeInTheDocument()
+  })
+
+  it('narrows by state inside a country', async () => {
+    svc.getPins.mockResolvedValue([
+      pin,
+      { ...pin, id: 'k2', title: 'Escuela', region: 'Chiapas', city: 'Tapachula' },
+      { ...pin, id: 'k3', title: 'Puente', region: '', city: '' },
+    ])
+    render(<PinsSection />)
+    await screen.findByText('Pozo')
+    expect(screen.queryByRole('combobox', { name: 'Filtrar por estado' })).not.toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filtrar por país' }), 'México')
+    const region = screen.getByRole('combobox', { name: 'Filtrar por estado' })
+    await userEvent.selectOptions(region, 'Chiapas')
+    expect(screen.getByText('Escuela')).toBeInTheDocument()
+    expect(screen.queryByText('Pozo')).not.toBeInTheDocument()
+    await userEvent.selectOptions(region, screen.getByRole('option', { name: 'Sin estado (1)' }))
+    expect(screen.getByText('Puente')).toBeInTheDocument()
+    expect(screen.queryByText('Escuela')).not.toBeInTheDocument()
+  })
+
+  it('makes the country filter searchable when there are many countries', async () => {
+    const names = ['Argentina', 'Bolivia', 'Brasil', 'Chile', 'Colombia', 'Costa Rica', 'Cuba', 'Ecuador', 'El Salvador', 'España', 'Guatemala', 'México']
+    svc.getPins.mockResolvedValue(names.map((country, i) => ({ ...pin, id: `k${i}`, title: `Pin ${country}`, country, region: '', city: '' })))
+    render(<PinsSection />)
+    await screen.findByText('Pin Argentina')
+    const filter = screen.getByRole('combobox', { name: 'Filtrar por país' })
+    expect(filter.tagName).toBe('INPUT')
+    await userEvent.type(filter, 'espana')
+    await userEvent.click(screen.getByRole('option', { name: 'España (1)' }))
+    expect(screen.getByText('Pin España')).toBeInTheDocument()
+    expect(screen.queryByText('Pin Chile')).not.toBeInTheDocument()
+    await userEvent.clear(filter)
+    expect(screen.getByText('Pin Chile')).toBeInTheDocument()
   })
 
   it('deletes after confirming', async () => {

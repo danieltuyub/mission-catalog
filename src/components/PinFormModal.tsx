@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { validateImage } from '../services/imageUtils'
+import { isValidCountry } from '../services/countries'
 import { canonicalPlace, EMPTY_PLACE } from '../services/pinPlace'
 import { pinImageUrl } from '../services/pinService'
 import PlaceFields from './PlaceFields'
@@ -62,6 +63,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (!isValidCountry(place.country, pin?.country)) return
     setSaving(true)
     setError(null)
     try {
@@ -124,6 +126,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
           value={place}
           onChange={setPlace}
           known={known}
+          currentCountry={pin?.country}
           labelClassName="block text-sm text-gray-700"
           inputClassName="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
         />
@@ -172,7 +175,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
           </button>
           <button
             type="submit"
-            disabled={saving || !title.trim() || !place.country.trim()}
+            disabled={saving || !title.trim() || !isValidCountry(place.country, pin?.country)}
             className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90 disabled:opacity-50"
           >
             {request ? (saving ? 'Enviando…' : 'Enviar solicitud') : saving ? 'Guardando…' : 'Guardar'}

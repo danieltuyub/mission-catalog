@@ -1,4 +1,6 @@
 import type { Pin } from '../types'
+import { matchCountry } from './countries'
+import { fold } from './textFold'
 
 /** Same limit as the database. */
 export const PLACE_MAX_LENGTH = 100
@@ -14,16 +16,14 @@ export const EMPTY_PLACE: Place = { country: '', region: '', city: '' }
 /** Trimmed, with inner runs of spaces collapsed. */
 export const cleanPlaceText = (text: string) => text.trim().replace(/\s+/g, ' ')
 
-const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
-
 /** Distinct non-empty values, alphabetically (Spanish). */
 const distinct = (values: string[]) =>
   [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 
 /** What to suggest for each field: the countries in use, and the regions and cities of the chosen ones. */
 export function placeSuggestions(known: Pick<Pin, 'country' | 'region' | 'city'>[], place: Place) {
-  const sameCountry = known.filter((p) => !place.country.trim() || fold(p.country) === fold(place.country.trim()))
-  const sameRegion = sameCountry.filter((p) => !place.region.trim() || fold(p.region) === fold(place.region.trim()))
+  const sameCountry = known.filter((p) => !place.country.trim() || fold(p.country) === fold(place.country))
+  const sameRegion = sameCountry.filter((p) => !place.region.trim() || fold(p.region) === fold(place.region))
   return {
     countries: distinct(known.map((p) => p.country)),
     regions: distinct(sameCountry.map((p) => p.region)),
@@ -40,7 +40,8 @@ export function canonicalPlace(place: Place, known: Pick<Pin, 'country' | 'regio
     const text = cleanPlaceText(value)
     return options.find((o) => fold(o) === fold(text)) ?? text
   }
-  const country = pick(place.country, distinct(known.map((p) => p.country)))
+  // A country on the list takes the list's spelling; one from before the list keeps the spelling in use.
+  const country = matchCountry(place.country) ?? pick(place.country, distinct(known.map((p) => p.country)))
   const inCountry = known.filter((p) => fold(p.country) === fold(country))
   const region = pick(place.region, distinct(inCountry.map((p) => p.region)))
   // Without a region, a city is looked for in the whole country (as the suggestions do).

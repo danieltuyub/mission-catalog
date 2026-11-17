@@ -11,6 +11,7 @@ import {
   REVIEW_PAGE_SIZE,
   type ReviewFilter,
 } from '../../services/pinRequests'
+import { isValidCountry } from '../../services/countries'
 import { canonicalPlace, placeLabel, type Place } from '../../services/pinPlace'
 import { getPins } from '../../services/pinService'
 import { showToast } from '../../services/toast'
@@ -45,6 +46,7 @@ function RequestReview({
         value={place}
         onChange={setPlace}
         known={known}
+        currentCountry={request.country}
         className="grid gap-3 sm:grid-cols-3"
         labelClassName="block text-xs text-stone-500"
         inputClassName={`${inputClass} mt-1 w-full`}
@@ -52,7 +54,7 @@ function RequestReview({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={busy !== null || !place.country.trim()}
+          disabled={busy !== null || !isValidCountry(place.country, request.country)}
           onClick={() => onApprove(canonicalPlace(place, known))}
           className={primaryButton}
         >

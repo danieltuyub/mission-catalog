@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Pin } from '../types'
@@ -184,12 +184,47 @@ describe('PinFormModal place', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ country: 'México', region: 'Yucatán', city: 'Mérida' }))
   })
 
-  it('suggests the countries in use, and the regions of the chosen one', async () => {
+  it('suggests the regions of the chosen country', async () => {
     const { container } = render(<PinFormModal lat={1} lng={2} known={known} onSubmit={vi.fn()} onCancel={vi.fn()} />)
     const options = () => [...container.querySelectorAll('datalist')].map((d) => [...d.querySelectorAll('option')].map((o) => o.getAttribute('value')))
-    expect(options()[0]).toEqual(['Guatemala', 'México'])
-    expect(options()[1]).toEqual(['Sacatepéquez', 'Yucatán'])
+    expect(options()[0]).toEqual(['Sacatepéquez', 'Yucatán'])
     await userEvent.type(screen.getByLabelText('País'), 'México')
-    expect(options()[1]).toEqual(['Yucatán'])
+    expect(options()[0]).toEqual(['Yucatán'])
+  })
+
+  it('searches the country list ignoring accents and picks one by click', async () => {
+    render(<PinFormModal lat={1} lng={2} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('País'), 'mexi')
+    const list = screen.getByRole('listbox', { name: 'Países' })
+    expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual(['México'])
+    await userEvent.click(within(list).getByRole('option', { name: 'México' }))
+    expect(screen.getByLabelText('País')).toHaveValue('México')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('picks with the keyboard, and Escape closes the list without closing the dialog', async () => {
+    const onCancel = vi.fn()
+    render(<PinFormModal lat={1} lng={2} onSubmit={vi.fn()} onCancel={onCancel} />)
+    await userEvent.type(screen.getByLabelText('País'), 'guat')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(onCancel).not.toHaveBeenCalled()
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+    expect(screen.getByLabelText('País')).toHaveValue('Guatemala')
+  })
+
+  it('only accepts a country from the list', async () => {
+    render(<PinFormModal lat={1} lng={2} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), 'Narnia')
+    expect(screen.getByText('Elige un país de la lista')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled()
+  })
+
+  it('keeps a country written before the list existed while editing that pin', () => {
+    const old = { id: '1', title: 'Base', description: '', lat: 1, lng: 2, created_at: 'x', image_path: null, country: 'USA', region: '', city: '' }
+    render(<PinFormModal lat={1} lng={2} pin={old} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    expect(screen.queryByText('Elige un país de la lista')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
   })
 })
