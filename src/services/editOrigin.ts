@@ -30,3 +30,9 @@ export function readEditOrigin(hash: string = window.location.hash): EditOrigin 
   const from = new URLSearchParams(hash.split('?')[1] ?? '').get('from')
   return ORIGINS.find((o) => o === from) ?? null
 }
+
+/** The admin's project list with the edit form open over it (the list is not reloaded). */
+export const adminEditUrl = (id: string) => `#/admin/proyectos?editar=${encodeURIComponent(id)}`
+
+/** The admin's project list, no form. */
+export const ADMIN_PROJECTS_URL = '#/admin/proyectos'

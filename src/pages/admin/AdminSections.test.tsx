@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -23,6 +23,8 @@ const svc = vi.hoisted(() => ({
   setPinContact: vi.fn(),
   updatePinWithImage: vi.fn(),
   listThread: vi.fn(),
+  updateProjectWithImages: vi.fn(),
+  getProjectById: vi.fn(),
 }))
 
 vi.mock('../../services/adminUsers', async (importOriginal) => ({
@@ -45,6 +47,11 @@ vi.mock('../../services/pinRequests', () => ({
 vi.mock('../../services/projectAdmin', () => ({
   listAdminProjects: svc.listAdminProjects,
   deleteProjectWithImages: svc.deleteProjectWithImages,
+  updateProjectWithImages: svc.updateProjectWithImages,
+}))
+vi.mock('../../services/projectService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../services/projectService')>()),
+  getProjectById: svc.getProjectById,
 }))
 vi.mock('../../services/pinService', () => ({
   getPins: svc.getPins,
@@ -75,6 +82,7 @@ vi.mock('../../services/messages', () => ({
   listThread: svc.listThread,
 }))
 
+import { DEFAULT_ADMIN_SORT, saveAdminPageSize, saveAdminSort } from '../../services/adminProjectsView'
 import { getAuthSnapshot } from '../../services/authService'
 import { getToast } from '../../services/toast'
 import { ADMIN } from '../../test/auth'
@@ -104,6 +112,9 @@ beforeEach(() => {
   svc.getPins.mockResolvedValue([])
   svc.listPinContacts.mockResolvedValue(new Map())
   svc.listPinLocations.mockResolvedValue(new Map())
+  saveAdminSort(DEFAULT_ADMIN_SORT)
+  saveAdminPageSize(10)
+  window.location.hash = '#/admin/proyectos'
 })
 
 describe('UsersSection', () => {
@@ -275,7 +286,90 @@ describe('ProjectsAdminSection', () => {
   it('links each project with the admin origin', async () => {
     render(<ProjectsAdminSection />)
     expect(await screen.findByRole('link', { name: 'Casa Azul' })).toHaveAttribute('href', '#/proyectos/p1?from=admin')
-    expect(screen.getAllByRole('link', { name: 'Editar' })[0]).toHaveAttribute('href', '#/proyectos/p1/editar?from=admin')
+    // Editing opens over the list instead of leaving it.
+    expect(screen.getAllByRole('link', { name: 'Editar' })[0]).toHaveAttribute('href', '#/admin/proyectos?editar=p1')
+  })
+
+  describe('order and page size', () => {
+    const many = Array.from({ length: 12 }, (_, i) => project({ id: `p${i}`, name: `Proyecto ${String(i).padStart(2, '0')}`, country: i % 2 ? 'México' : 'Chile', created_by: i === 0 ? 'u2' : null }))
+    const names = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+
+    it('lists by name and sorts by a column, in both directions', async () => {
+      svc.listAdminProjects.mockResolvedValue([project({ id: 'a', name: 'Beta', country: 'Chile' }), project({ id: 'b', name: 'Alfa', country: 'México' }), project({ id: 'c', name: 'Gama', country: 'Argentina', region: '' })])
+      render(<ProjectsAdminSection />)
+      await screen.findByText('Alfa')
+      expect(names()).toEqual(['Alfa', 'Beta', 'Gama'])
+      await userEvent.click(screen.getByRole('button', { name: /^Ordenar por Proyecto/ }))
+      expect(names()).toEqual(['Gama', 'Beta', 'Alfa'])
+      await userEvent.click(screen.getByRole('button', { name: /^Ordenar por Lugar/ }))
+      // By place: Argentina, then "Yucatán, Chile" and "Yucatán, México".
+      expect(names()).toEqual(['Gama', 'Beta', 'Alfa'])
+    })
+
+    it('goes back to the first page when the order changes', async () => {
+      svc.listAdminProjects.mockResolvedValue(many)
+      render(<ProjectsAdminSection />)
+      await screen.findByText('Proyecto 00')
+      await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }))
+      expect(names()).toEqual(['Proyecto 10', 'Proyecto 11'])
+      await userEvent.click(screen.getByRole('button', { name: /^Ordenar por Proyecto/ }))
+      expect(names()[0]).toBe('Proyecto 11')
+    })
+
+    it('changes the page size and keeps it', async () => {
+      svc.listAdminProjects.mockResolvedValue(many)
+      const { unmount } = render(<ProjectsAdminSection />)
+      await screen.findByText('Proyecto 00')
+      expect(names()).toHaveLength(10)
+      await userEvent.selectOptions(screen.getByLabelText('Proyectos por página'), '25')
+      expect(names()).toHaveLength(12)
+      unmount()
+      render(<ProjectsAdminSection />)
+      await screen.findByText('Proyecto 00')
+      expect(screen.getByLabelText('Proyectos por página')).toHaveValue('25')
+    })
+  })
+
+  describe('edit over the list', () => {
+    const full = { id: 'p1', name: 'Casa Azul', status: 'open', country: 'México', region: 'Yucatán', created_by: 'u2', created_at: 'x', updated_at: '2026-02-01T00:00:00Z', project_images: [] }
+
+    it('opens the form over the list when the URL asks for it, without reading the list again', async () => {
+      svc.getProjectById.mockResolvedValue(full)
+      window.location.hash = '#/admin/proyectos?editar=p1'
+      render(<ProjectsAdminSection />)
+      expect(await screen.findByRole('dialog', { name: 'Editar proyecto' })).toBeInTheDocument()
+      expect(screen.getByText('Escuela')).toBeInTheDocument()
+      expect(svc.listAdminProjects).toHaveBeenCalledTimes(1)
+    })
+
+    it('updates the row in place after saving and closes', async () => {
+      svc.getProjectById.mockResolvedValue(full)
+      svc.updateProjectWithImages.mockResolvedValue({ ...full, name: 'Casa Roja', updated_at: '2026-03-01T00:00:00Z' })
+      render(<ProjectsAdminSection />)
+      await screen.findByText('Casa Azul')
+      act(() => {
+        window.location.hash = '#/admin/proyectos?editar=p1'
+      })
+      const name = await screen.findByLabelText('Nombre *')
+      await userEvent.clear(name)
+      await userEvent.type(name, 'Casa Roja')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+      expect(await screen.findByRole('heading', { name: 'Casa Roja' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/admin/proyectos')
+      expect(svc.listAdminProjects).toHaveBeenCalledTimes(1)
+      expect(getToast()?.message).toBe('Proyecto actualizado')
+    })
+
+    it('closes with Escape, leaving the list as it was', async () => {
+      svc.getProjectById.mockResolvedValue(full)
+      window.location.hash = '#/admin/proyectos?editar=p1'
+      render(<ProjectsAdminSection />)
+      await screen.findByRole('dialog')
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/admin/proyectos')
+    })
   })
 
   it('creates a project coming back to this list', async () => {

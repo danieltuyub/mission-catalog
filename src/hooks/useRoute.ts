@@ -132,3 +132,12 @@ export function useAdminConversationId(): string | null {
     }
   })
 }
+
+/** `#/admin/proyectos?editar=<id>` -> the project being edited over the list; null otherwise (the list stays mounted). */
+export function useAdminEditProjectId(): string | null {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section] = segments()
+    if (name !== 'admin' || section !== 'proyectos') return null
+    return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('editar') || null
+  })
+}
