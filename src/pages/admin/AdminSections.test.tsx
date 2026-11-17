@@ -20,6 +20,7 @@ const svc = vi.hoisted(() => ({
   deletePin: vi.fn(),
   listAllConversations: vi.fn(),
   listPinContacts: vi.fn(),
+  listPinLocations: vi.fn(),
   setPinContact: vi.fn(),
   updatePinWithImage: vi.fn(),
   listThread: vi.fn(),
@@ -57,6 +58,19 @@ vi.mock('../../services/pinContacts', () => ({
   listPinContacts: svc.listPinContacts,
   setPinContact: svc.setPinContact,
 }))
+vi.mock('../../services/pinLocations', () => ({ listPinLocations: svc.listPinLocations }))
+// Leaflet needs a real browser: a stand-in that lists what the map would draw.
+vi.mock('../../components/AdminPinsMap', () => ({
+  default: ({ pins, selectedId, onSelect, visible }: { pins: { id: string; position: number[] }[]; selectedId: string | null; onSelect: (id: string) => void; visible: boolean }) => (
+    <div data-testid="map" data-visible={String(visible)} data-selected={selectedId ?? ''}>
+      {pins.map((p) => (
+        <button key={p.id} data-testid={`marker-${p.id}`} onClick={() => onSelect(p.id)}>
+          {p.position.join(',')}
+        </button>
+      ))}
+    </div>
+  ),
+}))
 vi.mock('../../services/pinEdit', () => ({ updatePinWithImage: svc.updatePinWithImage }))
 vi.mock('../../services/messages', () => ({
   listAllConversations: svc.listAllConversations,
@@ -91,6 +105,7 @@ beforeEach(() => {
   svc.requestImageUrl.mockResolvedValue('https://signed')
   svc.getPins.mockResolvedValue([])
   svc.listPinContacts.mockResolvedValue(new Map())
+  svc.listPinLocations.mockResolvedValue(new Map())
 })
 
 describe('UsersSection', () => {
@@ -391,6 +406,81 @@ describe('PinsSection', () => {
     expect(screen.queryByText('Pin Chile')).not.toBeInTheDocument()
     await userEvent.clear(filter)
     expect(screen.getByText('Pin Chile')).toBeInTheDocument()
+  })
+
+  describe('map', () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ ...pin, id: `k${i}`, title: `Pin ${i}`, lat: i, lng: i }))
+
+    it('draws the filtered pins at their exact places, falling back to the approximate ones', async () => {
+      svc.getPins.mockResolvedValue([pin, { ...pin, id: 'k2', title: 'Escuela', country: 'Guatemala', lat: 3, lng: 4 }])
+      svc.listPinLocations.mockResolvedValue(new Map([['k1', [10.5, 20.5]]]))
+      render(<PinsSection />)
+      await screen.findByText('Pozo')
+      await vi.waitFor(() => expect(screen.getByTestId('marker-k1')).toHaveTextContent('10.5,20.5'))
+      expect(screen.getByTestId('marker-k2')).toHaveTextContent('3,4')
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filtrar por país' }), 'Guatemala')
+      expect(screen.queryByTestId('marker-k1')).not.toBeInTheDocument()
+      expect(screen.getByTestId('marker-k2')).toBeInTheDocument()
+    })
+
+    it('shows the pin on the map when its card or title is clicked', async () => {
+      svc.getPins.mockResolvedValue([pin])
+      render(<PinsSection />)
+      await userEvent.click(await screen.findByText('Cerca'))
+      expect(screen.getByTestId('map')).toHaveAttribute('data-selected', 'k1')
+      await userEvent.click(screen.getByRole('button', { name: 'Pozo: ver en el mapa' }))
+      expect(screen.getByRole('button', { name: 'Pozo: ver en el mapa' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('does not select when a control of the card is used', async () => {
+      svc.getPins.mockResolvedValue([pin])
+      svc.setPinContact.mockResolvedValue(undefined)
+      render(<PinsSection />)
+      await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Contacto de Pozo' }), 'u1')
+      expect(screen.getByTestId('map')).toHaveAttribute('data-selected', '')
+    })
+
+    it('goes to the page of a pin chosen on the map', async () => {
+      svc.getPins.mockResolvedValue(many)
+      render(<PinsSection />)
+      await screen.findByText('Pin 0')
+      expect(screen.queryByText('Pin 9')).not.toBeInTheDocument()
+      await userEvent.click(screen.getByTestId('marker-k9'))
+      expect(await screen.findByText('Pin 9')).toBeInTheDocument()
+      expect(screen.getByTestId('map')).toHaveAttribute('data-selected', 'k9')
+    })
+
+    it('takes turns with the list on narrow screens', async () => {
+      svc.getPins.mockResolvedValue([pin])
+      render(<PinsSection />)
+      await screen.findByText('Pozo')
+      expect(screen.getByTestId('map')).toHaveAttribute('data-visible', 'false')
+      await userEvent.click(screen.getByRole('button', { name: 'Ver en el mapa' }))
+      expect(screen.getByTestId('map')).toHaveAttribute('data-visible', 'true')
+      expect(screen.getByTestId('map')).toHaveAttribute('data-selected', 'k1')
+      await userEvent.click(screen.getByRole('button', { name: 'Lista' }))
+      expect(screen.getByTestId('map')).toHaveAttribute('data-visible', 'false')
+    })
+
+    it('shows the exact place when editing, and no place for pins that only have the approximate one', async () => {
+      svc.getPins.mockResolvedValue([pin, { ...pin, id: 'k2', title: 'Escuela' }])
+      svc.listPinLocations.mockResolvedValue(new Map([['k1', [10.12345, 20.54321]]]))
+      render(<PinsSection />)
+      await screen.findByText('Escuela')
+      await vi.waitFor(() => expect(screen.getByTestId('marker-k1')).toHaveTextContent('10.12345'))
+      await userEvent.click(screen.getAllByRole('button', { name: 'Editar' })[0])
+      expect(screen.getByText('10.12345, 20.54321')).toBeInTheDocument()
+    })
+
+    it('forgets the selection of a deleted pin', async () => {
+      svc.getPins.mockResolvedValue([pin])
+      svc.deletePin.mockResolvedValue(undefined)
+      render(<PinsSection />)
+      await userEvent.click(await screen.findByRole('button', { name: 'Pozo: ver en el mapa' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Sí, eliminar' }))
+      expect(screen.getByTestId('map')).toHaveAttribute('data-selected', '')
+    })
   })
 
   it('deletes after confirming', async () => {

@@ -6,6 +6,8 @@ export type NewPin = Pick<Pin, 'title' | 'lat' | 'lng'> &
   Partial<Pick<Pin, 'description' | 'image_path' | 'country' | 'region' | 'city' | 'languages' | 'kind'>>
 
 const TABLE = 'pins'
+/** The exact place is private (it is not readable): never `select *` on this table. */
+export const PIN_COLUMNS = 'id, title, description, lat, lng, created_at, image_path, country, region, city, languages, kind'
 const BUCKET = 'pin-images'
 
 /** Compress and upload an image; returns its storage path. */
@@ -31,7 +33,7 @@ export function pinImageUrl(path: string): string {
 export async function getPins(): Promise<Pin[]> {
   const { data, error } = await supabase
     .from(TABLE)
-    .select('*')
+    .select(PIN_COLUMNS)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -41,7 +43,7 @@ export async function getPins(): Promise<Pin[]> {
 export type PinPatch = Partial<Pick<Pin, 'title' | 'description' | 'image_path' | 'country' | 'region' | 'city' | 'languages' | 'kind'>>
 
 export async function updatePin(id: string, patch: PinPatch): Promise<Pin> {
-  const { data, error } = await supabase.from(TABLE).update(patch).eq('id', id).select().single()
+  const { data, error } = await supabase.from(TABLE).update(patch).eq('id', id).select(PIN_COLUMNS).single()
   if (error) throw error
   return data as Pin
 }
@@ -50,7 +52,7 @@ export async function createPin(pin: NewPin): Promise<Pin> {
   const { data, error } = await supabase
     .from(TABLE)
     .insert(pin)
-    .select()
+    .select(PIN_COLUMNS)
     .single()
 
   if (error) throw error

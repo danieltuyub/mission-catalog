@@ -4,6 +4,7 @@ export interface Pin {
   id: string
   title: string
   description: string
+  /** Approximate: the real place is up to 1.5 km away and private (see `pin_location_privacy`). */
   lat: number
   lng: number
   created_at: string

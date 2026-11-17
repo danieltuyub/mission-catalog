@@ -20,6 +20,9 @@ vi.mock('react-leaflet', () => ({
   ),
   TileLayer: () => null,
   Marker: () => null,
+  Circle: ({ center, radius }: { center: number[]; radius: number }) => (
+    <div data-testid="area" data-center={center.join(',')} data-radius={radius} />
+  ),
   useMap: () => leaflet,
   useMapEvents: (handlers: { click?: typeof map.click }) => {
     if (handlers.click) map.click = handlers.click
@@ -153,6 +156,14 @@ describe('MapView shared link', () => {
     window.location.hash = '#/mapa?pin=gone'
     render(<MapView />)
     await waitFor(() => expect(getToast()?.message).toBe('No se encontró ese pin'))
+  })
+
+  it('draws an approximate area around each pin, never a precise spot', () => {
+    shown.pins = [pin, { ...pin, id: 'k2', lat: 7, lng: 8 }]
+    render(<MapView />)
+    const areas = screen.getAllByTestId('area')
+    expect(areas.map((a) => a.getAttribute('data-center'))).toEqual(['5,6', '7,8'])
+    expect(areas.every((a) => a.getAttribute('data-radius') === '2000')).toBe(true)
   })
 
   it('opens nothing without a link', () => {

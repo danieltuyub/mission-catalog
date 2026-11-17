@@ -1,3 +1,4 @@
+import type { LatLngTuple } from 'leaflet'
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { validateImage } from '../services/imageUtils'
 import { isValidCountry } from '../services/countries'
@@ -11,6 +12,8 @@ import type { Pin, PinKind } from '../types'
 interface Props {
   lat: number
   lng: number
+  /** The exact place, when it is known (admins): a stored pin only carries an approximate one. */
+  exactPosition?: LatLngTuple
   /** When set, the form edits this pin instead of creating one. */
   pin?: Pin
   /** The pin is proposed, not published: an admin reviews it first. */
@@ -31,7 +34,7 @@ interface Props {
   onCancel: () => void
 }
 
-export default function PinFormModal({ lat, lng, pin, request = false, known = [], onSubmit, onCancel }: Props) {
+export default function PinFormModal({ lat, lng, exactPosition, pin, request = false, known = [], onSubmit, onCancel }: Props) {
   const heading = pin ? 'Editar pin' : request ? 'Solicitar pin' : 'Nuevo pin'
   const [title, setTitle] = useState(pin?.title ?? '')
   const [description, setDescription] = useState(pin?.description ?? '')
@@ -99,9 +102,11 @@ export default function PinFormModal({ lat, lng, pin, request = false, known = [
         className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 shadow-xl"
       >
         <h2 className="text-lg font-semibold text-gray-900">{heading}</h2>
-        <p className="text-xs text-gray-500">
-          {lat.toFixed(5)}, {lng.toFixed(5)}
-        </p>
+        {(!pin || exactPosition) && (
+          <p className="text-xs text-gray-500">
+            {(exactPosition?.[0] ?? lat).toFixed(5)}, {(exactPosition?.[1] ?? lng).toFixed(5)}
+          </p>
+        )}
         {request && (
           <p className="rounded-md bg-brand-blush/40 px-3 py-2 text-sm text-brand-primary">
             Un administrador revisará tu solicitud antes de publicar el pin.

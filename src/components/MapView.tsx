@@ -1,6 +1,7 @@
 import L, { type LatLngTuple } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Circle,
   MapContainer,
   Marker,
   TileLayer,
@@ -12,9 +13,11 @@ import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
 import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import { can } from '../services/permissions'
+import { PIN_PRIVACY_RADIUS_M } from '../services/pinPrivacy'
 import { requestPin } from '../services/pinRequests'
 import { readSharedPinId } from '../services/shareProject'
 import { showToast } from '../services/toast'
+import { pinIcon, selectedPinIcon } from './pinIcons'
 import LocateControl from './LocateControl'
 import PinCard from './PinCard'
 import PinFormModal from './PinFormModal'
@@ -24,21 +27,6 @@ import TrackpadNavigation from './TrackpadNavigation'
 const DEFAULT_CENTER: LatLngTuple = [20, 0]
 const DEFAULT_ZOOM = 2
 const LOCATED_ZOOM = 13
-
-const createPinIcon = (color: string) =>
-  L.divIcon({
-    className: '',
-    iconSize: [32, 40],
-    iconAnchor: [16, 40],
-    popupAnchor: [0, -36],
-    html: `<svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-    <path d="M16 0C7.2 0 0 7 0 15.7 0 27 16 40 16 40s16-13 16-24.300C32 7 24.800 0 16 0z" fill="${color}"/>
-    <circle cx="16" cy="15.500" r="6" fill="#fff"/>
-  </svg>`,
-  })
-
-const pinIcon = createPinIcon('#0e1428')
-const selectedPinIcon = createPinIcon('#7b9e89')
 
 const userIcon = L.divIcon({
   className: '',
@@ -172,6 +160,21 @@ export default function MapView() {
           <Marker position={position} icon={userIcon} interactive={false} keyboard={false} />
         )}
 
+        {/* The place is approximate: the circle says so, and the real one is always inside it. */}
+        {pins.map((pin) => (
+          <Circle
+            key={`area-${pin.id}`}
+            center={[pin.lat, pin.lng]}
+            radius={PIN_PRIVACY_RADIUS_M}
+            interactive={false}
+            pathOptions={{
+              color: pin.id === selectedId ? '#7b9e89' : '#0e1428',
+              weight: 1,
+              opacity: 0.5,
+              fillOpacity: pin.id === selectedId ? 0.18 : 0.08,
+            }}
+          />
+        ))}
         {pins.map((pin) => (
           <Marker
             key={pin.id}
