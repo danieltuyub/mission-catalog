@@ -48,8 +48,13 @@ vi.mock('../hooks/useGeolocation', () => ({
 }))
 vi.mock('../hooks/usePins', () => ({ usePins: () => ({ pins: shown.pins, error: null, addPin, editPin }) }))
 vi.mock('../services/pinRequests', () => ({ requestPin: vi.fn() }))
+vi.mock('../services/pinContacts', () => ({
+  setPinContact: vi.fn().mockResolvedValue(undefined),
+  getPinContactState: vi.fn().mockResolvedValue('other'),
+}))
 vi.mock('../services/mapViewStorage', () => ({ loadMapView: () => null, saveMapView: vi.fn() }))
 
+import { setPinContact } from '../services/pinContacts'
 import MapView from './MapView'
 
 const clickMap = () => act(() => map.click?.({ latlng: { lat: 10, lng: 20 } }))
@@ -73,6 +78,20 @@ describe('MapView pin creation', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(addPin).toHaveBeenCalledWith({ lat: 10, lng: 20, title: 'Base', description: '', country: 'México', region: '', city: '', kind: 'family', languages: [] }, undefined)
     expect(requestPin).not.toHaveBeenCalled()
+  })
+
+  it('makes the admin who creates a pin its contact', async () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+    addPin.mockResolvedValue({ id: 'new-pin' })
+    render(<MapView />)
+    clickMap()
+    await userEvent.type(await screen.findByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), 'México')
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'family')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(setPinContact).toHaveBeenCalledWith('new-pin', ADMIN.userId))
+    // The creation form has no contact field: it is set here, edited later.
+    expect(screen.queryByLabelText(/^Contacto/)).not.toBeInTheDocument()
   })
 
   it('offers nothing to guests', () => {

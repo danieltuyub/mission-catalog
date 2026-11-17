@@ -339,20 +339,57 @@ describe('PinsSection', () => {
     expect(await screen.findByText('Pozo 2')).toBeInTheDocument()
   })
 
-  it('shows the type and languages of each pin and lets the admin choose its contact', async () => {
+  it('shows the type, languages and contact of each pin, without a control to change it in the list', async () => {
     svc.getPins.mockResolvedValue([{ ...pin, languages: ['es', 'quc'] }])
     svc.listPinContacts.mockResolvedValue(new Map([['k1', 'u2']]))
-    svc.setPinContact.mockResolvedValue(undefined)
     render(<PinsSection />)
     await screen.findByText('Pozo')
     expect(screen.getByText(/Familia · Mérida, Yucatán, México/)).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Idiomas' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual(["Español", "K'iche'"])
-    const select = await screen.findByRole('combobox', { name: 'Contacto de Pozo' })
-    await vi.waitFor(() => expect(select).toHaveValue('u2'))
-    await userEvent.selectOptions(select, 'u1')
+    await vi.waitFor(() => expect(screen.getByText('Contacto:').parentElement).toHaveTextContent('Contacto: Leo'))
+    expect(screen.queryByRole('combobox', { name: /Contacto/ })).not.toBeInTheDocument()
+  })
+
+  it('shows "Sin contacto" when the pin has none', async () => {
+    svc.getPins.mockResolvedValue([pin])
+    render(<PinsSection />)
+    await screen.findByText('Pozo')
+    expect(screen.getByText('Contacto:').parentElement).toHaveTextContent('Contacto: Sin contacto')
+  })
+
+  it('changes the contact from the edit form, and only when it changed', async () => {
+    svc.getPins.mockResolvedValue([pin])
+    svc.listPinContacts.mockResolvedValue(new Map([['k1', 'u2']]))
+    svc.updatePinWithImage.mockResolvedValue(pin)
+    svc.setPinContact.mockResolvedValue(undefined)
+    render(<PinsSection />)
+    await screen.findByText('Pozo')
+    await vi.waitFor(() => expect(screen.getByText('Contacto:').parentElement).toHaveTextContent('Leo'))
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    const select = screen.getByLabelText(/^Contacto/)
+    expect(select).toHaveValue('u2')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(svc.setPinContact).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    await userEvent.selectOptions(screen.getByLabelText(/^Contacto/), 'u1')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(svc.setPinContact).toHaveBeenCalledWith('k1', 'u1')
-    await userEvent.selectOptions(select, '')
-    expect(svc.setPinContact).toHaveBeenLastCalledWith('k1', null)
+    await vi.waitFor(() => expect(screen.getByText('Contacto:').parentElement).toHaveTextContent('Contacto: Ana'))
+  })
+
+  it('removes the contact with "Sin contacto"', async () => {
+    svc.getPins.mockResolvedValue([pin])
+    svc.listPinContacts.mockResolvedValue(new Map([['k1', 'u2']]))
+    svc.updatePinWithImage.mockResolvedValue(pin)
+    svc.setPinContact.mockResolvedValue(undefined)
+    render(<PinsSection />)
+    await screen.findByText('Pozo')
+    await vi.waitFor(() => expect(screen.getByText('Contacto:').parentElement).toHaveTextContent('Leo'))
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    await userEvent.selectOptions(screen.getByLabelText(/^Contacto/), '')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(svc.setPinContact).toHaveBeenCalledWith('k1', null)
   })
 
   it('shows where each pin is and filters by country, with those still without one', async () => {
@@ -434,9 +471,8 @@ describe('PinsSection', () => {
 
     it('does not select when a control of the card is used', async () => {
       svc.getPins.mockResolvedValue([pin])
-      svc.setPinContact.mockResolvedValue(undefined)
       render(<PinsSection />)
-      await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Contacto de Pozo' }), 'u1')
+      await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
       expect(screen.getByTestId('map')).toHaveAttribute('data-selected', '')
     })
 

@@ -15,6 +15,7 @@ import { loadMapView, saveMapView } from '../services/mapViewStorage'
 import { can } from '../services/permissions'
 import type { Pin } from '../types'
 import { PIN_PRIVACY_RADIUS_M } from '../services/pinPrivacy'
+import { setPinContact } from '../services/pinContacts'
 import { requestPin } from '../services/pinRequests'
 import { readSharedPinId } from '../services/shareProject'
 import { showToast } from '../services/toast'
@@ -263,7 +264,9 @@ export default function MapView() {
               await requestPin(auth.userId, { ...place, ...data }, image)
               showToast('Solicitud enviada. Un administrador la revisará.')
             } else {
-              await addPin({ ...place, ...data }, image)
+              const created = await addPin({ ...place, ...data }, image)
+              // Whoever creates a pin answers for it until an admin changes that.
+              if (created && auth.userId) await setPinContact(created.id, auth.userId).catch(() => {})
             }
             setDraft(null)
           }}

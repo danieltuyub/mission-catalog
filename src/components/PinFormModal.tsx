@@ -20,6 +20,8 @@ interface Props {
   request?: boolean
   /** Pins already on the map: their places are suggested, and their spelling is kept. */
   known?: Pin[]
+  /** Who answers messages for this pin; only offered when editing (a new pin's contact is whoever creates it). */
+  contact?: { value: string; options: { id: string; name: string }[] }
   onSubmit: (data: {
     title: string
     description: string
@@ -30,16 +32,18 @@ interface Props {
     languages: string[]
     image?: File
     removeImage?: boolean
+    contact?: string
   }) => Promise<void>
   onCancel: () => void
 }
 
-export default function PinFormModal({ lat, lng, exactPosition, pin, request = false, known = [], onSubmit, onCancel }: Props) {
+export default function PinFormModal({ lat, lng, exactPosition, pin, request = false, known = [], contact, onSubmit, onCancel }: Props) {
   const heading = pin ? 'Editar pin' : request ? 'Solicitar pin' : 'Nuevo pin'
   const [title, setTitle] = useState(pin?.title ?? '')
   const [description, setDescription] = useState(pin?.description ?? '')
   const [place, setPlace] = useState(pin ?? EMPTY_PLACE)
   const [attrs, setAttrs] = useState({ kind: pin?.kind ?? '', languages: pin?.languages ?? [] })
+  const [contactId, setContactId] = useState(contact?.value ?? '')
   const [removed, setRemoved] = useState(false)
   const [image, setImage] = useState<{ file: File; url: string } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -83,6 +87,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
         languages: attrs.languages,
         image: image?.file,
         removeImage: removed && !image ? true : undefined,
+        contact: pin && contact ? contactId : undefined,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : request ? 'No se pudo enviar la solicitud' : 'No se pudo guardar el pin')
@@ -149,6 +154,25 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
           labelClassName="block text-sm text-gray-700"
           inputClassName="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
         />
+
+        {pin && contact && (
+          <label className="block text-sm text-gray-700">
+            Contacto
+            <select
+              value={contactId}
+              onChange={(e) => setContactId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
+            >
+              <option value="">Sin contacto</option>
+              {contact.options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-gray-500">Recibe los mensajes enviados desde este pin.</span>
+          </label>
+        )}
 
         <label className="block text-sm text-gray-700">
           Imagen

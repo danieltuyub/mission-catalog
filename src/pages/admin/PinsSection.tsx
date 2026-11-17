@@ -112,23 +112,6 @@ export default function PinsSection() {
     if (index >= 0) setPage(Math.floor(index / PAGE_SIZE) + 1)
   }
 
-  async function changeContact(pin: Pin, userId: string) {
-    setBusy(pin.id)
-    try {
-      await setPinContact(pin.id, userId || null)
-      setContacts((map) => {
-        const next = new Map(map)
-        if (userId) next.set(pin.id, userId)
-        else next.delete(pin.id)
-        return next
-      })
-      showToast('Contacto actualizado')
-    } catch {
-      showToast('No se pudo guardar el contacto')
-    }
-    setBusy(null)
-  }
-
   function chooseCountry(value: string) {
     setCountry(value)
     setRegion(ALL)
@@ -298,23 +281,10 @@ export default function PinsSection() {
                     </ul>
                   )}
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                    <label className="flex items-center gap-2 text-sm text-stone-600">
-                      Contacto
-                      <select
-                        aria-label={`Contacto de ${pin.title}`}
-                        value={contacts.get(pin.id) ?? ''}
-                        disabled={busy !== null}
-                        onChange={(e) => changeContact(pin, e.target.value)}
-                        className={`${inputClass} max-w-56`}
-                      >
-                        <option value="">Sin contacto</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {nameOf(u.id)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <p className="text-sm text-stone-600">
+                      Contacto:{' '}
+                      <span className="text-stone-900">{contacts.has(pin.id) ? nameOf(contacts.get(pin.id)!) : 'Sin contacto'}</span>
+                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
@@ -358,9 +328,28 @@ export default function PinsSection() {
           exactPosition={exact.get(editing.id)}
           pin={editing}
           known={pins}
+          contact={{ value: contacts.get(editing.id) ?? '', options: users.map((u) => ({ id: u.id, name: nameOf(u.id) })) }}
           onCancel={() => setEditing(null)}
-          onSubmit={async ({ image, removeImage, ...data }) => {
+          onSubmit={async ({ image, removeImage, contact, ...data }) => {
             const saved = await updatePinWithImage(editing, data, image, removeImage)
+            const before = contacts.get(editing.id) ?? ''
+            if (contact !== undefined && contact !== before) {
+              try {
+                await setPinContact(editing.id, contact || null)
+                setContacts((map) => {
+                  const next = new Map(map)
+                  if (contact) next.set(editing.id, contact)
+                  else next.delete(editing.id)
+                  return next
+                })
+              } catch {
+                // The pin itself is saved: say so instead of failing the whole edit.
+                setPins((list) => (list ?? []).map((p) => (p.id === saved.id ? saved : p)))
+                setEditing(null)
+                showToast('Pin guardado, pero no se pudo cambiar el contacto')
+                return
+              }
+            }
             setPins((list) => (list ?? []).map((p) => (p.id === saved.id ? saved : p)))
             setEditing(null)
             showToast('Pin actualizado')
