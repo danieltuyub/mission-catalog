@@ -3,9 +3,11 @@ import Footer from './components/Footer'
 import Navbar from './components/Navbar'
 import RequireAuth from './components/RequireAuth'
 import Toaster from './components/Toaster'
+import { useAuth } from './hooks/useAuth'
 import { useEditProjectId, useIsNewProject, useProjectId, useRoute, type Route } from './hooks/useRoute'
 import AccountPage from './pages/AccountPage'
 import AdminPage from './pages/AdminPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import ContactPage from './pages/ContactPage'
 import LoginPage from './pages/LoginPage'
 import MapPage from './pages/MapPage'
@@ -31,6 +33,9 @@ export default function App() {
   const projectId = useProjectId()
   const newProject = useIsNewProject()
   const editId = useEditProjectId()
+  const { mustChangePassword } = useAuth()
+  // An account an admin created gets nothing else until it has its own password.
+  if (mustChangePassword) return <ChangePasswordPage />
   // The login is a standalone screen: no navbar or footer.
   if (route === 'login') return <LoginPage />
   const Page = PAGES[route]

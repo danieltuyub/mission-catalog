@@ -17,7 +17,7 @@ vi.mock('./supabaseClient', () => ({
   },
 }))
 
-import { changePassword, getProfile, updateProfile } from './accountService'
+import { changePassword, completeFirstPassword, getProfile, updateProfile } from './accountService'
 
 beforeEach(() => Object.values(m).forEach((f) => f.mockReset()))
 
@@ -70,5 +70,20 @@ describe('changePassword', () => {
   ])('maps %s to a friendly message', async (code, message) => {
     m.updateUser.mockResolvedValue({ error: { code } })
     await expect(changePassword('x')).rejects.toThrow(message)
+  })
+})
+
+describe('completeFirstPassword', () => {
+  it('sets the password and lifts the "must change" mark in one call', async () => {
+    m.updateUser.mockResolvedValue({ error: null })
+    await expect(completeFirstPassword('mi-clave-1')).resolves.toBeUndefined()
+    expect(m.updateUser).toHaveBeenCalledWith({ password: 'mi-clave-1', data: { must_change_password: false } })
+  })
+
+  it('maps errors like a normal password change', async () => {
+    m.updateUser.mockResolvedValue({ error: { code: 'same_password' } })
+    await expect(completeFirstPassword('x')).rejects.toThrow(/distinta de la actual/)
+    m.updateUser.mockResolvedValue({ error: { code: 'other' } })
+    await expect(completeFirstPassword('x')).rejects.toThrow(/No se pudo cambiar/)
   })
 })

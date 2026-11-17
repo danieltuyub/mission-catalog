@@ -80,6 +80,7 @@ describe('auth state', () => {
         permissions: ['projects.create'],
         firstName: 'Ana',
         lastName: 'Pérez',
+        mustChangePassword: false,
       }),
     )
     expect(sb.rpc).toHaveBeenCalledWith('my_permissions')
@@ -93,9 +94,19 @@ describe('auth state', () => {
         permissions: [],
         firstName: '',
         lastName: '',
+        mustChangePassword: false,
       }),
     )
     expect(listener).toHaveBeenCalled()
+  })
+
+  it('knows when the account must choose its own password, before anything else loads', async () => {
+    sb.rpc.mockResolvedValue({ data: { roles: ['subscriber'], permissions: [] }, error: null })
+    sb.maybeSingle.mockResolvedValue({ data: null, error: null })
+    emit('SIGNED_IN', { user: { id: 'u7', email: 'n@b.com', user_metadata: { must_change_password: true } } })
+    await vi.waitFor(() => expect(getAuthSnapshot()).toMatchObject({ userId: 'u7', mustChangePassword: true }))
+    emit('USER_UPDATED', { user: { id: 'u7', email: 'n@b.com', user_metadata: { must_change_password: false } } })
+    await vi.waitFor(() => expect(getAuthSnapshot().mustChangePassword).toBe(false))
   })
 
   it('has no permissions when loading them fails', async () => {
@@ -110,6 +121,7 @@ describe('auth state', () => {
         permissions: [],
         firstName: '',
         lastName: '',
+        mustChangePassword: false,
       }),
     )
   })
@@ -126,6 +138,7 @@ describe('auth state', () => {
         permissions: [],
         firstName: '',
         lastName: '',
+        mustChangePassword: false,
       }),
     )
   })
@@ -142,6 +155,7 @@ describe('auth state', () => {
         permissions: ['projects.save'],
         firstName: '',
         lastName: '',
+        mustChangePassword: false,
       }),
     )
   })

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useUsers } from '../../hooks/useUsers'
 import { ROLES, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
 import { showToast } from '../../services/toast'
+import NewUserForm from './NewUserForm'
 import { Empty, LoadError, Loading, SearchBox } from './ui'
 import { card, dateFormat, ghostButton, inputClass, matches, primaryButton } from './styles'
 
@@ -58,13 +59,14 @@ function NameEditor({ user, onSaved, onCancel }: { user: AdminUser; onSaved: () 
   )
 }
 
-/** "Usuarios": change anyone's role or name. Disabling accounts comes later. */
+/** "Usuarios": create accounts, change anyone's role or name. Disabling accounts comes later. */
 export default function UsersSection() {
   const { userId } = useAuth()
   const { users, loading, error, reload } = useUsers()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
   async function changeRole(user: AdminUser, role: Role) {
@@ -98,8 +100,14 @@ export default function UsersSection() {
             setPage(1)
           }}
         />
-        {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
+        <div className="flex items-center gap-3">
+          {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
+          <button type="button" onClick={() => setCreating(true)} disabled={creating} className={primaryButton}>
+            Nuevo usuario
+          </button>
+        </div>
       </div>
+      {creating && <NewUserForm onCreated={reload} onClose={() => setCreating(false)} />}
       {shown.length === 0 ? (
         <Empty>Ningún usuario coincide con la búsqueda.</Empty>
       ) : (

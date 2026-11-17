@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const sb = vi.hoisted(() => ({
   rpc: vi.fn(),
+  invoke: vi.fn(),
   result: { data: null as unknown, error: null as unknown },
   updated: [] as unknown[],
 }))
@@ -9,6 +10,7 @@ const sb = vi.hoisted(() => ({
 vi.mock('./supabaseClient', () => ({
   supabase: {
     rpc: sb.rpc,
+    functions: { invoke: sb.invoke },
     from: () => {
       const builder: Record<string, unknown> = {
         then: (resolve: (v: unknown) => unknown) => Promise.resolve(sb.result).then(resolve),
@@ -24,7 +26,7 @@ vi.mock('./supabaseClient', () => ({
   },
 }))
 
-import { listUsers, setUserRole, updateUserName, userLabel } from './adminUsers'
+import { createUser, listUsers, setUserRole, updateUserName, userLabel } from './adminUsers'
 
 beforeEach(() => {
   sb.rpc.mockReset()
@@ -87,5 +89,32 @@ describe('userLabel', () => {
   it('uses the name, else the email', () => {
     expect(userLabel({ firstName: 'Ana', lastName: 'Paz', email: 'a@b.com' })).toBe('Ana Paz')
     expect(userLabel({ firstName: '', lastName: '', email: 'a@b.com' })).toBe('a@b.com')
+  })
+})
+
+describe('createUser', () => {
+  const input = { email: 'a@b.com', firstName: 'Ana', lastName: 'Paz', role: 'creator' as const, password: 'Abcdef123456' }
+
+  it('asks the function and returns the new id', async () => {
+    sb.invoke.mockResolvedValue({ data: { id: 'u9' }, error: null })
+    await expect(createUser(input)).resolves.toBe('u9')
+    expect(sb.invoke).toHaveBeenCalledWith('admin-create-user', { body: input })
+  })
+
+  it('turns the function’s error codes into messages', async () => {
+    const failure = (error: string) => ({ data: null, error: { context: new Response(JSON.stringify({ error }), { status: 409 }) } })
+    sb.invoke.mockResolvedValue(failure('email_exists'))
+    await expect(createUser(input)).rejects.toThrow('Ya existe un usuario con ese correo')
+    sb.invoke.mockResolvedValue(failure('forbidden'))
+    await expect(createUser(input)).rejects.toThrow('Tu cuenta no puede crear usuarios')
+  })
+
+  it('hides anything it does not know', async () => {
+    sb.invoke.mockResolvedValue({ data: null, error: { context: new Response('boom', { status: 500 }) } })
+    await expect(createUser(input)).rejects.toThrow('No se pudo crear el usuario')
+    sb.invoke.mockResolvedValue({ data: null, error: new Error('network') })
+    await expect(createUser(input)).rejects.toThrow('No se pudo crear el usuario')
+    sb.invoke.mockResolvedValue({ data: {}, error: null })
+    await expect(createUser(input)).rejects.toThrow('No se pudo crear el usuario')
   })
 })

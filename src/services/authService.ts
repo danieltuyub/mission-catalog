@@ -12,11 +12,13 @@ export interface AuthState {
   /** From the user's profile; empty until loaded or when not filled in yet. */
   firstName: string
   lastName: string
+  /** An admin created the account with a temporary password: the user must choose their own first. */
+  mustChangePassword: boolean
 }
 
-const SIGNED_OUT: AuthState = { loading: false, userId: null, email: null, permissions: [], firstName: '', lastName: '' }
+const SIGNED_OUT: AuthState = { loading: false, userId: null, email: null, permissions: [], firstName: '', lastName: '', mustChangePassword: false }
 
-let state: AuthState = { loading: true, userId: null, email: null, permissions: [], firstName: '', lastName: '' }
+let state: AuthState = { loading: true, userId: null, email: null, permissions: [], firstName: '', lastName: '', mustChangePassword: false }
 let started = false
 let resolveId = 0
 const listeners = new Set<() => void>()
@@ -31,7 +33,8 @@ async function resolve(session: Session | null) {
   if (!session) return setState(SIGNED_OUT)
   const userId = session.user.id
   const email = session.user.email ?? null
-  setState({ loading: true, userId, email, permissions: [], firstName: '', lastName: '' })
+  const mustChangePassword = session.user.user_metadata?.must_change_password === true
+  setState({ loading: true, userId, email, permissions: [], firstName: '', lastName: '', mustChangePassword })
   const [{ data, error }, profile] = await Promise.all([
     supabase.rpc('my_permissions'),
     getProfile(userId).catch(() => null), // the name is a nicety: never block the session on it
@@ -45,6 +48,7 @@ async function resolve(session: Session | null) {
     permissions,
     firstName: profile?.first_name ?? '',
     lastName: profile?.last_name ?? '',
+    mustChangePassword,
   })
 }
 

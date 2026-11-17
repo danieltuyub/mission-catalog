@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { ADMIN, CREATOR, SIGNED_OUT, SUBSCRIBER } from './test/auth'
+import { ADMIN, CREATOR, MUST_CHANGE_PASSWORD, SIGNED_OUT, SUBSCRIBER } from './test/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot } from './services/authService'
 import App from './App'
@@ -8,6 +8,7 @@ vi.mock('./components/MapView', () => ({ default: () => <div>map</div> }))
 vi.mock('./services/accountService', () => ({
   getProfile: vi.fn().mockResolvedValue({ first_name: 'Ana', last_name: '' }),
   MIN_PASSWORD_LENGTH: 8,
+  completeFirstPassword: vi.fn(),
 }))
 
 vi.mock('./services/pinRequests', () => ({
@@ -42,6 +43,16 @@ describe('App', () => {
     expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument()
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Volver al mapa/ })).toHaveAttribute('href', '#/mapa')
+  })
+
+  it('shows only the password screen to an account that must choose its own password', () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(MUST_CHANGE_PASSWORD)
+    window.location.hash = '#/admin/usuarios'
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'Elige tu contraseña' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('main', { name: /./ })).not.toBeInTheDocument()
+    vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
   })
 
   it('matches the login route even with a query string', () => {

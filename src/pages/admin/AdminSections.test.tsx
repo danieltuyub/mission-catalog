@@ -6,6 +6,7 @@ const svc = vi.hoisted(() => ({
   listUsers: vi.fn(),
   setUserRole: vi.fn(),
   updateUserName: vi.fn(),
+  createUser: vi.fn(),
   listRequestsPage: vi.fn(),
   countPendingRequests: vi.fn(),
   countReviewedRequests: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock('../../services/adminUsers', async (importOriginal) => ({
   listUsers: svc.listUsers,
   setUserRole: svc.setUserRole,
   updateUserName: svc.updateUserName,
+  createUser: svc.createUser,
 }))
 vi.mock('../../services/pinRequests', () => ({
   listRequestsPage: svc.listRequestsPage,
@@ -117,6 +119,21 @@ beforeEach(() => {
   saveAdminSort(DEFAULT_ADMIN_SORT)
   saveAdminPageSize(10)
   window.location.hash = '#/admin/proyectos'
+})
+
+describe('UsersSection new user', () => {
+  it('opens the form from the button, and reloads the list once the user is created', async () => {
+    render(<UsersSection />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo usuario' }))
+    expect(screen.getByRole('form', { name: 'Nuevo usuario' })).toBeInTheDocument()
+    svc.createUser.mockResolvedValue('u9')
+    await userEvent.type(screen.getByLabelText('Correo'), 'nuevo@x.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Crear usuario' }))
+    expect(await screen.findByRole('region', { name: 'Usuario creado' })).toBeInTheDocument()
+    expect(svc.listUsers).toHaveBeenCalledTimes(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Listo' }))
+    expect(screen.queryByRole('region', { name: 'Usuario creado' })).not.toBeInTheDocument()
+  })
 })
 
 describe('UsersSection', () => {

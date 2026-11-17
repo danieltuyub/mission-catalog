@@ -35,3 +35,13 @@ export async function changePassword(password: string): Promise<void> {
   if (!error) return
   throw new Error(PASSWORD_ERRORS[error.code ?? ''] ?? 'No se pudo cambiar la contraseña. Intenta de nuevo.')
 }
+
+/**
+ * First sign-in of an account an admin created: sets the user's own password and lifts the
+ * "must change" mark in the same call, so the app lets them in.
+ */
+export async function completeFirstPassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } })
+  if (!error) return
+  throw new Error(PASSWORD_ERRORS[error.code ?? ''] ?? 'No se pudo cambiar la contraseña. Intenta de nuevo.')
+}
