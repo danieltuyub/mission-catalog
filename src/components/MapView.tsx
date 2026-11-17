@@ -1,4 +1,4 @@
-import L, { type LatLngTuple } from 'leaflet'
+import L, { type LatLngBoundsLiteral, type LatLngTuple } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Circle,
@@ -26,7 +26,14 @@ import RequestPinButton from './RequestPinButton'
 import TrackpadNavigation from './TrackpadNavigation'
 
 const DEFAULT_CENTER: LatLngTuple = [20, 0]
-const DEFAULT_ZOOM = 2
+const DEFAULT_ZOOM = 3
+/** Streets and buildings stay out of reach, and the whole world is never shown (or repeated). */
+const MIN_ZOOM = 3
+const MAX_ZOOM = 14
+const WORLD_BOUNDS: LatLngBoundsLiteral = [
+  [-85, -180],
+  [85, 180],
+]
 const LOCATED_ZOOM = 13
 
 const userIcon = L.divIcon({
@@ -166,6 +173,10 @@ export default function MapView() {
       <MapContainer
         center={savedView?.center ?? DEFAULT_CENTER}
         zoom={savedView?.zoom ?? DEFAULT_ZOOM}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        maxBounds={WORLD_BOUNDS}
+        maxBoundsViscosity={1}
         scrollWheelZoom={false}
         className={`h-full w-full ${placing ? '[&.leaflet-grab]:cursor-crosshair' : ''}`}
       >

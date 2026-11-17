@@ -16,8 +16,16 @@ const leaflet = vi.hoisted(() => ({ setView: vi.fn(), zoom: 12, getZoom() { retu
 
 // Leaflet needs a real browser: replace the map with a div and capture the click handler.
 vi.mock('react-leaflet', () => ({
-  MapContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="map" className={className}>
+  MapContainer: ({ children, className, ...options }: { children: React.ReactNode; className?: string; minZoom?: number; maxZoom?: number; zoom?: number; maxBounds?: number[][]; maxBoundsViscosity?: number }) => (
+    <div
+      data-testid="map"
+      className={className}
+      data-min-zoom={options.minZoom}
+      data-max-zoom={options.maxZoom}
+      data-zoom={options.zoom}
+      data-bounds={JSON.stringify(options.maxBounds)}
+      data-viscosity={options.maxBoundsViscosity}
+    >
       {children}
     </div>
   ),
@@ -132,6 +140,18 @@ describe('MapView pin creation', () => {
       expect(screen.queryByText('Toca el mapa para elegir la ubicación')).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Solicitar pin' })).toBeInTheDocument()
     })
+  })
+})
+
+describe('MapView zoom limits', () => {
+  it('keeps streets out of reach and never shows the whole world, starting inside the limits', () => {
+    render(<MapView />)
+    const map = screen.getByTestId('map')
+    expect(map).toHaveAttribute('data-min-zoom', '3')
+    expect(map).toHaveAttribute('data-max-zoom', '13')
+    expect(map).toHaveAttribute('data-zoom', '3')
+    expect(map).toHaveAttribute('data-bounds', '[[-85,-180],[85,180]]')
+    expect(map).toHaveAttribute('data-viscosity', '1')
   })
 })
 
