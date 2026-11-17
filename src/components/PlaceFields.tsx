@@ -35,7 +35,7 @@ export default function PlaceFields({ value, onChange, known, inputClassName, cu
 
   return (
     <div className={className}>
-      <div className={labelClassName}>
+      <div className={`${labelClassName} sm:col-span-2`}>
         <label htmlFor={countryId}>País</label>
         <Combobox
           id={countryId}
