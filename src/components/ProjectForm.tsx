@@ -1,3 +1,4 @@
+import FormSelect from './FormSelect'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { validateImage } from '../services/imageUtils'
 import type { ImageInput, NewProject } from '../services/projectAdmin'
@@ -210,13 +211,13 @@ export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
         </Field>
 
         <Field id="project-status" label="Estado">
-          <select id="project-status" value={values.status} onChange={set('status')} className={control}>
+          <FormSelect id="project-status" value={values.status} onChange={set('status')} className={control}>
             {STATUS_ORDER.map((s) => (
               <option key={s} value={s}>
                 {STATUS_META[s].label}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </Field>
 
         <Field id="project-description" label="Descripción" className="sm:col-span-2">
