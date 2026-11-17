@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import Pagination from '../../components/Pagination'
 import { STATUS_META } from '../../components/projectStatus'
-import { useAdminEditProjectId } from '../../hooks/useRoute'
+import { useAdminEditProjectId, useAdminNewProject } from '../../hooks/useRoute'
 import { useUsers } from '../../hooks/useUsers'
-import { ADMIN_PROJECTS_URL, adminEditUrl, projectUrl } from '../../services/editOrigin'
+import { ADMIN_NEW_PROJECT_URL, ADMIN_PROJECTS_URL, adminEditUrl, projectUrl } from '../../services/editOrigin'
 import {
   ADMIN_PAGE_SIZES,
   loadAdminPageSize,
@@ -16,7 +16,9 @@ import {
 import { deleteProjectWithImages, listAdminProjects, type AdminProject } from '../../services/projectAdmin'
 import { showToast } from '../../services/toast'
 import type { Project } from '../../types'
-import ProjectEditModal from './ProjectEditModal'
+import ProjectCreator from '../../components/ProjectCreator'
+import ProjectEditor from '../../components/ProjectEditor'
+import ProjectModal from './ProjectModal'
 import { ConfirmButton, Empty, LoadError, Loading, SearchBox } from './ui'
 import { ghostButton, inputClass, matches, primaryButton } from './styles'
 
@@ -42,6 +44,9 @@ function Cell({ label, strong = false, children }: { label: string; strong?: boo
     </p>
   )
 }
+
+/** Leaves the form over the list (replacing the entry, so Back does not reopen it). */
+const closeModal = () => window.location.replace(ADMIN_PROJECTS_URL)
 
 const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true })
 
@@ -69,6 +74,7 @@ export default function ProjectsAdminSection() {
   const [sort, setSort] = useState<AdminProjectSort>(loadAdminSort)
   const [pageSize, setPageSize] = useState(loadAdminPageSize)
   const editId = useAdminEditProjectId()
+  const creating = useAdminNewProject()
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
@@ -150,7 +156,7 @@ export default function ProjectsAdminSection() {
             ))}
           </select>
           {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
-          <a href="#/proyectos/nuevo?from=admin" className={primaryButton}>
+          <a href={ADMIN_NEW_PROJECT_URL} className={primaryButton}>
             Nuevo proyecto
           </a>
         </div>
@@ -209,18 +215,33 @@ export default function ProjectsAdminSection() {
           </ul>
         </div>
       )}
-      {editId && (
-        <ProjectEditModal
-          key={editId}
-          id={editId}
-          onClose={() => window.location.replace(ADMIN_PROJECTS_URL)}
-          onSaved={(saved) => {
-            // The row changes in place: the list is not read again.
-            setProjects((list) => (list ?? []).map((p) => (p.id === saved.id ? toRow(saved) : p)))
-            window.location.replace(ADMIN_PROJECTS_URL)
-            showToast('Proyecto actualizado')
-          }}
-        />
+      {editId ? (
+        <ProjectModal label="Editar proyecto" onClose={closeModal}>
+          <ProjectEditor
+            key={editId}
+            id={editId}
+            onCancel={closeModal}
+            onSaved={(saved) => {
+              // The row changes in place: the list is not read again.
+              setProjects((list) => (list ?? []).map((p) => (p.id === saved.id ? toRow(saved) : p)))
+              closeModal()
+              showToast('Proyecto actualizado')
+            }}
+          />
+        </ProjectModal>
+      ) : (
+        creating && (
+          <ProjectModal label="Nuevo proyecto" onClose={closeModal}>
+            <ProjectCreator
+              onCancel={closeModal}
+              onCreated={(created) => {
+                setProjects((list) => [...(list ?? []), toRow(created)])
+                closeModal()
+                showToast('Proyecto creado')
+              }}
+            />
+          </ProjectModal>
+        )
       )}
     </section>
   )

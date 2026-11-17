@@ -1,9 +1,7 @@
 import BackLink from '../components/BackLink'
-import ProjectForm, { type ProjectFormData } from '../components/ProjectForm'
+import ProjectCreator from '../components/ProjectCreator'
 import PageHeader from '../components/PageHeader'
 import { originBack, readEditOrigin } from '../services/editOrigin'
-import { createProjectWithImages } from '../services/projectAdmin'
-import { clearFilterOptionsCache } from '../services/projectService'
 
 export default function ProjectFormPage() {
   // Opened from a list (the admin panel): saving or cancelling leads back to it.
@@ -13,13 +11,9 @@ export default function ProjectFormPage() {
     window.location.hash = back.href
   }
 
-  async function save({ project, images }: ProjectFormData) {
-    const files = images.flatMap((image) => (image.kind === 'new' ? [image.file] : []))
-    const created = await createProjectWithImages(project, files)
-    // A new country/region/responsible may now exist: refetch the filter options.
-    clearFilterOptionsCache()
+  const created = (project: { id: string }) => {
     if (origin) goBack()
-    else window.location.hash = `#/proyectos/${created.id}`
+    else window.location.hash = `#/proyectos/${project.id}`
   }
 
   return (
@@ -28,7 +22,7 @@ export default function ProjectFormPage() {
         <BackLink href={back.href}>{back.label}</BackLink>
       </nav>
       <PageHeader title="Nuevo proyecto" />
-      <ProjectForm onSubmit={save} onCancel={goBack} />
+      <ProjectCreator onCreated={created} onCancel={goBack} />
     </div>
   )
 }

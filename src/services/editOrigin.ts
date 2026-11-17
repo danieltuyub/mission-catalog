@@ -36,3 +36,6 @@ export const adminEditUrl = (id: string) => `#/admin/proyectos?editar=${encodeUR
 
 /** The admin's project list, no form. */
 export const ADMIN_PROJECTS_URL = '#/admin/proyectos'
+
+/** The admin's project list with the new-project form open over it. */
+export const ADMIN_NEW_PROJECT_URL = '#/admin/proyectos?nuevo'

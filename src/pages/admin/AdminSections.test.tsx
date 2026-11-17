@@ -24,6 +24,7 @@ const svc = vi.hoisted(() => ({
   updatePinWithImage: vi.fn(),
   listThread: vi.fn(),
   updateProjectWithImages: vi.fn(),
+  createProjectWithImages: vi.fn(),
   getProjectById: vi.fn(),
 }))
 
@@ -48,6 +49,7 @@ vi.mock('../../services/projectAdmin', () => ({
   listAdminProjects: svc.listAdminProjects,
   deleteProjectWithImages: svc.deleteProjectWithImages,
   updateProjectWithImages: svc.updateProjectWithImages,
+  createProjectWithImages: svc.createProjectWithImages,
 }))
 vi.mock('../../services/projectService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../services/projectService')>()),
@@ -372,10 +374,39 @@ describe('ProjectsAdminSection', () => {
     })
   })
 
-  it('creates a project coming back to this list', async () => {
-    render(<ProjectsAdminSection />)
-    expect(await screen.findByRole('link', { name: 'Nuevo proyecto' })).toHaveAttribute('href', '#/proyectos/nuevo?from=admin')
+  describe('new project over the list', () => {
+    it('opens from the button without leaving the list', async () => {
+      render(<ProjectsAdminSection />)
+      expect(await screen.findByRole('link', { name: 'Nuevo proyecto' })).toHaveAttribute('href', '#/admin/proyectos?nuevo')
+    })
+
+    it('creates it, adds the row in place and closes, without reading the list again', async () => {
+      svc.createProjectWithImages.mockResolvedValue({ id: 'p9', name: 'Casa Nueva', status: 'open', country: null, region: null, created_by: 'admin-1', updated_at: '2026-04-01T00:00:00Z' })
+      render(<ProjectsAdminSection />)
+      await screen.findByText('Casa Azul')
+      act(() => {
+        window.location.hash = '#/admin/proyectos?nuevo'
+      })
+      expect(await screen.findByRole('dialog', { name: 'Nuevo proyecto' })).toBeInTheDocument()
+      await userEvent.type(screen.getByLabelText('Nombre *'), 'Casa Nueva')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar proyecto' }))
+      expect(await screen.findByRole('heading', { name: 'Casa Nueva' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/admin/proyectos')
+      expect(svc.listAdminProjects).toHaveBeenCalledTimes(1)
+      expect(getToast()?.message).toBe('Proyecto creado')
+    })
+
+    it('cancels back to the list', async () => {
+      window.location.hash = '#/admin/proyectos?nuevo'
+      render(<ProjectsAdminSection />)
+      await screen.findByRole('dialog', { name: 'Nuevo proyecto' })
+      await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(window.location.hash).toBe('#/admin/proyectos')
+    })
   })
+
 
   it('shows who created each project, without a control to change it here', async () => {
     render(<ProjectsAdminSection />)

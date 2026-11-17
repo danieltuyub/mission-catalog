@@ -141,3 +141,12 @@ export function useAdminEditProjectId(): string | null {
     return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('editar') || null
   })
 }
+
+/** `#/admin/proyectos?nuevo` -> the new-project form is open over the list. */
+export function useAdminNewProject(): boolean {
+  return useSyncExternalStore(subscribe, () => {
+    const [name, section] = segments()
+    if (name !== 'admin' || section !== 'proyectos') return false
+    return new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('nuevo')
+  })
+}
