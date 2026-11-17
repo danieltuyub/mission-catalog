@@ -10,11 +10,23 @@ vi.mock('./supabaseClient', () => ({
   },
 }))
 
-import { MAX_MESSAGE_LENGTH, sendProjectMessage } from './messages'
+import { MAX_MESSAGE_LENGTH, sendPinMessage, sendProjectMessage } from './messages'
 
 const saved = { id: 'm1', project_id: 'p1', body: 'Hola' }
 
 beforeEach(() => sb.insert.mockReset().mockResolvedValue({ data: saved, error: null }))
+
+describe('sendPinMessage', () => {
+  it('sends only the pin and the trimmed text: the database picks the contact', async () => {
+    await sendPinMessage('pin1', '  Hola  ')
+    expect(sb.insert).toHaveBeenCalledWith('messages', { pin_id: 'pin1', body: 'Hola' })
+  })
+
+  it('says the pin has no contact when there is no recipient', async () => {
+    sb.insert.mockResolvedValue({ data: null, error: { code: '23502', message: 'null recipient' } })
+    await expect(sendPinMessage('pin1', 'Hola')).rejects.toThrow('Este pin aún no tiene un contacto asignado')
+  })
+})
 
 describe('sendProjectMessage', () => {
   it('sends only the project and the trimmed text: the database decides the rest', async () => {

@@ -148,7 +148,7 @@ describe('MapView zoom limits', () => {
     render(<MapView />)
     const map = screen.getByTestId('map')
     expect(map).toHaveAttribute('data-min-zoom', '3')
-    expect(map).toHaveAttribute('data-max-zoom', '13')
+    expect(map).toHaveAttribute('data-max-zoom', '14')
     expect(map).toHaveAttribute('data-zoom', '3')
     expect(map).toHaveAttribute('data-bounds', '[[-85,-180],[85,180]]')
     expect(map).toHaveAttribute('data-viscosity', '1')

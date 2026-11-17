@@ -1,4 +1,10 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useAuth } from '../hooks/useAuth'
+import { loginUrl } from '../services/authRedirect'
+import { can } from '../services/permissions'
+import { getPinContactState, type PinContactState } from '../services/pinContacts'
+import { sendPinMessage } from '../services/messages'
+import MessageComposer from './MessageComposer'
 import { languageLabel } from '../services/languages'
 import { kindLabel } from '../services/pinKinds'
 import { placeLabel } from '../services/pinPlace'
@@ -41,6 +47,35 @@ function Row({ icon, label, children }: { icon: keyof typeof ICONS; label: strin
 export default function PinDetails({ pin }: { pin: Pin }) {
   const place = placeLabel(pin)
   const since = new Date(pin.created_at)
+  const auth = useAuth()
+  const [contactState, setContactState] = useState<{ pinId: string; state: PinContactState } | null>(null)
+  const [composing, setComposing] = useState(false)
+  // Re-asked after signing in: whether the caller is the contact depends on the session.
+  const contact = contactState?.pinId === pin.id ? contactState.state : null
+
+  useEffect(() => {
+    let cancelled = false
+    getPinContactState(pin.id).then(
+      (state) => !cancelled && setContactState({ pinId: pin.id, state }),
+      () => !cancelled && setContactState({ pinId: pin.id, state: 'none' }),
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [pin.id, auth.userId])
+
+  function startMessage() {
+    if (auth.loading) return
+    if (!auth.userId) showToast('Inicia sesión para enviar mensajes', {
+        label: 'Iniciar sesión',
+        // Back to this pin, not just the map.
+        onClick: () => {
+          window.location.hash = loginUrl(`/mapa?pin=${encodeURIComponent(pin.id)}`)
+        },
+      })
+    else if (!can(auth, 'messages.send')) showToast('Tu cuenta no puede enviar mensajes')
+    else setComposing(true)
+  }
 
   async function share() {
     const result = await sharePin(pin.id, pin.title)
@@ -50,19 +85,38 @@ export default function PinDetails({ pin }: { pin: Pin }) {
 
   return (
     <>
-      {/* Messages to the pin's contact are not sent yet. */}
-      <button
-        type="button"
-        disabled
-        title="Próximamente"
-        className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand-primary text-sm font-medium text-brand-blush opacity-50"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d={ICONS.mail} />
-        </svg>
-        Enviar mensaje
-        <span className="text-xs font-normal opacity-80">· Próximamente</span>
-      </button>
+      {contact !== 'self' && (
+        <button
+          type="button"
+          disabled={contact === null || contact === 'none'}
+          title={contact === 'none' ? 'Este pin aún no tiene un contacto asignado' : undefined}
+          onClick={startMessage}
+          className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand-primary text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d={ICONS.mail} />
+          </svg>
+          Enviar mensaje
+          {contact === 'none' && <span className="text-xs font-normal opacity-80">· Sin contacto</span>}
+        </button>
+      )}
+
+      {composing && (
+        <MessageComposer
+          projectName={pin.title}
+          onCancel={() => setComposing(false)}
+          onSend={async (body) => {
+            await sendPinMessage(pin.id, body)
+            setComposing(false)
+            showToast('Mensaje enviado', {
+              label: 'Ver mensajes',
+              onClick: () => {
+                window.location.hash = '#/cuenta/mensajes'
+              },
+            })
+          }}
+        />
+      )}
 
       <dl className="mt-4 space-y-3.5">
         {pin.languages.length > 0 && (

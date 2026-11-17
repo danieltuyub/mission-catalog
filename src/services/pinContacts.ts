@@ -16,3 +16,12 @@ export async function setPinContact(pinId: string, userId: string | null): Promi
     : await supabase.from(TABLE).delete().eq('pin_id', pinId)
   if (error) throw new Error('No se pudo guardar el contacto')
 }
+
+/** Whether a pin has someone to write to: `self` is the signed-in contact (the database never says who). */
+export type PinContactState = 'none' | 'self' | 'other'
+
+export async function getPinContactState(pinId: string): Promise<PinContactState> {
+  const { data, error } = await supabase.rpc('pin_contact_state', { p_pin: pinId })
+  if (error) throw new Error('No se pudo consultar el contacto')
+  return data === 'self' || data === 'other' ? data : 'none'
+}

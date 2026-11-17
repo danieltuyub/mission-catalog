@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { MAX_MESSAGE_LENGTH } from '../services/messages'
 
 interface Props {
@@ -34,7 +35,8 @@ export default function MessageComposer({ projectName, onSend, onCancel }: Props
     }
   }
 
-  return (
+  // In `body`: inside a transformed or clipped ancestor (the pin card) a fixed dialog would be trapped there.
+  return createPortal(
     <div
       className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && !sending && onCancel()}
@@ -95,6 +97,7 @@ export default function MessageComposer({ projectName, onSend, onCancel }: Props
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }

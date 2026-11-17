@@ -7,6 +7,8 @@ export interface Message {
   recipient_id: string
   /** The project it was written from, if any. */
   project_id: string | null
+  /** The pin it was written from, if any. */
+  pin_id: string | null
   /** Sender's name when it was sent (the database fills it in). */
   sender_name: string
   body: string
@@ -22,6 +24,8 @@ export interface Conversation {
   user_b: string
   /** Null for a direct conversation, or when the project was deleted. */
   project_id: string | null
+  /** Null unless it is about a pin (and the pin still exists). */
+  pin_id: string | null
   created_at: string
   /** Latest activity: what the inbox sorts by. */
   last_message_at: string

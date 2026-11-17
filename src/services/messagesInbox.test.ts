@@ -40,6 +40,8 @@ describe('listConversations', () => {
     user_a: 'me',
     user_b: 'you',
     project_id: 'p1',
+    pin_id: null,
+    pins: null,
     last_message_at: '2026-11-10T12:00:00Z',
     projects: { name: 'Casa Azul' },
     messages: [{ body: 'Hola', sender_id: 'you', sender_name: 'Ana', created_at: '2026-11-10T12:00:00Z' }],
@@ -57,6 +59,8 @@ describe('listConversations', () => {
       otherId: 'you',
       projectId: 'p1',
       projectName: 'Casa Azul',
+      pinId: null,
+      pinTitle: null,
       otherName: 'Ana',
       lastMessage: { body: 'Hola', fromMe: false, createdAt: '2026-11-10T12:00:00Z' },
       lastMessageAt: '2026-11-10T12:00:00Z',
@@ -106,18 +110,26 @@ describe('listThread', () => {
   })
 })
 
+describe('sendReply in a pin thread', () => {
+  it('keeps the pin so the reply stays in the same thread', async () => {
+    sb.results = { messages: ok({ id: 'm1' }) }
+    await sendReply({ otherId: 'you', projectId: null, pinId: 'pin1' }, 'Hola')
+    expect(called('insert')).toEqual([[{ recipient_id: 'you', project_id: null, pin_id: 'pin1', body: 'Hola' }]])
+  })
+})
+
 describe('sendReply', () => {
   it('names the recipient and the project; the database decides the sender and the thread', async () => {
     sb.results = { messages: ok({ id: 'm1' }) }
-    await expect(sendReply({ otherId: 'you', projectId: 'p1' }, '  Hola ')).resolves.toEqual({ id: 'm1' })
-    expect(called('insert')).toEqual([[{ recipient_id: 'you', project_id: 'p1', body: 'Hola' }]])
+    await expect(sendReply({ otherId: 'you', projectId: 'p1', pinId: null }, '  Hola ')).resolves.toEqual({ id: 'm1' })
+    expect(called('insert')).toEqual([[{ recipient_id: 'you', project_id: 'p1', pin_id: null, body: 'Hola' }]])
   })
 
   it('explains a permission rejection and hides other errors', async () => {
     sb.results = { messages: { data: null, error: { code: '42501', message: 'rls' } } }
-    await expect(sendReply({ otherId: 'you', projectId: null }, 'Hola')).rejects.toThrow('Tu cuenta no puede enviar mensajes')
+    await expect(sendReply({ otherId: 'you', projectId: null, pinId: null }, 'Hola')).rejects.toThrow('Tu cuenta no puede enviar mensajes')
     sb.results = { messages: { data: null, error: { code: '500', message: 'internal' } } }
-    await expect(sendReply({ otherId: 'you', projectId: null }, 'Hola')).rejects.toThrow('No se pudo enviar el mensaje')
+    await expect(sendReply({ otherId: 'you', projectId: null, pinId: null }, 'Hola')).rejects.toThrow('No se pudo enviar el mensaje')
   })
 })
 

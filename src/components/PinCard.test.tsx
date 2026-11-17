@@ -5,6 +5,8 @@ import type { Pin } from '../types'
 import { getToast } from '../services/toast'
 import PinCard from './PinCard'
 
+vi.mock('../services/pinContacts', () => ({ getPinContactState: vi.fn().mockResolvedValue('other') }))
+
 const pin: Pin = {
   id: '1',
   title: 'Base',
@@ -177,11 +179,6 @@ describe('PinCard transitions', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }))
       expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/#\/mapa\?pin=1$/))
       expect(getToast()?.message).toBe('Enlace copiado')
-    })
-
-    it('has the message button, not available yet', () => {
-      render(<PinCard pin={full} onClose={vi.fn()} />)
-      expect(screen.getByRole('button', { name: /Enviar mensaje/ })).toBeDisabled()
     })
   })
 })

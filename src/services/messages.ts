@@ -7,6 +7,7 @@ export const MAX_MESSAGE_LENGTH = 2000
 
 const FAILED = 'No se pudo enviar el mensaje. Inténtalo de nuevo.'
 const NO_CONTACT = 'Este proyecto aún no tiene un contacto asignado.'
+const NO_PIN_CONTACT = 'Este pin aún no tiene un contacto asignado.'
 const DENIED = 'Tu cuenta no puede enviar mensajes a este contacto.'
 const PERMISSION_DENIED = '42501'
 const NOT_NULL_VIOLATION = '23502'
@@ -30,6 +31,21 @@ export async function sendProjectMessage(projectId: string, body: string): Promi
   return data as Message
 }
 
+/** Writes to the pin's contact: the database picks the recipient, the sender and the thread (one per pair and pin). */
+export async function sendPinMessage(pinId: string, body: string): Promise<Message> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .insert({ pin_id: pinId, body: body.trim() })
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === NOT_NULL_VIOLATION) throw new Error(NO_PIN_CONTACT)
+    throw new Error(error.code === PERMISSION_DENIED ? DENIED : FAILED)
+  }
+  return data as Message
+}
+
 /** What the inbox shows for a conversation. */
 export interface ConversationSummary {
   id: string
@@ -37,6 +53,8 @@ export interface ConversationSummary {
   otherId: string
   projectId: string | null
   projectName: string | null
+  pinId: string | null
+  pinTitle: string | null
   /** The other person's name, when they have written in this conversation. */
   otherName: string
   lastMessage: { body: string; fromMe: boolean; createdAt: string } | null
@@ -49,8 +67,10 @@ interface ConversationRow {
   user_a: string
   user_b: string
   project_id: string | null
+  pin_id: string | null
   last_message_at: string
   projects: { name: string } | { name: string }[] | null
+  pins: { title: string } | { title: string }[] | null
   messages: { body: string; sender_id: string; sender_name: string; created_at: string }[]
 }
 
@@ -64,7 +84,7 @@ export async function listConversations(userId: string): Promise<ConversationSum
   const [conversations, unread] = await Promise.all([
     supabase
       .from('conversations')
-      .select('id, user_a, user_b, project_id, last_message_at, projects(name), messages(body, sender_id, sender_name, created_at)')
+      .select('id, user_a, user_b, project_id, pin_id, last_message_at, projects(name), pins(title), messages(body, sender_id, sender_name, created_at)')
       // Admins can read every conversation: the inbox is still only the ones they take part in.
       .or(`user_a.eq.${userId},user_b.eq.${userId}`)
       .order('last_message_at', { ascending: false })
@@ -83,6 +103,7 @@ export async function listConversations(userId: string): Promise<ConversationSum
 
   return (conversations.data as unknown as ConversationRow[]).map((row) => {
     const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
+    const pin = Array.isArray(row.pins) ? row.pins[0] : row.pins
     const last = row.messages[0]
     const fromMe = last?.sender_id === userId
     return {
@@ -90,6 +111,8 @@ export async function listConversations(userId: string): Promise<ConversationSum
       otherId: row.user_a === userId ? row.user_b : row.user_a,
       projectId: row.project_id,
       projectName: project?.name ?? null,
+      pinId: row.pin_id,
+      pinTitle: pin?.title ?? null,
       otherName: last && !fromMe ? last.sender_name : '',
       lastMessage: last ? { body: last.body, fromMe, createdAt: last.created_at } : null,
       lastMessageAt: row.last_message_at,
@@ -111,10 +134,10 @@ export async function listThread(conversationId: string): Promise<Message[]> {
 }
 
 /** Replies in an existing conversation: the database still sets the sender and the thread. */
-export async function sendReply(to: { otherId: string; projectId: string | null }, body: string): Promise<Message> {
+export async function sendReply(to: { otherId: string; projectId: string | null; pinId: string | null }, body: string): Promise<Message> {
   const { data, error } = await supabase
     .from(TABLE)
-    .insert({ recipient_id: to.otherId, project_id: to.projectId, body: body.trim() })
+    .insert({ recipient_id: to.otherId, project_id: to.projectId, pin_id: to.pinId, body: body.trim() })
     .select()
     .single()
   if (error) throw new Error(error.code === PERMISSION_DENIED ? DENIED : FAILED)
@@ -139,6 +162,8 @@ export interface ModerationConversation {
   userB: string
   projectId: string | null
   projectName: string | null
+  pinId: string | null
+  pinTitle: string | null
   lastBody: string
   lastMessageAt: string
 }
@@ -147,7 +172,7 @@ export interface ModerationConversation {
 export async function listAllConversations(): Promise<ModerationConversation[]> {
   const { data, error } = await supabase
     .from('conversations')
-    .select('id, user_a, user_b, project_id, last_message_at, projects(name), messages(body, created_at)')
+    .select('id, user_a, user_b, project_id, pin_id, last_message_at, projects(name), pins(title), messages(body, created_at)')
     .order('last_message_at', { ascending: false })
     .limit(MAX_CONVERSATIONS * 4)
     .order('created_at', { referencedTable: 'messages', ascending: false })
@@ -155,12 +180,15 @@ export async function listAllConversations(): Promise<ModerationConversation[]> 
   if (error) throw new Error('No se pudieron cargar las conversaciones. Inténtalo de nuevo.')
   return (data as unknown as (Omit<ConversationRow, 'messages'> & { messages: { body: string }[] })[]).map((row) => {
     const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
+    const pin = Array.isArray(row.pins) ? row.pins[0] : row.pins
     return {
       id: row.id,
       userA: row.user_a,
       userB: row.user_b,
       projectId: row.project_id,
       projectName: project?.name ?? null,
+      pinId: row.pin_id,
+      pinTitle: pin?.title ?? null,
       lastBody: row.messages[0]?.body ?? '',
       lastMessageAt: row.last_message_at,
     }

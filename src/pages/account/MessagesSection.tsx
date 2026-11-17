@@ -21,7 +21,7 @@ const isToday = (date: Date) => date.toDateString() === new Date().toDateString(
 const shortWhen = (iso: string) => (isToday(new Date(iso)) ? timeFormat : dayFormat).format(new Date(iso))
 const longWhen = (iso: string) => (isToday(new Date(iso)) ? timeFormat : fullFormat).format(new Date(iso))
 
-const title = (c: ConversationSummary) => c.projectName ?? 'Conversación directa'
+const title = (c: ConversationSummary) => c.projectName ?? c.pinTitle ?? 'Conversación directa'
 
 function ConversationList({ conversations, activeId }: { conversations: ConversationSummary[]; activeId: string | null }) {
   return (
@@ -143,8 +143,11 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
         </a>
         <div className="min-w-0">
           <h2 title={title(conversation)} className="truncate font-semibold text-brand-primary">
-            {conversation.projectId ? (
-              <a href={`#/proyectos/${conversation.projectId}`} className="hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage">
+            {conversation.projectId || conversation.pinId ? (
+              <a
+                href={conversation.projectId ? `#/proyectos/${conversation.projectId}` : `#/mapa?pin=${conversation.pinId}`}
+                className="hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage"
+              >
                 {title(conversation)}
               </a>
             ) : (

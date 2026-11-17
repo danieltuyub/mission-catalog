@@ -7,7 +7,7 @@ import { Empty, LoadError, Loading } from './ui'
 
 const whenFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-const title = (c: ModerationConversation) => c.projectName ?? 'Conversación directa'
+const title = (c: ModerationConversation) => c.projectName ?? c.pinTitle ?? 'Conversación directa'
 
 function Thread({ conversation, userA, userB }: { conversation: ModerationConversation; userA: string; userB: string }) {
   const [messages, setMessages] = useState<Message[] | null>(null)
