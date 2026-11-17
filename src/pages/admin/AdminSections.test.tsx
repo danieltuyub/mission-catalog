@@ -13,7 +13,6 @@ const svc = vi.hoisted(() => ({
   rejectRequest: vi.fn(),
   requestImageUrl: vi.fn(),
   listAdminProjects: vi.fn(),
-  assignProjectCreator: vi.fn(),
   deleteProjectWithImages: vi.fn(),
   getPins: vi.fn(),
   updatePin: vi.fn(),
@@ -45,7 +44,6 @@ vi.mock('../../services/pinRequests', () => ({
 }))
 vi.mock('../../services/projectAdmin', () => ({
   listAdminProjects: svc.listAdminProjects,
-  assignProjectCreator: svc.assignProjectCreator,
   deleteProjectWithImages: svc.deleteProjectWithImages,
 }))
 vi.mock('../../services/pinService', () => ({
@@ -285,14 +283,13 @@ describe('ProjectsAdminSection', () => {
     expect(await screen.findByRole('link', { name: 'Nuevo proyecto' })).toHaveAttribute('href', '#/proyectos/nuevo?from=admin')
   })
 
-  it('offers creators and admins as owners, and assigns one', async () => {
-    svc.assignProjectCreator.mockResolvedValue(undefined)
+  it('shows who created each project, without a control to change it here', async () => {
     render(<ProjectsAdminSection />)
-    const select = await screen.findByRole('combobox', { name: 'Creador de Casa Azul' })
-    const options = within(select).getAllByRole('option').map((o) => o.textContent)
-    expect(options).toEqual(['Sin asignar', 'Leo', 'Yo'])
-    await userEvent.selectOptions(select, 'u2')
-    expect(svc.assignProjectCreator).toHaveBeenCalledWith('p1', 'u2')
+    await screen.findByText('Casa Azul')
+    const [first, second] = screen.getAllByText('Creador:').map((el) => el.parentElement)
+    expect(first).toHaveTextContent('Creador: Sin asignar')
+    await vi.waitFor(() => expect(second).toHaveTextContent('Creador: Leo'))
+    expect(screen.queryByRole('combobox', { name: /Creador/ })).not.toBeInTheDocument()
   })
 
   it('deletes only after confirming', async () => {

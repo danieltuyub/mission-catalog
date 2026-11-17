@@ -18,6 +18,8 @@ export interface ProjectFormData {
 interface Props {
   /** When set, the form edits this project instead of creating one. */
   project?: Project
+  /** Admins editing: who owns the project. A new project always belongs to whoever creates it. */
+  creator?: { options: { id: string; name: string }[] }
   onSubmit: (data: ProjectFormData) => Promise<void>
   onCancel: () => void
 }
@@ -83,7 +85,7 @@ const Icon = ({ d }: { d: string }) => (
   </svg>
 )
 
-export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
+export default function ProjectForm({ project, creator, onSubmit, onCancel }: Props) {
   const [values, setValues] = useState({
     name: project?.name ?? '',
     responsible: project?.responsible ?? '',
@@ -96,6 +98,7 @@ export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
     mail: project?.mail ?? '',
     status: (project?.status ?? 'open') as ProjectStatus,
   })
+  const [creatorId, setCreatorId] = useState(project?.created_by ?? '')
   const [errors, setErrors] = useState<{ name?: string; mail?: string }>({})
   const [images, setImages] = useState<Image[]>(() => initialImages(project))
   const [imageError, setImageError] = useState<string | null>(null)
@@ -170,6 +173,8 @@ export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
           phone: text(values.phone),
           mail: text(mail),
           status: values.status,
+          // Only sent when an admin changed it.
+          ...(project && creator && creatorId !== (project.created_by ?? '') ? { created_by: creatorId || null } : {}),
         },
         images: images.map((i) => i.input),
       })
@@ -209,6 +214,19 @@ export default function ProjectForm({ project, onSubmit, onCancel }: Props) {
         <Field id="project-responsible" label="Encargado">
           <input id="project-responsible" value={values.responsible} onChange={set('responsible')} className={control} />
         </Field>
+
+        {project && creator && (
+          <Field id="project-creator" label="Creador" hint="Dueño del proyecto: puede editarlo y recibe sus mensajes.">
+            <FormSelect id="project-creator" value={creatorId} onChange={(e) => setCreatorId(e.target.value)} className={control}>
+              <option value="">Sin asignar</option>
+              {creator.options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </FormSelect>
+          </Field>
+        )}
 
         <Field id="project-status" label="Estado">
           <FormSelect id="project-status" value={values.status} onChange={set('status')} className={control}>

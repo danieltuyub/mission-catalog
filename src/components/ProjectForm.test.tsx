@@ -162,6 +162,45 @@ describe('ProjectForm', () => {
       return onSubmit
     }
 
+    describe('creator', () => {
+      const creator = { options: [{ id: 'u1', name: 'Ana' }, { id: 'u2', name: 'Leo' }] }
+      const withCreator = (created_by: string | null, onSubmit = vi.fn().mockResolvedValue(undefined)) => {
+        render(<ProjectForm project={{ ...project, created_by }} creator={creator} onSubmit={onSubmit} onCancel={vi.fn()} />)
+        return onSubmit
+      }
+
+      it('shows who owns it and sends a change only when there is one', async () => {
+        const onSubmit = withCreator('u1')
+        expect(screen.getByLabelText('Creador')).toHaveValue('u1')
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+        expect(onSubmit.mock.calls[0][0].project).not.toHaveProperty('created_by')
+      })
+
+      it('sends the new owner, or null when it is cleared', async () => {
+        const onSubmit = withCreator('u1')
+        await userEvent.selectOptions(screen.getByLabelText('Creador'), 'u2')
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+        expect(onSubmit.mock.calls[0][0].project.created_by).toBe('u2')
+      })
+
+      it('clears the owner with "Sin asignar"', async () => {
+        const onSubmit = withCreator('u1')
+        await userEvent.selectOptions(screen.getByLabelText('Creador'), '')
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+        expect(onSubmit.mock.calls[0][0].project.created_by).toBeNull()
+      })
+
+      it('is not offered without the option, nor when creating', () => {
+        open()
+        expect(screen.queryByLabelText('Creador')).not.toBeInTheDocument()
+      })
+
+      it('is not offered when creating, even for admins', () => {
+        render(<ProjectForm creator={creator} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+        expect(screen.queryByLabelText('Creador')).not.toBeInTheDocument()
+      })
+    })
+
     it('prefills every field and lists the saved photos in position order', () => {
       open()
       expect(screen.getByRole('form', { name: 'Editar proyecto' })).toBeInTheDocument()

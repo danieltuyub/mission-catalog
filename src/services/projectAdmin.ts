@@ -14,7 +14,7 @@ const TABLE = 'projects'
 
 export type NewProject = Pick<Project, 'name'> &
   Partial<
-    Pick<Project, 'responsible' | 'description' | 'details' | 'started_at' | 'country' | 'region' | 'phone' | 'mail' | 'status'>
+    Pick<Project, 'responsible' | 'description' | 'details' | 'started_at' | 'country' | 'region' | 'phone' | 'mail' | 'status' | 'created_by'>
   >
 
 /** A photo in the form: one already saved, or a file still to upload. */
@@ -107,13 +107,6 @@ export async function listAdminProjects(): Promise<AdminProject[]> {
     .order('id')
   if (error) throw error
   return data as AdminProject[]
-}
-
-/** Gives a project an owner (or none). Admins only: the database checks. */
-export async function assignProjectCreator(id: string, userId: string | null): Promise<void> {
-  const { data, error } = await supabase.from(TABLE).update({ created_by: userId }).eq('id', id).select('id')
-  if (error) throw error
-  if (!data || data.length === 0) throw new Error('No se pudo asignar el creador')
 }
 
 /** Deletes a project and its photos (the rows go with it; the files are removed afterwards). */

@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Pagination from '../../components/Pagination'
 import { STATUS_META } from '../../components/projectStatus'
 import { useUsers } from '../../hooks/useUsers'
 import { editUrl, projectUrl } from '../../services/editOrigin'
-import { assignProjectCreator, deleteProjectWithImages, listAdminProjects, type AdminProject } from '../../services/projectAdmin'
+import { deleteProjectWithImages, listAdminProjects, type AdminProject } from '../../services/projectAdmin'
 import { showToast } from '../../services/toast'
 import { ConfirmButton, Empty, LoadError, Loading, SearchBox } from './ui'
-import { card, ghostButton, inputClass, matches, primaryButton } from './styles'
+import { card, ghostButton, matches, primaryButton } from './styles'
 
 const PAGE_SIZE = 10
-const NONE = ''
 
 /** "Proyectos": the whole catalog in a compact list, with owner assignment and removal. */
 export default function ProjectsAdminSection() {
-  const { users, nameOf } = useUsers()
+  const { nameOf } = useUsers()
   const [projects, setProjects] = useState<AdminProject[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
@@ -35,21 +34,6 @@ export default function ProjectsAdminSection() {
       cancelled = true
     }
   }, [version])
-
-  // Who can own a project: creators and admins.
-  const owners = useMemo(() => users.filter((u) => u.role === 'creator' || u.role === 'admin'), [users])
-
-  async function assign(project: AdminProject, userId: string) {
-    setBusy(project.id)
-    try {
-      await assignProjectCreator(project.id, userId || null)
-      setProjects((list) => (list ?? []).map((p) => (p.id === project.id ? { ...p, created_by: userId || null } : p)))
-      showToast('Creador actualizado')
-    } catch {
-      showToast('No se pudo asignar el creador')
-    }
-    setBusy(null)
-  }
 
   async function remove(project: AdminProject) {
     setBusy(project.id)
@@ -96,7 +80,6 @@ export default function ProjectsAdminSection() {
         <ul className="space-y-3">
           {shown.map((p) => {
             const status = STATUS_META[p.status]
-            const unknownOwner = p.created_by && !owners.some((o) => o.id === p.created_by)
             return (
               <li key={p.id} className={`${card} space-y-3`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -111,24 +94,9 @@ export default function ProjectsAdminSection() {
                   <p className="text-xs text-stone-400">{[p.region, p.country].filter(Boolean).join(', ') || '—'}</p>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="flex items-center gap-2 text-sm text-stone-600">
-                    Creador
-                    <select
-                      aria-label={`Creador de ${p.name}`}
-                      value={p.created_by ?? NONE}
-                      disabled={busy !== null}
-                      onChange={(e) => assign(p, e.target.value)}
-                      className={`${inputClass} max-w-56`}
-                    >
-                      <option value={NONE}>Sin asignar</option>
-                      {unknownOwner && <option value={p.created_by!}>{nameOf(p.created_by!)}</option>}
-                      {owners.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {nameOf(u.id)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <p className="text-sm text-stone-600">
+                    Creador: <span className="text-stone-900">{nameOf(p.created_by ?? null)}</span>
+                  </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <a href={editUrl(p.id, 'admin')} className={ghostButton}>
                       Editar
