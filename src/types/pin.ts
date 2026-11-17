@@ -6,6 +6,10 @@ export interface Pin {
   lng: number
   created_at: string
   image_path: string | null
+  /** Where it is; empty when not known yet. */
+  country: string
+  region: string
+  city: string
 }
 
 export type PinRequestStatus = 'pending' | 'approved' | 'rejected'
@@ -20,6 +24,9 @@ export interface PinRequest {
   lng: number
   /** Path in the private `pin-request-images` bucket. */
   image_path: string | null
+  country: string
+  region: string
+  city: string
   status: PinRequestStatus
   created_at: string
 }

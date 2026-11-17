@@ -12,6 +12,9 @@ const pin: Pin = {
   lng: 2,
   created_at: '2026-01-01T00:00:00Z',
   image_path: null,
+  country: 'México',
+  region: 'Yucatán',
+  city: 'Mérida',
 }
 
 describe('PinCard', () => {

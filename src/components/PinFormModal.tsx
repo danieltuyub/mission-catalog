@@ -1,6 +1,8 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { validateImage } from '../services/imageUtils'
+import { canonicalPlace, EMPTY_PLACE } from '../services/pinPlace'
 import { pinImageUrl } from '../services/pinService'
+import PlaceFields from './PlaceFields'
 import type { Pin } from '../types'
 
 interface Props {
@@ -10,19 +12,25 @@ interface Props {
   pin?: Pin
   /** The pin is proposed, not published: an admin reviews it first. */
   request?: boolean
+  /** Pins already on the map: their places are suggested, and their spelling is kept. */
+  known?: Pin[]
   onSubmit: (data: {
     title: string
     description: string
+    country: string
+    region: string
+    city: string
     image?: File
     removeImage?: boolean
   }) => Promise<void>
   onCancel: () => void
 }
 
-export default function PinFormModal({ lat, lng, pin, request = false, onSubmit, onCancel }: Props) {
+export default function PinFormModal({ lat, lng, pin, request = false, known = [], onSubmit, onCancel }: Props) {
   const heading = pin ? 'Editar pin' : request ? 'Solicitar pin' : 'Nuevo pin'
   const [title, setTitle] = useState(pin?.title ?? '')
   const [description, setDescription] = useState(pin?.description ?? '')
+  const [place, setPlace] = useState(pin ?? EMPTY_PLACE)
   const [removed, setRemoved] = useState(false)
   const [image, setImage] = useState<{ file: File; url: string } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -60,6 +68,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, onSubmit,
       await onSubmit({
         title: title.trim(),
         description: description.trim(),
+        ...canonicalPlace(place, known),
         image: image?.file,
         removeImage: removed && !image ? true : undefined,
       })
@@ -111,6 +120,14 @@ export default function PinFormModal({ lat, lng, pin, request = false, onSubmit,
           />
         </label>
 
+        <PlaceFields
+          value={place}
+          onChange={setPlace}
+          known={known}
+          labelClassName="block text-sm text-gray-700"
+          inputClassName="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
+        />
+
         <label className="block text-sm text-gray-700">
           Imagen
           <input
@@ -155,7 +172,7 @@ export default function PinFormModal({ lat, lng, pin, request = false, onSubmit,
           </button>
           <button
             type="submit"
-            disabled={saving || !title.trim()}
+            disabled={saving || !title.trim() || !place.country.trim()}
             className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90 disabled:opacity-50"
           >
             {request ? (saving ? 'Enviando…' : 'Enviar solicitud') : saving ? 'Guardando…' : 'Guardar'}

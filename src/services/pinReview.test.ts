@@ -45,6 +45,9 @@ const request: PinRequest = {
   description: 'Cerca',
   lat: 1,
   lng: 2,
+  country: 'México',
+  region: 'Yucatán',
+  city: 'Mérida',
   image_path: null,
   status: 'pending',
   created_at: 'x',
@@ -63,8 +66,13 @@ describe('approveRequest', () => {
   it('claims the request, then publishes the pin without a photo', async () => {
     await approveRequest(request)
     expect(sb.statuses).toEqual(['approved'])
-    expect(sb.createPin).toHaveBeenCalledWith({ title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, image_path: undefined })
+    expect(sb.createPin).toHaveBeenCalledWith({ title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, country: 'México', region: 'Yucatán', city: 'Mérida', image_path: undefined })
     expect(sb.download).not.toHaveBeenCalled()
+  })
+
+  it('publishes in the place the reviewer settled on', async () => {
+    await approveRequest(request, { country: 'Guatemala', region: '', city: 'Antigua' })
+    expect(sb.createPin).toHaveBeenCalledWith(expect.objectContaining({ country: 'Guatemala', region: '', city: 'Antigua' }))
   })
 
   it('copies the photo from the private bucket to the public one', async () => {

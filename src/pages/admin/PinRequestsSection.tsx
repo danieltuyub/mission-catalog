@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Pagination from '../../components/Pagination'
+import PlaceFields from '../../components/PlaceFields'
 import { useUsers } from '../../hooks/useUsers'
 import {
   approveRequest,
@@ -10,16 +11,58 @@ import {
   REVIEW_PAGE_SIZE,
   type ReviewFilter,
 } from '../../services/pinRequests'
+import { canonicalPlace, placeLabel, type Place } from '../../services/pinPlace'
+import { getPins } from '../../services/pinService'
 import { showToast } from '../../services/toast'
-import type { PinRequest } from '../../types'
+import type { Pin, PinRequest } from '../../types'
 import { RequestImage } from '../account/RequestsSection'
 import { Chips, ConfirmButton, Empty, LoadError, Loading } from './ui'
-import { card, dateFormat, primaryButton } from './styles'
+import { card, dateFormat, inputClass, primaryButton } from './styles'
 
 const STATUS_CHIP = {
   approved: { label: 'Aprobada', chip: 'bg-green-100 text-green-800' },
   rejected: { label: 'Rechazada', chip: 'bg-red-100 text-red-800' },
 } as const
+
+/** Place to settle before approving (the requester's is the starting point), and the two decisions. */
+function RequestReview({
+  request,
+  known,
+  busy,
+  onApprove,
+  onReject,
+}: {
+  request: PinRequest
+  known: Pin[]
+  busy: string | null
+  onApprove: (place: Place) => void
+  onReject: () => void
+}) {
+  const [place, setPlace] = useState<Place>(request)
+  return (
+    <div className="mt-3 space-y-3">
+      <PlaceFields
+        value={place}
+        onChange={setPlace}
+        known={known}
+        className="grid gap-3 sm:grid-cols-3"
+        labelClassName="block text-xs text-stone-500"
+        inputClassName={`${inputClass} mt-1 w-full`}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={busy !== null || !place.country.trim()}
+          onClick={() => onApprove(canonicalPlace(place, known))}
+          className={primaryButton}
+        >
+          {busy === request.id ? 'Publicando…' : 'Aprobar'}
+        </button>
+        <ConfirmButton label="Rechazar" confirmLabel="Sí, rechazar" disabled={busy !== null} onConfirm={onReject} />
+      </div>
+    </div>
+  )
+}
 
 /** "Solicitudes de pines": what members propose. Approving publishes the pin on the map. */
 export default function PinRequestsSection() {
@@ -29,8 +72,21 @@ export default function PinRequestsSection() {
   const [data, setData] = useState<{ requests: PinRequest[]; total: number; pending: number; reviewed: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [known, setKnown] = useState<Pin[]>([])
   const [version, setVersion] = useState(0)
   const reload = useCallback(() => setVersion((v) => v + 1), [])
+
+  // The places already in use are suggested (and their spelling kept).
+  useEffect(() => {
+    let cancelled = false
+    getPins().then(
+      (pins) => !cancelled && setKnown(pins),
+      () => {},
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // The page and the two chip counts come from the server; the previous page stays until the next arrives.
   useEffect(() => {
@@ -52,10 +108,10 @@ export default function PinRequestsSection() {
     }
   }, [filter, page, version])
 
-  async function review(request: PinRequest, action: 'approve' | 'reject') {
+  async function review(request: PinRequest, action: 'approve' | 'reject', place?: Place) {
     setBusy(request.id)
     try {
-      if (action === 'approve') await approveRequest(request)
+      if (action === 'approve') await approveRequest(request, place)
       else await rejectRequest(request.id)
       showToast(action === 'approve' ? 'Pin publicado en el mapa' : 'Solicitud rechazada')
     } catch (e) {
@@ -110,19 +166,17 @@ export default function PinRequestsSection() {
                 {r.description && <p className="mt-1 line-clamp-3 text-sm text-stone-500">{r.description}</p>}
                 <p className="mt-2 text-xs text-stone-400">
                   {nameOf(r.requested_by)} · {dateFormat.format(new Date(r.created_at))} · {r.lat.toFixed(4)}, {r.lng.toFixed(4)}
+                  {r.status !== 'pending' && placeLabel(r) && ` · ${placeLabel(r)}`}
                 </p>
                 {r.status === 'pending' && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <button type="button" disabled={busy !== null} onClick={() => review(r, 'approve')} className={primaryButton}>
-                      {busy === r.id ? 'Publicando…' : 'Aprobar'}
-                    </button>
-                    <ConfirmButton
-                      label="Rechazar"
-                      confirmLabel="Sí, rechazar"
-                      disabled={busy !== null}
-                      onConfirm={() => review(r, 'reject')}
-                    />
-                  </div>
+                  <RequestReview
+                    key={r.id}
+                    request={r}
+                    known={known}
+                    busy={busy}
+                    onApprove={(place) => review(r, 'approve', place)}
+                    onReject={() => review(r, 'reject')}
+                  />
                 )}
               </div>
             </li>

@@ -3,7 +3,7 @@ import { compressImage } from './imageUtils'
 import { supabase } from './supabaseClient'
 
 export type NewPin = Pick<Pin, 'title' | 'lat' | 'lng'> &
-  Partial<Pick<Pin, 'description' | 'image_path'>>
+  Partial<Pick<Pin, 'description' | 'image_path' | 'country' | 'region' | 'city'>>
 
 const TABLE = 'pins'
 const BUCKET = 'pin-images'
@@ -38,7 +38,7 @@ export async function getPins(): Promise<Pin[]> {
   return data as Pin[]
 }
 
-export type PinPatch = Partial<Pick<Pin, 'title' | 'description' | 'image_path'>>
+export type PinPatch = Partial<Pick<Pin, 'title' | 'description' | 'image_path' | 'country' | 'region' | 'city'>>
 
 export async function updatePin(id: string, patch: PinPatch): Promise<Pin> {
   const { data, error } = await supabase.from(TABLE).update(patch).eq('id', id).select().single()

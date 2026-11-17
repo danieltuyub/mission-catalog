@@ -179,6 +179,7 @@ export default function MapView() {
           lat={editing.lat}
           lng={editing.lng}
           pin={editing}
+          known={pins}
           onCancel={() => setEditingId(null)}
           onSubmit={async ({ image, removeImage, ...data }) => {
             await editPin(editing, data, image, removeImage)
@@ -192,6 +193,7 @@ export default function MapView() {
           lat={draft.lat}
           lng={draft.lng}
           request={draft.request}
+          known={pins}
           onCancel={() => setDraft(null)}
           onSubmit={async ({ image, ...data }) => {
             const place = { lat: draft.lat, lng: draft.lng }

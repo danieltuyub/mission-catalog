@@ -11,6 +11,9 @@ describe('Pin type', () => {
       lng: number
       created_at: string
       image_path: string | null
+      country: string
+      region: string
+      city: string
     }>()
   })
 })

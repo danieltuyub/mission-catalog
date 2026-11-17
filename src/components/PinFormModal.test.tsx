@@ -16,15 +16,17 @@ describe('PinFormModal', () => {
     const save = screen.getByRole('button', { name: 'Guardar' })
     expect(save).toBeDisabled()
     await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), 'México')
     expect(save).toBeEnabled()
   })
 
   it('submits trimmed values', async () => {
     const { onSubmit } = setup()
     await userEvent.type(screen.getByLabelText('Título'), ' Base ')
+    await userEvent.type(screen.getByLabelText('País'), 'México')
     await userEvent.type(screen.getByLabelText('Descripción'), ' Main camp ')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
-    expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: 'Main camp', image: undefined })
+    expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: 'Main camp', country: 'México', region: '', city: '', image: undefined })
   })
 
   it('passes the chosen image to onSubmit and shows a preview', async () => {
@@ -33,25 +35,28 @@ describe('PinFormModal', () => {
     const { onSubmit } = setup()
     const file = new File(['x'], 'a.png', { type: 'image/png' })
     await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), 'México')
     await userEvent.upload(screen.getByLabelText('Imagen'), file)
     expect(screen.getByAltText('Vista previa')).toHaveAttribute('src', 'blob:x')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
-    expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: '', image: file })
+    expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: '', country: 'México', region: '', city: '', image: file })
   })
 
   it('rejects non-image files', async () => {
     const { onSubmit } = setup()
     const file = new File(['x'], 'a.txt', { type: 'text/plain' })
     await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), 'México')
     await userEvent.upload(screen.getByLabelText('Imagen'), file, { applyAccept: false })
     expect(screen.getByText('El archivo debe ser una imagen')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
-    expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: '', image: undefined })
+    expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: '', country: 'México', region: '', city: '', image: undefined })
   })
 
   it('shows the error when saving fails', async () => {
     setup(vi.fn().mockRejectedValue(new Error('boom')))
     await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), 'México')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByText('boom')).toBeInTheDocument()
   })
@@ -88,13 +93,15 @@ describe('PinFormModal', () => {
       const send = screen.getByRole('button', { name: 'Enviar solicitud' })
       expect(send).toBeDisabled()
       await userEvent.type(screen.getByLabelText('Título'), 'Base')
+      await userEvent.type(screen.getByLabelText('País'), 'México')
       await userEvent.click(send)
-      expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: '', image: undefined })
+      expect(onSubmit).toHaveBeenCalledWith({ title: 'Base', description: '', country: 'México', region: '', city: '', image: undefined })
     })
 
     it('shows the failure message', async () => {
       open(vi.fn().mockRejectedValue(new Error('Ya tienes 5 solicitudes pendientes.')))
       await userEvent.type(screen.getByLabelText('Título'), 'Base')
+      await userEvent.type(screen.getByLabelText('País'), 'México')
       await userEvent.click(screen.getByRole('button', { name: 'Enviar solicitud' }))
       expect(await screen.findByText('Ya tienes 5 solicitudes pendientes.')).toBeInTheDocument()
     })
@@ -109,6 +116,9 @@ describe('PinFormModal', () => {
       lng: 2,
       created_at: '2026-01-01T00:00:00Z',
       image_path: 'a.webp',
+      country: 'México',
+      region: 'Yucatán',
+      city: 'Mérida',
     }
     const open = (onSubmit = vi.fn().mockResolvedValue(undefined)) => {
       render(<PinFormModal lat={1} lng={2} pin={pin} onSubmit={onSubmit} onCancel={vi.fn()} />)
@@ -131,6 +141,9 @@ describe('PinFormModal', () => {
       expect(onSubmit).toHaveBeenCalledWith({
         title: 'Nuevo',
         description: 'Camp',
+        country: 'México',
+        region: 'Yucatán',
+        city: 'Mérida',
         image: undefined,
         removeImage: undefined,
       })
@@ -143,5 +156,40 @@ describe('PinFormModal', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ removeImage: true }))
     })
+  })
+})
+
+describe('PinFormModal place', () => {
+  const known = [
+    { country: 'México', region: 'Yucatán', city: 'Mérida' },
+    { country: 'Guatemala', region: 'Sacatepéquez', city: 'Antigua' },
+  ] as Pin[]
+
+  it('needs a country to save', async () => {
+    render(<PinFormModal lat={1} lng={2} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('País'), 'Chile')
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
+  })
+
+  it('keeps the spelling already in use, whatever the accents or case', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<PinFormModal lat={1} lng={2} known={known} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Título'), 'Base')
+    await userEvent.type(screen.getByLabelText('País'), '  mexico ')
+    await userEvent.type(screen.getByLabelText('Estado o región'), 'yucatan')
+    await userEvent.type(screen.getByLabelText('Ciudad'), 'merida')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ country: 'México', region: 'Yucatán', city: 'Mérida' }))
+  })
+
+  it('suggests the countries in use, and the regions of the chosen one', async () => {
+    const { container } = render(<PinFormModal lat={1} lng={2} known={known} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    const options = () => [...container.querySelectorAll('datalist')].map((d) => [...d.querySelectorAll('option')].map((o) => o.getAttribute('value')))
+    expect(options()[0]).toEqual(['Guatemala', 'México'])
+    expect(options()[1]).toEqual(['Sacatepéquez', 'Yucatán'])
+    await userEvent.type(screen.getByLabelText('País'), 'México')
+    expect(options()[1]).toEqual(['Yucatán'])
   })
 })

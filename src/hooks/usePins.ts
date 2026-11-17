@@ -30,7 +30,7 @@ export function usePins() {
   }, [])
 
   const editPin = useCallback(
-    async (pin: Pin, patch: { title: string; description: string }, image?: File, removeImage = false) => {
+    async (pin: Pin, patch: { title: string; description: string; country: string; region: string; city: string }, image?: File, removeImage = false) => {
       const uploaded = image ? await uploadPinImage(image) : undefined
       const image_path = uploaded ?? (removeImage ? null : undefined)
       try {

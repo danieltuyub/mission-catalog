@@ -1,5 +1,6 @@
 import type { PinRequest } from '../types'
 import { compressImage } from './imageUtils'
+import type { Place } from './pinPlace'
 import { createPin, removePinImage } from './pinService'
 import { supabase } from './supabaseClient'
 
@@ -18,6 +19,9 @@ export interface NewPinRequest {
   description: string
   lat: number
   lng: number
+  country: string
+  region: string
+  city: string
 }
 
 /** Uploads under the user's own folder, as the bucket policy requires. */
@@ -151,10 +155,10 @@ async function publishRequestImage(path: string): Promise<string> {
 }
 
 /**
- * Publishes the pin. The request is claimed first (pending -> approved), so two admins cannot
+ * Publishes the pin, in the place the reviewer settled on (the requester's by default). The request is claimed first (pending -> approved), so two admins cannot
  * publish it twice; if the pin cannot be created the request goes back to pending.
  */
-export async function approveRequest(request: PinRequest): Promise<void> {
+export async function approveRequest(request: PinRequest, place: Place = request): Promise<void> {
   if (!(await setStatus(request.id, 'pending', 'approved'))) throw new Error(ALREADY_REVIEWED)
   let imagePath: string | undefined
   try {
@@ -164,6 +168,9 @@ export async function approveRequest(request: PinRequest): Promise<void> {
       description: request.description,
       lat: request.lat,
       lng: request.lng,
+      country: place.country,
+      region: place.region,
+      city: place.city,
       image_path: imagePath,
     })
   } catch {

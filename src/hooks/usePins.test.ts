@@ -20,8 +20,11 @@ const pin: Pin = {
   lng: 2,
   created_at: '2026-01-01T00:00:00Z',
   image_path: 'old.webp',
+  country: 'México',
+  region: 'Yucatán',
+  city: 'Mérida',
 }
-const patch = { title: 'Nuevo', description: '' }
+const patch = { title: 'Nuevo', description: '', country: 'México', region: 'Yucatán', city: 'Mérida' }
 const file = new File(['x'], 'a.png', { type: 'image/png' })
 
 async function setup() {

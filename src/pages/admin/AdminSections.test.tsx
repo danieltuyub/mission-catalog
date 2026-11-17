@@ -81,6 +81,7 @@ beforeEach(() => {
   for (const fn of Object.values(svc)) fn.mockReset()
   svc.listUsers.mockResolvedValue(USERS)
   svc.requestImageUrl.mockResolvedValue('https://signed')
+  svc.getPins.mockResolvedValue([])
 })
 
 describe('UsersSection', () => {
@@ -128,6 +129,9 @@ const request = (over: object) => ({
   description: '',
   lat: 1,
   lng: 2,
+  country: 'México',
+  region: 'Yucatán',
+  city: 'Mérida',
   image_path: null,
   status: 'pending',
   created_at: '2026-11-10T12:00:00Z',
@@ -162,12 +166,32 @@ describe('PinRequestsSection', () => {
     })
     render(<PinRequestsSection />)
     await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }))
-    expect(svc.approveRequest).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }))
+    expect(svc.approveRequest).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }), { country: 'México', region: 'Yucatán', city: 'Mérida' })
     expect(getToast()?.message).toBe('Pin publicado en el mapa')
     expect(await screen.findByText('No hay solicitudes pendientes.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Revisadas/ }))
     expect(await screen.findByText('Pozo nuevo')).toBeInTheDocument()
     expect(svc.listRequestsPage).toHaveBeenCalledWith('reviewed', 1)
+  })
+
+  it('lets the reviewer fix the place before approving, keeping the spelling in use', async () => {
+    svc.getPins.mockResolvedValue([{ country: 'Guatemala', region: 'Sacatepéquez', city: 'Antigua' }])
+    svc.approveRequest.mockResolvedValue(undefined)
+    render(<PinRequestsSection />)
+    const country = await screen.findByLabelText('País')
+    await userEvent.clear(country)
+    await userEvent.type(country, 'guatemala')
+    await userEvent.clear(screen.getByLabelText('Estado o región'))
+    await userEvent.clear(screen.getByLabelText('Ciudad'))
+    await userEvent.type(screen.getByLabelText('Ciudad'), 'antigua')
+    await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }))
+    expect(svc.approveRequest).toHaveBeenCalledWith(expect.anything(), { country: 'Guatemala', region: '', city: 'Antigua' })
+  })
+
+  it('cannot approve without a country', async () => {
+    render(<PinRequestsSection />)
+    await userEvent.clear(await screen.findByLabelText('País'))
+    expect(screen.getByRole('button', { name: 'Aprobar' })).toBeDisabled()
   })
 
   it('pages the reviewed ones on the server', async () => {
@@ -252,7 +276,7 @@ describe('ProjectsAdminSection', () => {
 })
 
 describe('PinsSection', () => {
-  const pin = { id: 'k1', title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, created_at: 'x', image_path: null }
+  const pin = { id: 'k1', title: 'Pozo', description: 'Cerca', lat: 1, lng: 2, created_at: 'x', image_path: null, country: 'México', region: 'Yucatán', city: 'Mérida' }
 
   it('edits the text of a pin', async () => {
     svc.getPins.mockResolvedValue([pin])
@@ -264,8 +288,27 @@ describe('PinsSection', () => {
     await userEvent.clear(title)
     await userEvent.type(title, 'Pozo 2')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
-    expect(svc.updatePin).toHaveBeenCalledWith('k1', { title: 'Pozo 2', description: 'Cerca' })
+    expect(svc.updatePin).toHaveBeenCalledWith('k1', { title: 'Pozo 2', description: 'Cerca', country: 'México', region: 'Yucatán', city: 'Mérida' })
     expect(await screen.findByText('Pozo 2')).toBeInTheDocument()
+  })
+
+  it('shows where each pin is and filters by country, with those still without one', async () => {
+    svc.getPins.mockResolvedValue([
+      pin,
+      { ...pin, id: 'k2', title: 'Escuela', country: 'Guatemala', region: '', city: 'Antigua' },
+      { ...pin, id: 'k3', title: 'Puente', country: '', region: '', city: '' },
+    ])
+    render(<PinsSection />)
+    await screen.findByText('Pozo')
+    expect(screen.getByText('Mérida, Yucatán, México')).toBeInTheDocument()
+    expect(screen.getByText('Antigua, Guatemala')).toBeInTheDocument()
+    const select = screen.getByRole('combobox', { name: 'País' })
+    await userEvent.selectOptions(select, 'Guatemala')
+    expect(screen.queryByText('Pozo')).not.toBeInTheDocument()
+    expect(screen.getByText('Escuela')).toBeInTheDocument()
+    await userEvent.selectOptions(select, screen.getByRole('option', { name: 'Sin país (1)' }))
+    expect(screen.getByText('Puente')).toBeInTheDocument()
+    expect(screen.queryByText('Escuela')).not.toBeInTheDocument()
   })
 
   it('deletes after confirming', async () => {
