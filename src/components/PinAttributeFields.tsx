@@ -1,3 +1,4 @@
+import FormSelect from './FormSelect'
 import { useId, useState } from 'react'
 import { LANGUAGES, languageLabel, MAX_LANGUAGES } from '../services/languages'
 import { PIN_KINDS } from '../services/pinKinds'
@@ -34,7 +35,7 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
     <div className={className}>
       <label className={labelClassName}>
         Tipo
-        <select
+        <FormSelect
           required
           value={value.kind}
           onChange={(e) => onChange({ ...value, kind: e.target.value })}
@@ -48,7 +49,7 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
               {k.label}
             </option>
           ))}
-        </select>
+        </FormSelect>
       </label>
 
       <div className={labelClassName}>

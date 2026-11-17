@@ -5,6 +5,7 @@ import { isValidCountry } from '../services/countries'
 import { canonicalPlace, EMPTY_PLACE } from '../services/pinPlace'
 import { pinImageUrl } from '../services/pinService'
 import { isPinKind } from '../services/pinKinds'
+import FormSelect from './FormSelect'
 import PinAttributeFields from './PinAttributeFields'
 import PlaceFields from './PlaceFields'
 import type { Pin, PinKind } from '../types'
@@ -158,7 +159,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
         {pin && contact && (
           <label className="block text-sm text-gray-700">
             Contacto
-            <select
+            <FormSelect
               value={contactId}
               onChange={(e) => setContactId(e.target.value)}
               className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
@@ -169,7 +170,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
                   {o.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
             <span className="mt-1 block text-xs text-gray-500">Recibe los mensajes enviados desde este pin.</span>
           </label>
         )}
