@@ -340,7 +340,7 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
         </p>
       )}
 
-      <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex justify-end gap-2 rounded-b-2xl border-t border-stone-200 bg-white/95 px-6 py-4 backdrop-blur">
+      <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex justify-end gap-2 rounded-b-2xl border-t border-stone-200 bg-white px-6 py-4 shadow-[0_-6px_10px_-6px_rgba(0,0,0,0.12)]">
         <button
           type="button"
           onClick={onCancel}
