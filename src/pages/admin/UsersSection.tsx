@@ -1,9 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react'
 import Collapsible from '../../components/Collapsible'
+import FormSelect from '../../components/FormSelect'
 import Pagination from '../../components/Pagination'
 import { useAuth } from '../../hooks/useAuth'
 import { useUsers } from '../../hooks/useUsers'
-import { ROLES, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
+import { ROLES, roleLabel, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
 import { showToast } from '../../services/toast'
 import NewUserForm from './NewUserForm'
 import { Empty, LoadError, Loading, SearchBox } from './ui'
@@ -11,9 +12,10 @@ import { card, dateFormat, ghostButton, inputClass, matches, primaryButton } fro
 
 const PAGE_SIZE = 10
 
-function NameEditor({ user, onSaved, onCancel }: { user: AdminUser; onSaved: () => void; onCancel: () => void }) {
+function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: boolean; onSaved: () => void; onCancel: () => void }) {
   const [first, setFirst] = useState(user.firstName)
   const [last, setLast] = useState(user.lastName)
+  const [role, setRole] = useState<Role | ''>(user.role ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +25,8 @@ function NameEditor({ user, onSaved, onCancel }: { user: AdminUser; onSaved: () 
     setSaving(true)
     setError(null)
     try {
-      await updateUserName(user.id, first, last)
+      if (first !== user.firstName || last !== user.lastName) await updateUserName(user.id, first, last)
+      if (role && role !== user.role) await setUserRole(user.id, role)
       onSaved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar')
@@ -32,8 +35,8 @@ function NameEditor({ user, onSaved, onCancel }: { user: AdminUser; onSaved: () 
   }
 
   return (
-    <form onSubmit={submit} aria-label={`Editar nombre de ${user.email}`} className="mt-2 space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <form onSubmit={submit} aria-label={`Editar a ${user.email}`} className="space-y-3 border-t border-stone-100 pt-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         <label className="block text-sm text-stone-600">
           Nombre
           <input value={first} maxLength={80} onChange={(e) => setFirst(e.target.value)} className={`${inputClass} mt-1 w-full`} />
@@ -41,6 +44,23 @@ function NameEditor({ user, onSaved, onCancel }: { user: AdminUser; onSaved: () 
         <label className="block text-sm text-stone-600">
           Apellido
           <input value={last} maxLength={80} onChange={(e) => setLast(e.target.value)} className={`${inputClass} mt-1 w-full`} />
+        </label>
+        <label className="block text-sm text-stone-600">
+          Rol
+          <FormSelect
+            value={role}
+            disabled={self}
+            title={self ? 'No puedes cambiar tu propio rol' : undefined}
+            onChange={(e) => setRole(e.target.value as Role)}
+            className={`${inputClass} mt-1 w-full`}
+          >
+            {!user.role && <option value="">Sin rol</option>}
+            {ROLES.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </FormSelect>
         </label>
       </div>
       {error && (
@@ -60,7 +80,7 @@ function NameEditor({ user, onSaved, onCancel }: { user: AdminUser; onSaved: () 
   )
 }
 
-/** "Usuarios": create accounts, change anyone's role or name. Disabling accounts comes later. */
+/** "Usuarios": create accounts, edit anyone's name or role. Disabling accounts comes later. */
 export default function UsersSection() {
   const { userId } = useAuth()
   const { users, loading, error, reload } = useUsers()
@@ -69,24 +89,11 @@ export default function UsersSection() {
   const [editing, setEditing] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const newUserButton = useRef<HTMLButtonElement>(null)
-  const [busy, setBusy] = useState<string | null>(null)
 
   /** Closing hands focus back to the button that opened the form. */
   function closeNewUser() {
     setCreating(false)
     requestAnimationFrame(() => newUserButton.current?.focus())
-  }
-
-  async function changeRole(user: AdminUser, role: Role) {
-    setBusy(user.id)
-    try {
-      await setUserRole(user.id, role)
-      showToast('Rol actualizado')
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo cambiar el rol')
-    }
-    reload()
-    setBusy(null)
   }
 
   if (error && users.length === 0) return <LoadError message={error} onRetry={reload} />
@@ -125,7 +132,7 @@ export default function UsersSection() {
           {shown.map((u) => {
             const self = u.id === userId
             return (
-              <li key={u.id} className={card}>
+              <li key={u.id} className={`${card} flex flex-col gap-4`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate font-semibold text-brand-primary">
@@ -138,38 +145,31 @@ export default function UsersSection() {
                       {u.lastSignInAt && ` · Último acceso ${dateFormat.format(new Date(u.lastSignInAt))}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      aria-label={`Rol de ${userLabel(u)}`}
-                      value={u.role ?? ''}
-                      disabled={self || busy !== null}
-                      title={self ? 'No puedes cambiar tu propio rol' : undefined}
-                      onChange={(e) => changeRole(u, e.target.value as Role)}
-                      className={inputClass}
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">{roleLabel(u.role)}</span>
+                    <button
+                      type="button"
+                      aria-expanded={editing === u.id}
+                      aria-label={`Editar a ${userLabel(u)}`}
+                      onClick={() => setEditing(editing === u.id ? null : u.id)}
+                      className={ghostButton}
                     >
-                      {!u.role && <option value="">Sin rol</option>}
-                      {ROLES.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="button" onClick={() => setEditing(editing === u.id ? null : u.id)} className={ghostButton}>
-                      Editar nombre
+                      Editar
                     </button>
                   </div>
                 </div>
-                {editing === u.id && (
-                  <NameEditor
+                <Collapsible open={editing === u.id}>
+                  <UserEditor
                     user={u}
+                    self={self}
                     onCancel={() => setEditing(null)}
                     onSaved={() => {
                       setEditing(null)
-                      showToast('Nombre actualizado')
+                      showToast('Usuario actualizado')
                       reload()
                     }}
                   />
-                )}
+                </Collapsible>
               </li>
             )
           })}
