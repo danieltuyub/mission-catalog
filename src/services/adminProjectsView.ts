@@ -1,4 +1,4 @@
-export type AdminProjectSortKey = 'name' | 'place' | 'creator' | 'updated'
+export type AdminProjectSortKey = 'name' | 'status' | 'place' | 'creator' | 'updated'
 export interface AdminProjectSort {
   key: AdminProjectSortKey
   descending: boolean

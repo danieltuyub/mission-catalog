@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import Pagination from '../../components/Pagination'
+import Select from '../../components/Select'
 import { STATUS_META } from '../../components/projectStatus'
 import { useAdminEditProjectId, useAdminNewProject } from '../../hooks/useRoute'
 import { useUsers } from '../../hooks/useUsers'
@@ -20,11 +21,12 @@ import ProjectCreator from '../../components/ProjectCreator'
 import ProjectEditor from '../../components/ProjectEditor'
 import ProjectModal from './ProjectModal'
 import { ConfirmButton, Empty, LoadError, Loading, SearchBox } from './ui'
-import { ghostButton, inputClass, matches, primaryButton } from './styles'
+import { ghostButton, matches, primaryButton } from './styles'
 
 /** One place for the columns: the header and the row grid follow it. Name comes first, actions last. */
 const COLUMNS: readonly { id: AdminProjectSortKey; label: string; width: string }[] = [
   { id: 'name', label: 'Proyecto', width: 'minmax(0,2.2fr)' },
+  { id: 'status', label: 'Estado', width: '6rem' },
   { id: 'place', label: 'Lugar', width: 'minmax(0,1.3fr)' },
   { id: 'creator', label: 'Creador', width: 'minmax(0,1.3fr)' },
   { id: 'updated', label: 'Actualizado', width: '7rem' },
@@ -47,6 +49,8 @@ function Cell({ label, strong = false, children }: { label: string; strong?: boo
 
 /** Leaves the form over the list (replacing the entry, so Back does not reopen it). */
 const closeModal = () => window.location.replace(ADMIN_PROJECTS_URL)
+
+const PAGE_SIZE_OPTIONS = ADMIN_PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }))
 
 const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true })
 
@@ -94,7 +98,7 @@ export default function ProjectsAdminSection() {
 
   const sorted = useMemo(() => {
     const value = (p: AdminProject) =>
-      sort.key === 'name' ? p.name : sort.key === 'place' ? placeOf(p) : sort.key === 'creator' ? nameOf(p.created_by ?? null) : p.updated_at
+      sort.key === 'name' ? p.name : sort.key === 'status' ? STATUS_META[p.status].label : sort.key === 'place' ? placeOf(p) : sort.key === 'creator' ? nameOf(p.created_by ?? null) : p.updated_at
     const list = [...(projects ?? [])].sort((a, b) => collator.compare(value(a), value(b)) || collator.compare(a.name, b.name))
     return sort.descending ? list.reverse() : list
   }, [projects, sort, nameOf])
@@ -138,23 +142,18 @@ export default function ProjectsAdminSection() {
           }}
         />
         <div className="flex items-center gap-3">
-          <select
-            aria-label="Proyectos por página"
-            value={pageSize}
-            onChange={(e) => {
-              const size = Number(e.target.value)
+          <Select
+            label="Proyectos por página"
+            icon={<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />}
+            value={String(pageSize)}
+            options={PAGE_SIZE_OPTIONS}
+            onChange={(v) => {
+              const size = Number(v)
               setPageSize(size)
               saveAdminPageSize(size)
               setPage(1)
             }}
-            className={inputClass}
-          >
-            {ADMIN_PAGE_SIZES.map((n) => (
-              <option key={n} value={n}>
-                {n} por página
-              </option>
-            ))}
-          </select>
+          />
           {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
           <a href={ADMIN_NEW_PROJECT_URL} className={primaryButton}>
             Nuevo proyecto
@@ -190,14 +189,15 @@ export default function ProjectsAdminSection() {
               const updated = new Date(p.updated_at)
               return (
                 <li key={p.id} className={`${ROW} items-center px-4 py-3 hover:bg-stone-50`}>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <h3 className="min-w-0 truncate font-medium text-brand-primary">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${status.dot}`} />
+                    <h3 className="min-w-0 truncate text-brand-primary">
                       <a href={projectUrl(p.id, 'admin')} className="hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage">
                         {p.name}
                       </a>
                     </h3>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${status.chip}`}>{status.label}</span>
                   </div>
+                  <Cell label="Estado">{status.label}</Cell>
                   <Cell label="Lugar">{place || '—'}</Cell>
                   <Cell label="Creador" strong>
                     {nameOf(p.created_by ?? null)}

@@ -325,6 +325,16 @@ describe('ProjectsAdminSection', () => {
       expect(names()).toEqual(['Gama', 'Beta', 'Alfa'])
     })
 
+    it('shows the status as text in its own column and sorts by it', async () => {
+      svc.listAdminProjects.mockResolvedValue([project({ id: 'a', name: 'Beta', status: 'paused' }), project({ id: 'b', name: 'Alfa', status: 'closed' }), project({ id: 'c', name: 'Gama', status: 'open' })])
+      render(<ProjectsAdminSection />)
+      await screen.findByText('Alfa')
+      expect(screen.getByText('Cerrado')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: /^Ordenar por Estado/ }))
+      // Abierto, Cerrado, Pausado.
+      expect(names()).toEqual(['Gama', 'Alfa', 'Beta'])
+    })
+
     it('goes back to the first page when the order changes', async () => {
       svc.listAdminProjects.mockResolvedValue(many)
       render(<ProjectsAdminSection />)
