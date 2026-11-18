@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
+import Collapsible from '../../components/Collapsible'
 import Pagination from '../../components/Pagination'
 import { useAuth } from '../../hooks/useAuth'
 import { useUsers } from '../../hooks/useUsers'
@@ -67,7 +68,14 @@ export default function UsersSection() {
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const newUserButton = useRef<HTMLButtonElement>(null)
   const [busy, setBusy] = useState<string | null>(null)
+
+  /** Closing hands focus back to the button that opened the form. */
+  function closeNewUser() {
+    setCreating(false)
+    requestAnimationFrame(() => newUserButton.current?.focus())
+  }
 
   async function changeRole(user: AdminUser, role: Role) {
     setBusy(user.id)
@@ -90,7 +98,7 @@ export default function UsersSection() {
   const shown = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
 
   return (
-    <section aria-label="Usuarios" className="space-y-4">
+    <section aria-label="Usuarios" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <SearchBox
           label="Buscar usuario"
@@ -102,12 +110,14 @@ export default function UsersSection() {
         />
         <div className="flex items-center gap-3">
           {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
-          <button type="button" onClick={() => setCreating(true)} disabled={creating} className={primaryButton}>
+          <button ref={newUserButton} type="button" onClick={() => setCreating(true)} disabled={creating} className={primaryButton}>
             Nuevo usuario
           </button>
         </div>
       </div>
-      {creating && <NewUserForm onCreated={reload} onClose={() => setCreating(false)} />}
+      <Collapsible open={creating}>
+        <NewUserForm onCreated={reload} onClose={closeNewUser} />
+      </Collapsible>
       {shown.length === 0 ? (
         <Empty>Ningún usuario coincide con la búsqueda.</Empty>
       ) : (

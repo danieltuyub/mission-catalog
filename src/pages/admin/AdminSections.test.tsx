@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -132,7 +132,9 @@ describe('UsersSection new user', () => {
     expect(await screen.findByRole('region', { name: 'Usuario creado' })).toBeInTheDocument()
     expect(svc.listUsers).toHaveBeenCalledTimes(2)
     await userEvent.click(screen.getByRole('button', { name: 'Listo' }))
-    expect(screen.queryByRole('region', { name: 'Usuario creado' })).not.toBeInTheDocument()
+    // It leaves with a transition, then goes away, and focus returns to the button that opened it.
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Usuario creado' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Nuevo usuario' })).toHaveFocus())
   })
 })
 
