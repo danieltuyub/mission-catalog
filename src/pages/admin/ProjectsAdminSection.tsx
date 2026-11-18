@@ -191,7 +191,7 @@ export default function ProjectsAdminSection() {
                 <li key={p.id} className={`${ROW} items-center px-4 py-3 hover:bg-stone-50`}>
                   <div className="flex min-w-0 items-center gap-2.5">
                     <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${status.dot}`} />
-                    <h3 className="min-w-0 truncate text-brand-primary">
+                    <h3 className="min-w-0 truncate text-sm text-brand-primary">
                       <a href={projectUrl(p.id, 'admin')} className="hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage">
                         {p.name}
                       </a>

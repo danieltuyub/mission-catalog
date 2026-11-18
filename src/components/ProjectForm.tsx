@@ -198,59 +198,62 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
         <h2 id="section-data" className={sectionTitle}>
           Datos del proyecto
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="project-name" label="Nombre *" error={errors.name} className="sm:col-span-2">
-          <input
-            id="project-name"
-            autoFocus
-            required
-            value={values.name}
-            onChange={set('name')}
-            className={control}
-            {...invalid('project-name', errors.name)}
-          />
-        </Field>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field id="project-name" label="Nombre *" error={errors.name} className="md:col-span-2">
+            <input
+              id="project-name"
+              autoFocus
+              required
+              value={values.name}
+              onChange={set('name')}
+              className={control}
+              {...invalid('project-name', errors.name)}
+            />
+          </Field>
 
-        <Field id="project-responsible" label="Encargado">
-          <input id="project-responsible" value={values.responsible} onChange={set('responsible')} className={control} />
-        </Field>
-
-        {project && creator && (
-          <Field id="project-creator" label="Creador" hint="Dueño del proyecto: puede editarlo y recibe sus mensajes.">
-            <FormSelect id="project-creator" value={creatorId} onChange={(e) => setCreatorId(e.target.value)} className={control}>
-              <option value="">Sin asignar</option>
-              {creator.options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
+          <Field id="project-status" label="Estado">
+            <FormSelect id="project-status" value={values.status} onChange={set('status')} className={control}>
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_META[s].label}
                 </option>
               ))}
             </FormSelect>
           </Field>
-        )}
 
-        <Field id="project-status" label="Estado">
-          <FormSelect id="project-status" value={values.status} onChange={set('status')} className={control}>
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_META[s].label}
-              </option>
-            ))}
-          </FormSelect>
-        </Field>
+          <Field id="project-responsible" label="Encargado">
+            <input id="project-responsible" value={values.responsible} onChange={set('responsible')} className={control} />
+          </Field>
 
-        <Field id="project-description" label="Descripción" className="sm:col-span-2">
-          <textarea id="project-description" rows={4} value={values.description} onChange={set('description')} className={`${control} resize-none`} />
-        </Field>
+          {project && creator && (
+            <Field id="project-creator" label="Creador" hint="Puede editarlo y recibe sus mensajes.">
+              <FormSelect id="project-creator" value={creatorId} onChange={(e) => setCreatorId(e.target.value)} className={control}>
+                <option value="">Sin asignar</option>
+                {creator.options.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </FormSelect>
+            </Field>
+          )}
 
-        <Field
-          id="project-details"
-          label="Detalles"
-          hint="Se muestra solo en la página del proyecto. Separa los párrafos con una línea en blanco."
-          className="sm:col-span-2"
-        >
-          <textarea id="project-details" rows={7} value={values.details} onChange={set('details')} className={`${control} resize-y`} />
-        </Field>
+          <Field id="project-started" label="Inicio">
+            <input id="project-started" type="date" value={values.started_at} onChange={set('started_at')} className={control} />
+          </Field>
 
+          <Field id="project-description" label="Descripción" className="md:col-span-3">
+            <textarea id="project-description" rows={3} value={values.description} onChange={set('description')} className={`${control} resize-y`} />
+          </Field>
+
+          <Field
+            id="project-details"
+            label="Detalles"
+            hint="Se muestra solo en la página del proyecto. Separa los párrafos con una línea en blanco."
+            className="md:col-span-3"
+          >
+            <textarea id="project-details" rows={5} value={values.details} onChange={set('details')} className={`${control} resize-y`} />
+          </Field>
         </div>
       </section>
 
@@ -259,33 +262,29 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
           Ubicación y contacto
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="project-country" label="País">
-          <input id="project-country" value={values.country} onChange={set('country')} className={control} />
-        </Field>
+          <Field id="project-country" label="País">
+            <input id="project-country" value={values.country} onChange={set('country')} className={control} />
+          </Field>
 
-        <Field id="project-region" label="Región">
-          <input id="project-region" value={values.region} onChange={set('region')} className={control} />
-        </Field>
+          <Field id="project-region" label="Región">
+            <input id="project-region" value={values.region} onChange={set('region')} className={control} />
+          </Field>
 
-        <Field id="project-started" label="Inicio">
-          <input id="project-started" type="date" value={values.started_at} onChange={set('started_at')} className={control} />
-        </Field>
+          <Field id="project-phone" label="Teléfono">
+            <input id="project-phone" type="tel" autoComplete="off" value={values.phone} onChange={set('phone')} className={control} />
+          </Field>
 
-        <Field id="project-phone" label="Teléfono">
-          <input id="project-phone" type="tel" autoComplete="off" value={values.phone} onChange={set('phone')} className={control} />
-        </Field>
-
-        <Field id="project-mail" label="Mail" error={errors.mail} className="sm:col-span-2">
-          <input
-            id="project-mail"
-            type="email"
-            autoComplete="off"
-            value={values.mail}
-            onChange={set('mail')}
-            className={control}
-            {...invalid('project-mail', errors.mail)}
-          />
-        </Field>
+          <Field id="project-mail" label="Mail" error={errors.mail}>
+            <input
+              id="project-mail"
+              type="email"
+              autoComplete="off"
+              value={values.mail}
+              onChange={set('mail')}
+              className={control}
+              {...invalid('project-mail', errors.mail)}
+            />
+          </Field>
         </div>
       </section>
 
