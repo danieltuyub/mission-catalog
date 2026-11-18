@@ -23,25 +23,33 @@ import ProjectModal from './ProjectModal'
 import { ConfirmButton, Empty, LoadError, Loading, SearchBox } from './ui'
 import { ghostButton, matches, primaryButton } from './styles'
 
-/** One place for the columns: the header and the row grid follow it. Name comes first, actions last. */
-const COLUMNS: readonly { id: AdminProjectSortKey; label: string; width: string }[] = [
-  { id: 'name', label: 'Proyecto', width: 'minmax(0,2.2fr)' },
-  { id: 'status', label: 'Estado', width: '6rem' },
-  { id: 'place', label: 'Lugar', width: 'minmax(0,1.3fr)' },
-  { id: 'creator', label: 'Creador', width: 'minmax(0,1.3fr)' },
-  { id: 'updated', label: 'Actualizado', width: '7rem' },
+/**
+ * The table adapts to the width of its own panel (container queries), not of the screen:
+ *  - under 48rem each row is a compact card;
+ *  - from 48rem: Proyecto, Estado, Creador and the actions (the place goes under the name);
+ *  - from 64rem: + Lugar; from 72rem: + Actualizado.
+ * `show` hides a column where it has no room of its own.
+ */
+const COLUMNS: readonly { id: AdminProjectSortKey; label: string; show: string }[] = [
+  { id: 'name', label: 'Proyecto', show: '' },
+  { id: 'status', label: 'Estado', show: '' },
+  { id: 'place', label: 'Lugar', show: '@3xl:@max-5xl:hidden' },
+  { id: 'creator', label: 'Creador', show: '' },
+  { id: 'updated', label: 'Actualizado', show: '@3xl:@max-6xl:hidden' },
 ]
-/** Fixed, so the columns line up from row to row even while a row asks to confirm a deletion. */
-const ACTIONS_WIDTH = '13rem'
-const GRID_COLUMNS = [...COLUMNS.map((c) => c.width), ACTIONS_WIDTH].join(' ')
-const ROW = 'grid gap-x-4 gap-y-1 md:[grid-template-columns:var(--cols)]'
+/** Actions are fixed in width, so the columns line up even while a row asks to confirm a deletion. */
+const GRID_MEDIUM = 'minmax(0,1fr) 6rem minmax(0,11rem) 13rem'
+const GRID_LARGE = 'minmax(0,2fr) 6rem minmax(0,1.3fr) minmax(0,1.2fr) 13rem'
+const GRID_XLARGE = 'minmax(0,2fr) 6rem minmax(0,1.3fr) minmax(0,1.2fr) 7rem 13rem'
+const ROW =
+  'grid gap-x-4 gap-y-1 @3xl:[grid-template-columns:var(--cols-m)] @5xl:[grid-template-columns:var(--cols-l)] @6xl:[grid-template-columns:var(--cols-xl)]'
 const updatedFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', year: 'numeric' })
 
-/** A value in the row; on small screens it carries its own label, on wide ones the header does (screen readers always get it). */
-function Cell({ label, strong = false, children }: { label: string; strong?: boolean; children: ReactNode }) {
+/** A value in the row; in the compact card it carries its own label, in the table the header does (screen readers always get it). */
+function Cell({ label, strong = false, className = '', children }: { label: string; strong?: boolean; className?: string; children: ReactNode }) {
   return (
-    <p className={`min-w-0 truncate text-sm ${strong ? 'text-stone-900' : 'text-stone-500'}`}>
-      <span className="text-stone-400 md:sr-only">{label}: </span>
+    <p className={`min-w-0 truncate text-sm ${strong ? 'text-stone-900' : 'text-stone-500'} ${className}`}>
+      <span className="text-stone-400 @3xl:sr-only">{label}: </span>
       {children}
     </p>
   )
@@ -154,7 +162,6 @@ export default function ProjectsAdminSection() {
               setPage(1)
             }}
           />
-          {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
           <a href={ADMIN_NEW_PROJECT_URL} className={primaryButton}>
             Nuevo proyecto
           </a>
@@ -164,15 +171,19 @@ export default function ProjectsAdminSection() {
       {shown.length === 0 ? (
         <Empty>{projects.length === 0 ? 'Aún no hay proyectos.' : 'Ningún proyecto coincide con la búsqueda.'}</Empty>
       ) : (
-        <div style={{ '--cols': GRID_COLUMNS } as CSSProperties} className="overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5">
-          <div className={`${ROW} hidden border-b border-stone-100 bg-stone-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-stone-500 md:grid`}>
+        <div className="@container">
+        <div
+          style={{ '--cols-m': GRID_MEDIUM, '--cols-l': GRID_LARGE, '--cols-xl': GRID_XLARGE, '--rows': Math.min(pageSize, filtered.length) } as CSSProperties}
+          className="flex flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/10"
+        >
+          <div className={`${ROW} hidden border-b border-stone-100 bg-stone-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-stone-500 @3xl:grid`}>
             {COLUMNS.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => sortBy(c.id)}
                 aria-label={`Ordenar por ${c.label}${sort.key === c.id ? (sort.descending ? ', de mayor a menor' : ', de menor a mayor') : ''}`}
-                className="inline-flex min-w-0 items-center gap-1 text-left uppercase tracking-wide hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
+                className={`${c.show} inline-flex min-w-0 items-center gap-1 text-left uppercase tracking-wide hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage`}
               >
                 <span className="truncate">{c.label}</span>
                 <span aria-hidden="true" className={sort.key === c.id ? 'text-brand-primary' : 'opacity-0'}>
@@ -182,28 +193,39 @@ export default function ProjectsAdminSection() {
             ))}
             <span />
           </div>
-          <ul className="divide-y divide-stone-100">
+          <ul className="flex-1 divide-y divide-stone-100 @3xl:min-h-[calc(var(--rows)*3.75rem)]">
             {shown.map((p) => {
               const status = STATUS_META[p.status]
               const place = placeOf(p)
               const updated = new Date(p.updated_at)
               return (
-                <li key={p.id} className={`${ROW} items-center px-4 py-3 hover:bg-stone-50`}>
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${status.dot}`} />
-                    <h3 className="min-w-0 truncate text-sm text-brand-primary">
-                      <a href={projectUrl(p.id, 'admin')} className="hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage">
-                        {p.name}
-                      </a>
-                    </h3>
+                <li key={p.id} className={`${ROW} items-center px-4 py-3 hover:bg-stone-50 @3xl:min-h-15`}>
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${status.dot}`} />
+                      <h3 className="min-w-0 truncate text-sm text-brand-primary">
+                        <a href={projectUrl(p.id, 'admin')} className="hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage">
+                          {p.name}
+                        </a>
+                      </h3>
+                    </div>
+                    {/* Without a column of its own, the place goes under the name. */}
+                    {place && <p className="hidden truncate pl-5 text-xs text-stone-400 @3xl:@max-5xl:block">{place}</p>}
                   </div>
-                  <Cell label="Estado">{status.label}</Cell>
-                  <Cell label="Lugar">{place || '—'}</Cell>
-                  <Cell label="Creador" strong>
-                    {nameOf(p.created_by ?? null)}
-                  </Cell>
-                  <Cell label="Actualizado">{Number.isNaN(updated.getTime()) ? '—' : updatedFormat.format(updated)}</Cell>
-                  <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                  {/* A card: the values run together in lines. A table: each one is a cell of the grid. */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 @3xl:contents">
+                    <Cell label="Estado">{status.label}</Cell>
+                    <Cell label="Lugar" className={COLUMNS[2].show}>
+                      {place || '—'}
+                    </Cell>
+                    <Cell label="Creador" strong>
+                      {nameOf(p.created_by ?? null)}
+                    </Cell>
+                    <Cell label="Actualizado" className={COLUMNS[4].show}>
+                      {Number.isNaN(updated.getTime()) ? '—' : updatedFormat.format(updated)}
+                    </Cell>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 @3xl:justify-end">
                     <a href={adminEditUrl(p.id)} className={ghostButton}>
                       Editar
                     </a>
@@ -213,6 +235,13 @@ export default function ProjectsAdminSection() {
               )
             })}
           </ul>
+          <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-t border-stone-200 bg-stone-50 px-4 py-2.5">
+            <p className="text-sm text-stone-500">
+              {(current - 1) * pageSize + 1}–{(current - 1) * pageSize + shown.length} de {filtered.length}
+            </p>
+            {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
+          </div>
+        </div>
         </div>
       )}
       {editId ? (
