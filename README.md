@@ -97,3 +97,71 @@ curl -X POST "$VITE_SUPABASE_URL/functions/v1/admin-create-user" \
   -H "Content-Type: application/json" \
   -d '{"email":"nuevo@example.com","password":"Temporal-123456","firstName":"Ana","lastName":"Paz","role":"subscriber"}'
 ```
+
+## Deploy (GitHub Actions + nginx)
+
+`.github/workflows/deploy.yml`:
+
+- **Every push (main, dev) and pull request to main:** `npm run lint`, `npx tsc -b`, `npm test`. The tests mock Supabase: no container or network needed (the workflow only sets dummy `VITE_SUPABASE_*` values, which the client requires to exist).
+- **Push to main, after the checks pass:** builds with the real `VITE_SUPABASE_*`, uploads `dist/` over SSH (rsync) to `<VPS_PATH>/releases/<commit>/` and then points `<VPS_PATH>/current` at it with an atomic rename. The 5 newest releases are kept (`RELEASES_TO_KEEP`), never the one in use.
+- **Manual run:** GitHub → Actions → "CI and deploy" → Run workflow, choosing the branch. It runs the checks and publishes that branch.
+- **Not included:** migrations (`db:push`) and the Edge Function stay manual.
+
+### Secrets
+
+Repository **Settings → Secrets and variables → Actions** (or the `production` environment, which also lets you require an approval before each deploy):
+
+| Secret | Value |
+| --- | --- |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | the same publishable values as `.env` |
+| `VPS_HOST` | server name or IP |
+| `VPS_PORT` | optional, `22` by default |
+| `VPS_USER` | the deploy user (below) |
+| `VPS_PATH` | absolute path of the site's folder, e.g. `/var/www/mission-catalog` (letters, digits, `_ . / -` only) |
+| `VPS_SSH_KEY` | the deploy user's **private** key (whole file) |
+| `VPS_KNOWN_HOSTS` | the server's host key line(s): `ssh-keyscan -p 22 your.host` run from a network you trust, ideally compared with the server's own `/etc/ssh/ssh_host_ed25519_key.pub` |
+
+### Server, once
+
+```bash
+# A user that can only write the site's folder (no sudo, no password)
+sudo adduser --disabled-password --gecos "" deploy
+sudo mkdir -p /var/www/mission-catalog && sudo chown deploy: /var/www/mission-catalog
+
+# A key made for this, with no passphrase; the public half goes to the server
+ssh-keygen -t ed25519 -f deploy_key -N "" -C "github-actions"
+sudo -u deploy install -m 700 -d ~deploy/.ssh
+cat deploy_key.pub | sudo -u deploy tee -a ~deploy/.ssh/authorized_keys   # then delete deploy_key.pub; deploy_key goes into VPS_SSH_KEY and is deleted from your machine
+```
+
+nginx (the app routes with `#`, so there is no rewrite to configure):
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name catalog.example.com;
+    # ssl_certificate / ssl_certificate_key: e.g. certbot
+
+    root /var/www/mission-catalog/current;
+    index index.html;
+
+    # Hashed files never change: cache them for good. The page itself must be re-read to see a new release.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+}
+```
+
+`root` follows the `current` link, so a deploy needs no nginx reload. If you serve it under a sub-path, set `base` in `vite.config.ts` first.
+
+### Going back
+
+```bash
+ssh deploy@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -sfn releases/<commit> current.new && mv -T current.new current'
+```
+
+(`mv -T` is GNU: fine on Linux.) The next push to main publishes again from there.
