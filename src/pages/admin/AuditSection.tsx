@@ -5,7 +5,7 @@ import Pagination from '../../components/Pagination'
 import { useUsers } from '../../hooks/useUsers'
 import { AUDIT_ACTIONS, PAGE_SIZES, listAuditLog, type AuditEntry } from '../../services/auditLog'
 import { roleLabel, userLabel, type Role } from '../../services/adminUsers'
-import { card, ghostButton, inputClass } from './styles'
+import { ghostButton, inputClass } from './styles'
 import { Empty, LoadError, Loading } from './ui'
 
 const FIELDS = [
@@ -24,6 +24,9 @@ interface Filters {
   from: string
   to: string
 }
+/** WebKit top-aligns and indents the text of a date field: one line as tall as the box, no inner padding. */
+const dateClass = `${inputClass} mt-1 block w-40 py-0 leading-10 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0`
+
 const NO_FILTERS: Filters = { actorId: '', action: '', from: '', to: '' }
 
 function Changes({ entry, names }: { entry: AuditEntry; names: (id: string) => string }) {
@@ -136,11 +139,11 @@ export default function AuditSection() {
         </label>
         <label className="block text-sm text-stone-600">
           {t('audit.from')}
-          <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => change({ from: e.target.value })} className={`${inputClass} mt-1 block`} />
+          <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => change({ from: e.target.value })} className={dateClass} />
         </label>
         <label className="block text-sm text-stone-600">
           {t('audit.to')}
-          <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => change({ to: e.target.value })} className={`${inputClass} mt-1 block`} />
+          <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => change({ to: e.target.value })} className={dateClass} />
         </label>
         {filtered && (
           <button type="button" onClick={() => change(NO_FILTERS)} className={ghostButton}>
@@ -155,12 +158,12 @@ export default function AuditSection() {
         <Empty>{filtered ? t('audit.none') : t('audit.noneAtAll')}</Empty>
       ) : (
         <>
-          <ul className="space-y-3">
+          <ul className="divide-y divide-stone-100 rounded-2xl bg-white shadow ring-1 ring-black/5">
             {result.entries.map((e) => {
               const expanded = open === e.id
               const known = (AUDIT_ACTIONS as readonly string[]).includes(e.action)
               return (
-                <li key={e.id} className={`${card} flex flex-col gap-3`}>
+                <li key={e.id} className="flex flex-col gap-3 px-4 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="font-semibold text-brand-primary">
