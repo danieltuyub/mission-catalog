@@ -1,9 +1,13 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import enCommon from './locales/en/common.json'
+import enAccount from './locales/en/account.json'
+import enAuth from './locales/en/auth.json'
 import enMap from './locales/en/map.json'
 import enProjects from './locales/en/projects.json'
 import esCommon from './locales/es/common.json'
+import esAccount from './locales/es/account.json'
+import esAuth from './locales/es/auth.json'
 import esMap from './locales/es/map.json'
 import esProjects from './locales/es/projects.json'
 
@@ -13,8 +17,8 @@ export type Language = (typeof LANGUAGES)[number]
 export const DEFAULT_LANGUAGE: Language = 'es'
 
 export const resources = {
-  es: { common: esCommon, map: esMap, projects: esProjects },
-  en: { common: enCommon, map: enMap, projects: enProjects },
+  es: { account: esAccount, auth: esAuth, common: esCommon, map: esMap, projects: esProjects },
+  en: { account: enAccount, auth: enAuth, common: enCommon, map: enMap, projects: enProjects },
 } as const
 
 const STORAGE_KEY = 'lang'
@@ -49,7 +53,7 @@ void i18n.use(initReactI18next).init({
   lng: initialLanguage(),
   fallbackLng: DEFAULT_LANGUAGE,
   defaultNS: 'common',
-  ns: ['common', 'map', 'projects'],
+  ns: ['common', 'account', 'auth', 'map', 'projects'],
   interpolation: { escapeValue: false }, // React already escapes
   initAsync: false, // resources are bundled: ready on the first render
 })

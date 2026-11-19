@@ -1,4 +1,5 @@
 import { useEffect, type ComponentType } from 'react'
+import { useTranslation } from 'react-i18next'
 import PageHeader from '../components/PageHeader'
 import PanelTabs from '../components/PanelTabs'
 import RequireAuth from '../components/RequireAuth'
@@ -20,6 +21,7 @@ const CONTENT: Record<AccountSection, ComponentType> = {
 }
 
 function Panel() {
+  const { t } = useTranslation('account')
   const auth = useAuth()
   const section = useAccountSection()
   const unread = useUnreadMessages()
@@ -36,27 +38,27 @@ function Panel() {
 
   return (
     <div className="mx-auto w-[94%] pb-10 md:w-4/5">
-      <PageHeader title="Mi espacio">
+      <PageHeader title={t('title')}>
         {can(auth, 'users.manage') && (
           <a
             href="#/admin"
             className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
           >
-            Administración
+            {t('admin')}
           </a>
         )}
       </PageHeader>
       <PanelTabs
-        label="Mi espacio"
+        label={t('title')}
         base="cuenta"
         current={current.id}
-        tabs={sections.map(({ id, label }) => ({
+        tabs={sections.map(({ id }) => ({
           id,
-          label,
+          label: t(`sections.${id}`),
           badge:
             id === 'mensajes' && unread > 0 ? (
               <span
-                aria-label={`${unread} sin leer`}
+                aria-label={t('unreadBadge', { count: unread })}
                 className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold leading-none text-white"
               >
                 {unread > 9 ? '9+' : unread}

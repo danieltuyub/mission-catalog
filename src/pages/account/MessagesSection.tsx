@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/useAuth'
 import { useConversations } from '../../hooks/useConversations'
 import { useConversationId } from '../../hooks/useRoute'
@@ -12,18 +13,30 @@ import {
 import { subscribeToMessages } from '../../services/unreadMessages'
 import type { Message } from '../../types'
 
-const timeFormat = new Intl.DateTimeFormat('es', { hour: '2-digit', minute: '2-digit' })
-const dayFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' })
-const fullFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-
 const isToday = (date: Date) => date.toDateString() === new Date().toDateString()
-/** The time today, the day otherwise. */
-const shortWhen = (iso: string) => (isToday(new Date(iso)) ? timeFormat : dayFormat).format(new Date(iso))
-const longWhen = (iso: string) => (isToday(new Date(iso)) ? timeFormat : fullFormat).format(new Date(iso))
 
-const title = (c: ConversationSummary) => c.projectName ?? c.pinTitle ?? 'Conversación directa'
+/** Date formatters for the current language: the time today, the day (or day and time) otherwise. */
+function useWhen() {
+  const { i18n } = useTranslation()
+  const lng = i18n.language
+  const time = new Intl.DateTimeFormat(lng, { hour: '2-digit', minute: '2-digit' })
+  const day = new Intl.DateTimeFormat(lng, { day: 'numeric', month: 'short' })
+  const full = new Intl.DateTimeFormat(lng, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return {
+    short: (iso: string) => (isToday(new Date(iso)) ? time : day).format(new Date(iso)),
+    long: (iso: string) => (isToday(new Date(iso)) ? time : full).format(new Date(iso)),
+  }
+}
+
+function useTitle() {
+  const { t } = useTranslation('account')
+  return (c: ConversationSummary) => c.projectName ?? c.pinTitle ?? t('messages.direct')
+}
 
 function ConversationList({ conversations, activeId }: { conversations: ConversationSummary[]; activeId: string | null }) {
+  const { t } = useTranslation('account')
+  const when = useWhen()
+  const title = useTitle()
   return (
     <ul className="divide-y divide-stone-100">
       {conversations.map((c) => (
@@ -39,16 +52,16 @@ function ConversationList({ conversations, activeId }: { conversations: Conversa
               <span title={title(c)} className={`truncate text-sm text-brand-primary ${c.unread > 0 ? 'font-semibold' : 'font-medium'}`}>
                 {title(c)}
               </span>
-              <span className="shrink-0 text-xs text-stone-400">{shortWhen(c.lastMessageAt)}</span>
+              <span className="shrink-0 text-xs text-stone-400">{when.short(c.lastMessageAt)}</span>
             </div>
             {c.otherName && <p className="truncate text-xs text-stone-500">{c.otherName}</p>}
             <div className="mt-0.5 flex items-center justify-between gap-2">
               <p className={`truncate text-sm ${c.unread > 0 ? 'text-brand-primary' : 'text-stone-500'}`}>
-                {c.lastMessage ? `${c.lastMessage.fromMe ? 'Tú: ' : ''}${c.lastMessage.body}` : ''}
+                {c.lastMessage ? `${c.lastMessage.fromMe ? t('messages.you') : ''}${c.lastMessage.body}` : ''}
               </p>
               {c.unread > 0 && (
                 <span
-                  aria-label={`${c.unread} sin leer`}
+                  aria-label={t('unreadBadge', { count: c.unread })}
                   className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold leading-none text-white"
                 >
                   {c.unread > 9 ? '9+' : c.unread}
@@ -70,6 +83,9 @@ interface ThreadProps {
 }
 
 function Thread({ conversation, userId, onChanged }: ThreadProps) {
+  const { t } = useTranslation('account')
+  const when = useWhen()
+  const title = useTitle()
   const [messages, setMessages] = useState<Message[] | null>(null)
   const [version, setVersion] = useState(0)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -92,12 +108,12 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
           markConversationRead(id, userId).then(onChanged, () => {})
         }
       },
-      (e: unknown) => !cancelled && setLoadError(e instanceof Error ? e.message : 'Error'),
+      (e: unknown) => !cancelled && setLoadError(e instanceof Error ? e.message : t('messages.error')),
     )
     return () => {
       cancelled = true
     }
-  }, [id, userId, version, onChanged])
+  }, [id, userId, version, onChanged, t])
 
   // Messages that arrive while it is open.
   useEffect(() => subscribeToMessages(userId, () => setVersion((v) => v + 1)), [userId])
@@ -120,7 +136,7 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
       setBody('')
       onChanged()
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje')
+      setSendError(err instanceof Error ? err.message : t('messages.sendFailed'))
     }
     setSending(false)
   }
@@ -134,7 +150,7 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
       <header className="flex items-center gap-3 border-b border-stone-100 px-4 py-3">
         <a
           href="#/cuenta/mensajes"
-          aria-label="Volver a las conversaciones"
+          aria-label={t('messages.back')}
           className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage md:hidden"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -164,7 +180,7 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
             {loadError}
           </p>
         )}
-        {!messages && !loadError && <p className="py-6 text-center text-stone-500">Cargando…</p>}
+        {!messages && !loadError && <p className="py-6 text-center text-stone-500">{t('loading')}</p>}
         {messages?.map((m) => {
           const mine = m.sender_id === userId
           return (
@@ -175,14 +191,14 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                <p className={`mt-1 text-right text-[11px] ${mine ? 'text-brand-blush/60' : 'text-stone-400'}`}>{longWhen(m.created_at)}</p>
+                <p className={`mt-1 text-right text-[11px] ${mine ? 'text-brand-blush/60' : 'text-stone-400'}`}>{when.long(m.created_at)}</p>
               </div>
             </div>
           )
         })}
       </div>
 
-      <form onSubmit={submit} aria-label="Responder" className="border-t border-stone-100 p-3">
+      <form onSubmit={submit} aria-label={t('messages.reply')} className="border-t border-stone-100 p-3">
         {sendError && (
           <p role="alert" className="mb-2 text-sm text-red-700">
             {sendError}
@@ -190,13 +206,13 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
         )}
         <div className="flex items-end gap-2">
           <textarea
-            aria-label="Mensaje"
+            aria-label={t('messages.message')}
             rows={2}
             maxLength={MAX_MESSAGE_LENGTH}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Escribe un mensaje…"
+            placeholder={t('messages.placeholder')}
             className="min-w-0 flex-1 resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
           />
           <button
@@ -204,7 +220,7 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
             disabled={sending || !text}
             className="h-10 shrink-0 rounded-full bg-brand-primary px-5 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
           >
-            {sending ? 'Enviando…' : 'Enviar'}
+            {sending ? t('actions.sending', { ns: 'common' }) : t('actions.send', { ns: 'common' })}
           </button>
         </div>
       </form>
@@ -214,12 +230,13 @@ function Thread({ conversation, userId, onChanged }: ThreadProps) {
 
 /** "Mensajes": the inbox. The list and the open conversation side by side from md; one at a time below. */
 export default function MessagesSection() {
+  const { t } = useTranslation('account')
   const { userId } = useAuth()
   const activeId = useConversationId()
   const { conversations, loading, error, reload } = useConversations(userId)
   const active = conversations.find((c) => c.id === activeId)
 
-  if (loading) return <p className="py-10 text-center text-stone-500">Cargando…</p>
+  if (loading) return <p className="py-10 text-center text-stone-500">{t('loading')}</p>
   if (error && conversations.length === 0)
     return (
       <div role="alert" className="rounded-2xl bg-white p-6 text-sm text-red-700 shadow ring-1 ring-black/5">
@@ -229,20 +246,20 @@ export default function MessagesSection() {
           onClick={reload}
           className="mt-3 h-10 rounded-full px-4 text-brand-primary ring-1 ring-black/10 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-brand-sage"
         >
-          Reintentar
+          {t('retry')}
         </button>
       </div>
     )
   if (conversations.length === 0)
     return (
       <div className="rounded-2xl bg-white p-6 text-stone-600 shadow ring-1 ring-black/5">
-        <p>Aún no tienes conversaciones.</p>
-        <p className="mt-1 text-sm text-stone-500">Escribe al contacto de un proyecto desde su página y la conversación aparecerá aquí.</p>
+        <p>{t('messages.emptyTitle')}</p>
+        <p className="mt-1 text-sm text-stone-500">{t('messages.emptyHint')}</p>
         <a
           href="#/proyectos"
           className="mt-4 inline-flex h-10 items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
         >
-          Ver proyectos
+          {t('messages.seeProjects')}
         </a>
       </div>
     )
@@ -250,20 +267,20 @@ export default function MessagesSection() {
   return (
     <div className="grid gap-4 md:grid-cols-[20rem_minmax(0,1fr)]">
       <nav
-        aria-label="Conversaciones"
+        aria-label={t('messages.list')}
         className={`${activeId ? 'hidden md:block' : ''} max-h-[34rem] overflow-y-auto rounded-2xl bg-white shadow ring-1 ring-black/5`}
       >
         <ConversationList conversations={conversations} activeId={activeId} />
       </nav>
       <section
-        aria-label="Conversación"
+        aria-label={t('messages.conversation')}
         className={`${activeId ? 'flex' : 'hidden md:flex'} h-[34rem] flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5`}
       >
         {active && userId ? (
           <Thread key={active.id} conversation={active} userId={userId} onChanged={reload} />
         ) : (
           <p className="m-auto px-6 text-center text-stone-500">
-            {activeId ? 'No se encontró esta conversación.' : 'Elige una conversación para leerla.'}
+            {activeId ? t('messages.notFound') : t('messages.choose')}
           </p>
         )}
       </section>

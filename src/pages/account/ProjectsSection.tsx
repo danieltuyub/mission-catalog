@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Pagination from '../../components/Pagination'
 import ProjectCard from '../../components/ProjectCard'
 import { useAuth } from '../../hooks/useAuth'
@@ -24,6 +25,7 @@ const linkButton =
 
 /** "Proyectos": the ones the user created (creators only) and, always, the ones they saved. */
 export default function ProjectsSection() {
+  const { t } = useTranslation('account')
   const auth = useAuth()
   const { userId } = auth
   const isCreator = can(auth, 'projects.create')
@@ -43,15 +45,15 @@ export default function ProjectsSection() {
       ([created, saved]) => !cancelled && setResult({ userId, created, saved, error: null }),
       () =>
         !cancelled &&
-        setResult({ userId, created: [], saved: [], error: 'No se pudieron cargar tus proyectos. Inténtalo de nuevo.' }),
+        setResult({ userId, created: [], saved: [], error: t('projects.loadFailed') }),
     )
     return () => {
       cancelled = true
     }
-  }, [userId, isCreator, canSave])
+  }, [userId, isCreator, canSave, t])
 
   const current = result?.userId === userId ? result : null
-  if (!current) return <p className="py-10 text-center text-stone-500">Cargando…</p>
+  if (!current) return <p className="py-10 text-center text-stone-500">{t('loading')}</p>
   if (current.error)
     return (
       <p role="alert" className="rounded-2xl bg-white p-6 text-sm text-red-700 shadow ring-1 ring-black/5">
@@ -60,10 +62,10 @@ export default function ProjectsSection() {
     )
 
   const tabs = [
-    ...(isCreator ? [{ id: 'creados' as const, label: 'Creados por mí', projects: current.created }] : []),
-    ...(canSave ? [{ id: 'guardados' as const, label: 'Guardados', projects: current.saved }] : []),
+    ...(isCreator ? [{ id: 'creados' as const, label: t('projects.created'), projects: current.created }] : []),
+    ...(canSave ? [{ id: 'guardados' as const, label: t('projects.saved'), projects: current.saved }] : []),
   ]
-  const tab = tabs.find((t) => t.id === requested) ?? tabs[0]
+  const tab = tabs.find((x) => x.id === requested) ?? tabs[0]
   if (!tab) return null
   const totalPages = Math.ceil(tab.projects.length / PAGE_SIZE)
   const page = Math.min(paging.tab === tab.id ? paging.page : 1, Math.max(totalPages, 1))
@@ -75,7 +77,7 @@ export default function ProjectsSection() {
       {(tabs.length > 1 || totalPages > 1) && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           {tabs.length > 1 ? (
-            <nav aria-label="Proyectos">
+            <nav aria-label={t('projects.label')}>
               <ul className="flex flex-wrap gap-2">
                 {tabs.map((t) => (
                   <li key={t.id}>
@@ -104,13 +106,13 @@ export default function ProjectsSection() {
 
       {tab.projects.length === 0 ? (
         tab.id === 'creados' ? (
-          <p className="rounded-2xl bg-white p-6 text-sm text-stone-500 shadow ring-1 ring-black/5">Aún no has creado proyectos.</p>
+          <p className="rounded-2xl bg-white p-6 text-sm text-stone-500 shadow ring-1 ring-black/5">{t('projects.noneCreated')}</p>
         ) : (
           <div className="rounded-2xl bg-white p-6 text-stone-600 shadow ring-1 ring-black/5">
-            <p>Aún no has guardado proyectos.</p>
-            <p className="mt-1 text-sm text-stone-500">Toca el corazón de un proyecto para verlo aquí.</p>
+            <p>{t('projects.noneSaved')}</p>
+            <p className="mt-1 text-sm text-stone-500">{t('projects.noneSavedHint')}</p>
             <a href="#/proyectos" className={linkButton}>
-              Ver proyectos
+              {t('projects.seeProjects')}
             </a>
           </div>
         )

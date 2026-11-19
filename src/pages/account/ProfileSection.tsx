@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/useAuth'
 import { useProfile } from '../../hooks/useProfile'
 import { changePassword, MIN_PASSWORD_LENGTH, updateProfile, type Profile } from '../../services/accountService'
@@ -38,6 +39,8 @@ function Feedback({ error, done }: { error: string | null; done: string | null }
 }
 
 function ProfileForm({ userId, email, initial }: { userId: string; email: string; initial: Profile }) {
+  const { t } = useTranslation('account')
+  const [nameMissing, setNameMissing] = useState(false)
   const [firstName, setFirstName] = useState(initial.first_name)
   const [lastName, setLastName] = useState(initial.last_name)
   const [saving, setSaving] = useState(false)
@@ -47,42 +50,46 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
   async function submit(e: FormEvent) {
     e.preventDefault()
     setDone(null)
-    if (!firstName.trim()) return setError('El nombre es obligatorio')
+    setNameMissing(false)
+    if (!firstName.trim()) {
+      setNameMissing(true)
+      return setError(t('profile.nameRequired'))
+    }
     setSaving(true)
     setError(null)
     try {
       const saved = { first_name: firstName.trim(), last_name: lastName.trim() }
       await updateProfile(userId, saved)
       setProfileNames(saved.first_name, saved.last_name)
-      setDone('Cambios guardados')
+      setDone(t('profile.saved'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudieron guardar los cambios')
+      setError(err instanceof Error ? err.message : t('profile.saveFailed'))
     }
     setSaving(false)
   }
 
   return (
-    <form noValidate onSubmit={submit} aria-label="Datos personales" className="space-y-4">
+    <form noValidate onSubmit={submit} aria-label={t('profile.personal')} className="space-y-4">
       <div className="text-sm text-gray-700">
-        <p>Correo</p>
+        <p>{t('profile.email')}</p>
         <p className="mt-1 truncate text-brand-primary" title={email}>
           {email}
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="text-sm text-gray-700">
-          <label htmlFor="account-first-name">Nombre</label>
+          <label htmlFor="account-first-name">{t('profile.firstName')}</label>
           <input
             id="account-first-name"
             autoComplete="given-name"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             className={control}
-            aria-invalid={error === 'El nombre es obligatorio' || undefined}
+            aria-invalid={nameMissing || undefined}
           />
         </div>
         <div className="text-sm text-gray-700">
-          <label htmlFor="account-last-name">Apellido</label>
+          <label htmlFor="account-last-name">{t('profile.lastName')}</label>
           <input
             id="account-last-name"
             autoComplete="family-name"
@@ -95,7 +102,7 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
       <Feedback error={error} done={done} />
       <div className="flex justify-end">
         <button type="submit" disabled={saving} className={submitButton}>
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('profile.saving') : t('profile.save')}
         </button>
       </div>
     </form>
@@ -103,6 +110,7 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
 }
 
 function PasswordForm() {
+  const { t } = useTranslation('account')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [saving, setSaving] = useState(false)
@@ -112,26 +120,26 @@ function PasswordForm() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     setDone(null)
-    if (password.length < MIN_PASSWORD_LENGTH) return setError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`)
-    if (password !== confirm) return setError('Las contraseñas no coinciden')
+    if (password.length < MIN_PASSWORD_LENGTH) return setError(t('profile.minLength', { count: MIN_PASSWORD_LENGTH }))
+    if (password !== confirm) return setError(t('profile.mismatch'))
     setSaving(true)
     setError(null)
     try {
       await changePassword(password)
       setPassword('')
       setConfirm('')
-      setDone('Contraseña actualizada')
+      setDone(t('profile.passwordUpdated'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cambiar la contraseña')
+      setError(err instanceof Error ? err.message : t('profile.passwordFailed'))
     }
     setSaving(false)
   }
 
   return (
-    <form noValidate onSubmit={submit} aria-label="Cambiar contraseña" className="space-y-4">
+    <form noValidate onSubmit={submit} aria-label={t('profile.changePassword')} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="text-sm text-gray-700">
-          <label htmlFor="account-password">Nueva contraseña</label>
+          <label htmlFor="account-password">{t('profile.newPassword')}</label>
           <input
             id="account-password"
             type="password"
@@ -142,7 +150,7 @@ function PasswordForm() {
           />
         </div>
         <div className="text-sm text-gray-700">
-          <label htmlFor="account-confirm">Confirmar contraseña</label>
+          <label htmlFor="account-confirm">{t('profile.confirmPassword')}</label>
           <input
             id="account-confirm"
             type="password"
@@ -153,11 +161,11 @@ function PasswordForm() {
           />
         </div>
       </div>
-      <p className="text-xs text-stone-500">Mínimo {MIN_PASSWORD_LENGTH} caracteres.</p>
+      <p className="text-xs text-stone-500">{t('profile.minHint', { count: MIN_PASSWORD_LENGTH })}</p>
       <Feedback error={error} done={done} />
       <div className="flex justify-end">
         <button type="submit" disabled={saving} className={submitButton}>
-          {saving ? 'Guardando…' : 'Cambiar contraseña'}
+          {saving ? t('profile.saving') : t('profile.changePassword')}
         </button>
       </div>
     </form>
@@ -172,21 +180,22 @@ export default function ProfileSection() {
 }
 
 function Profile({ userId, email }: { userId: string; email: string }) {
+  const { t } = useTranslation('account')
   const { profile, loading, error } = useProfile(userId)
 
   return (
     <div className="max-w-3xl space-y-6 rounded-2xl bg-white p-6 shadow ring-1 ring-black/5">
-      <Section id="account-profile" title="Datos personales">
-        {loading && <p className="py-6 text-center text-stone-500">Cargando…</p>}
+      <Section id="account-profile" title={t('profile.personal')}>
+        {loading && <p className="py-6 text-center text-stone-500">{t('loading')}</p>}
         {error && (
           <p role="alert" className="text-sm text-red-700">
-            No se pudo cargar tu perfil: {error}
+            {t('profile.loadFailed', { error })}
           </p>
         )}
-        {!loading && !error && !profile && <p className="text-sm text-stone-500">No se encontró tu perfil.</p>}
+        {!loading && !error && !profile && <p className="text-sm text-stone-500">{t('profile.notFound')}</p>}
         {profile && <ProfileForm userId={userId} email={email} initial={profile} />}
       </Section>
-      <Section id="account-password-section" title="Contraseña" className="border-t border-stone-200 pt-6">
+      <Section id="account-password-section" title={t('profile.password')} className="border-t border-stone-200 pt-6">
         <PasswordForm />
       </Section>
     </div>

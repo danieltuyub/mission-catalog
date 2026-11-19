@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { readNext } from '../services/authRedirect'
 import { signIn } from '../services/authService'
@@ -7,6 +8,7 @@ const input =
   'mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
 
 export default function LoginPage() {
+  const { t } = useTranslation('auth')
   const { email: sessionEmail } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,7 +30,7 @@ export default function LoginPage() {
     try {
       await signIn(email.trim(), password)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión')
+      setError(err instanceof Error ? err.message : t('signInFailed'))
       setSubmitting(false)
     }
   }
@@ -50,11 +52,11 @@ export default function LoginPage() {
           className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow ring-1 ring-black/5"
         >
           <h1 id="login-title" className="text-2xl font-semibold tracking-tight text-brand-primary">
-            Iniciar sesión
+            {t('signIn')}
           </h1>
 
           <label className="block text-sm text-gray-700">
-            Correo
+            {t('email')}
             <input
               type="email"
               required
@@ -67,7 +69,7 @@ export default function LoginPage() {
           </label>
 
           <div className="text-sm text-gray-700">
-            <label htmlFor="login-password">Contraseña</label>
+            <label htmlFor="login-password">{t('password')}</label>
             <div className="relative">
               <input
                 id="login-password"
@@ -80,7 +82,7 @@ export default function LoginPage() {
               />
               <button
                 type="button"
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-label={showPassword ? t('hide') : t('show')}
                 aria-pressed={showPassword}
                 onClick={() => setShowPassword((s) => !s)}
                 className="absolute right-1.5 top-1/2 mt-0.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 hover:bg-brand-blush/60 hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
@@ -110,7 +112,7 @@ export default function LoginPage() {
             disabled={submitting}
             className="h-10 w-full rounded-full bg-brand-primary text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
           >
-            {submitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
+            {submitting ? t('signingIn') : t('signIn')}
           </button>
 
         </form>
@@ -118,7 +120,7 @@ export default function LoginPage() {
           href="#/mapa"
           className="mt-5 rounded-full px-4 py-1.5 text-sm text-stone-500 hover:bg-brand-blush/70 hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
         >
-          ← Volver al mapa
+          {t('backToMap')}
         </a>
       </div>
     </main>

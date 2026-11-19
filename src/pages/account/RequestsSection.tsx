@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/useAuth'
 import { listMyRequests, MAX_PENDING_REQUESTS, requestImageUrl } from '../../services/pinRequests'
 import type { PinRequest, PinRequestStatus } from '../../types'
 
-const STATUS: Record<PinRequestStatus, { label: string; chip: string }> = {
-  pending: { label: 'Pendiente', chip: 'bg-yellow-100 text-yellow-800' },
-  approved: { label: 'Aprobada', chip: 'bg-green-100 text-green-800' },
-  rejected: { label: 'Rechazada', chip: 'bg-red-100 text-red-800' },
+const STATUS: Record<PinRequestStatus, { chip: string }> = {
+  pending: { chip: 'bg-yellow-100 text-yellow-800' },
+  approved: { chip: 'bg-green-100 text-green-800' },
+  rejected: { chip: 'bg-red-100 text-red-800' },
 }
-
-const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long' })
 
 /** The private image, through a link that expires: no picture when it cannot be loaded. */
 export function RequestImage({ path }: { path: string }) {
@@ -32,6 +31,7 @@ export function RequestImage({ path }: { path: string }) {
 }
 
 function RequestItem({ request }: { request: PinRequest }) {
+  const { t, i18n } = useTranslation('account')
   const status = STATUS[request.status]
   return (
     <li className="flex gap-4 rounded-2xl bg-white p-4 shadow ring-1 ring-black/5">
@@ -41,11 +41,11 @@ function RequestItem({ request }: { request: PinRequest }) {
           <h3 title={request.title} className="min-w-0 truncate font-semibold text-brand-primary">
             {request.title}
           </h3>
-          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${status.chip}`}>{status.label}</span>
+          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${status.chip}`}>{t(`requests.${request.status}`)}</span>
         </div>
         {request.description && <p className="mt-1 line-clamp-2 text-sm text-stone-500">{request.description}</p>}
         <p className="mt-2 text-xs text-stone-400">
-          Enviada el {dateFormat.format(new Date(request.created_at))} · {request.lat.toFixed(4)}, {request.lng.toFixed(4)}
+          {t('requests.sentOn', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(new Date(request.created_at)) })} · {request.lat.toFixed(4)}, {request.lng.toFixed(4)}
         </p>
       </div>
     </li>
@@ -54,6 +54,7 @@ function RequestItem({ request }: { request: PinRequest }) {
 
 /** "Solicitudes de pines": what the user asked for and where each request stands. */
 export default function RequestsSection() {
+  const { t } = useTranslation('account')
   const { userId } = useAuth()
   const [result, setResult] = useState<{ userId: string; requests: PinRequest[] | null; error: string | null } | null>(null)
 
@@ -62,15 +63,15 @@ export default function RequestsSection() {
     let cancelled = false
     listMyRequests(userId).then(
       (requests) => !cancelled && setResult({ userId, requests, error: null }),
-      (e: unknown) => !cancelled && setResult({ userId, requests: null, error: e instanceof Error ? e.message : 'Error' }),
+      (e: unknown) => !cancelled && setResult({ userId, requests: null, error: e instanceof Error ? e.message : t('requests.error') }),
     )
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, t])
 
   const current = result?.userId === userId ? result : null
-  if (!current) return <p className="py-10 text-center text-stone-500">Cargando…</p>
+  if (!current) return <p className="py-10 text-center text-stone-500">{t('loading')}</p>
   if (current.error)
     return (
       <p role="alert" className="rounded-2xl bg-white p-6 text-sm text-red-700 shadow ring-1 ring-black/5">
@@ -84,21 +85,21 @@ export default function RequestsSection() {
   if (requests.length === 0)
     return (
       <div className="rounded-2xl bg-white p-6 text-stone-600 shadow ring-1 ring-black/5">
-        <p>Aún no has enviado solicitudes de pines.</p>
-        <p className="mt-1 text-sm text-stone-500">Usa «Solicitar pin» en el mapa para proponer un lugar.</p>
+        <p>{t('requests.none')}</p>
+        <p className="mt-1 text-sm text-stone-500">{t('requests.noneHint')}</p>
         <a
           href="#/mapa"
           className="mt-4 inline-flex h-10 items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
         >
-          Ir al mapa
+          {t('requests.goMap')}
         </a>
       </div>
     )
 
   return (
-    <section aria-label="Solicitudes de pines">
+    <section aria-label={t('requests.label')}>
       <p className="mb-4 text-sm text-stone-500">
-        {pending} de {MAX_PENDING_REQUESTS} solicitudes pendientes
+        {t('requests.pendingCount', { pending, max: MAX_PENDING_REQUESTS })}
       </p>
       <ul className="space-y-3">
         {requests.map((request) => (
