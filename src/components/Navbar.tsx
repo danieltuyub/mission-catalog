@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
+import { useUnreadContacts } from '../hooks/useUnreadContacts'
 import { useUnreadMessages } from '../hooks/useUnreadMessages'
 import type { Route } from '../hooks/useRoute'
 import { can } from '../services/permissions'
@@ -19,7 +20,9 @@ export default function Navbar({ current }: { current: Route }) {
   const [userOpen, setUserOpen] = useState(false)
   const auth = useAuth()
   const { email, loading, firstName, lastName } = auth
-  const unread = useUnreadMessages()
+  // Admins also count the contact-form messages nobody has read.
+  const unread = useUnreadMessages() + useUnreadContacts()
+  const isAdmin = can(auth, 'users.manage')
 
   // The mobile menu and the user menu never stay open together.
   const changeUserOpen = (next: boolean) => {
@@ -57,7 +60,7 @@ export default function Navbar({ current }: { current: Route }) {
           id="main-menu"
           className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:ml-auto md:mt-0 md:flex md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
         >
-          {LINKS.map(({ route, key }) => (
+          {LINKS.filter((l) => !(isAdmin && l.route === 'contacto')).map(({ route, key }) => (
             <li key={route}>
               <a
                 href={`#/${route}`}
@@ -96,7 +99,7 @@ export default function Navbar({ current }: { current: Route }) {
               lastName={lastName}
               loading={loading}
               unread={unread}
-              isAdmin={can(auth, 'users.manage')}
+              isAdmin={isAdmin}
               active={current === 'cuenta' || current === 'admin'}
               open={userOpen}
               onOpenChange={changeUserOpen}

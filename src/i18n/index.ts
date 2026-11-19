@@ -4,6 +4,7 @@ import enCommon from './locales/en/common.json'
 import enAccount from './locales/en/account.json'
 import enAdmin from './locales/en/admin.json'
 import enAuth from './locales/en/auth.json'
+import enContact from './locales/en/contact.json'
 import enErrors from './locales/en/errors.json'
 import enMap from './locales/en/map.json'
 import enProject from './locales/en/project.json'
@@ -12,6 +13,7 @@ import esCommon from './locales/es/common.json'
 import esAccount from './locales/es/account.json'
 import esAdmin from './locales/es/admin.json'
 import esAuth from './locales/es/auth.json'
+import esContact from './locales/es/contact.json'
 import esErrors from './locales/es/errors.json'
 import esMap from './locales/es/map.json'
 import esProject from './locales/es/project.json'
@@ -31,8 +33,8 @@ export const LANGUAGE_NAMES: Record<Language, string> = { es: 'Español', en: 'E
 export const currentLanguage = (): Language => (isLanguage(i18n.resolvedLanguage) ? i18n.resolvedLanguage : DEFAULT_LANGUAGE)
 
 export const resources = {
-  es: { account: esAccount, admin: esAdmin, auth: esAuth, common: esCommon, errors: esErrors, map: esMap, project: esProject, projects: esProjects },
-  en: { account: enAccount, admin: enAdmin, auth: enAuth, common: enCommon, errors: enErrors, map: enMap, project: enProject, projects: enProjects },
+  es: { account: esAccount, admin: esAdmin, auth: esAuth, common: esCommon, contact: esContact, errors: esErrors, map: esMap, project: esProject, projects: esProjects },
+  en: { account: enAccount, admin: enAdmin, auth: enAuth, common: enCommon, contact: enContact, errors: enErrors, map: enMap, project: enProject, projects: enProjects },
 } as const
 
 const STORAGE_KEY = 'lang'
@@ -65,7 +67,7 @@ void i18n.use(initReactI18next).init({
   lng: initialLanguage(),
   fallbackLng: DEFAULT_LANGUAGE,
   defaultNS: 'common',
-  ns: ['common', 'account', 'admin', 'auth', 'errors', 'map', 'project', 'projects'],
+  ns: ['common', 'account', 'admin', 'auth', 'contact', 'errors', 'map', 'project', 'projects'],
   interpolation: { escapeValue: false }, // React already escapes
   initAsync: false, // resources are bundled: ready on the first render
 })

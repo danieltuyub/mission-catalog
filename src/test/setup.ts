@@ -23,6 +23,13 @@ vi.mock('../services/unreadMessages', () => ({
   subscribeToMessages: vi.fn(() => () => {}),
 }))
 
+// No unread contact messages and no live connection by default; the rest of the service is real.
+vi.mock('../services/contactMessages', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/contactMessages')>()),
+  countUnreadContacts: vi.fn(async () => 0),
+  subscribeToContacts: vi.fn(() => () => {}),
+}))
+
 // Nothing saved by default and every request succeeds; individual tests override the mocks.
 vi.mock('../services/savedProjects', () => ({
   listSavedProjectIds: vi.fn(async () => []),

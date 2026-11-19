@@ -1,0 +1,15 @@
+{
+  "title": "Contacto",
+  "intro": "¿Quieres más información sobre las iglesias en casa o sobre algún proyecto? Escríbenos y te respondemos.",
+  "name": "Nombre",
+  "contact": "Correo o teléfono",
+  "contactHint": "Por dónde prefieres que te respondamos.",
+  "message": "Mensaje",
+  "send": "Enviar mensaje",
+  "sending": "Enviando…",
+  "invalidContact": "Escribe un correo o un teléfono válido.",
+  "sentTitle": "Mensaje enviado",
+  "sentText": "Gracias por escribirnos. Te responderemos pronto.",
+  "another": "Enviar otro mensaje",
+  "count": "{{count}} / {{max}}"
+}

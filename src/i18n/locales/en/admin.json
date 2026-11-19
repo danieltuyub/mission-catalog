@@ -5,7 +5,8 @@
     "pines": "Pins",
     "proyectos": "Projects",
     "usuarios": "Users",
-    "mensajes": "Messages"
+    "mensajes": "Messages",
+    "contacto": "Contact"
   },
   "pending_one": "{{count}} pending",
   "pending_other": "{{count}} pending",
@@ -154,5 +155,22 @@
     "loadFailed": "Could not load the projects. Please try again.",
     "updatedToast": "Project updated",
     "createdToast": "Project created"
+  },
+  "pendingContacts_one": "{{count}} unread contact message",
+  "pendingContacts_other": "{{count}} unread contact messages",
+  "contactInbox": {
+    "none": "No contact messages yet.",
+    "list": "Contact messages",
+    "message": "Contact message",
+    "choose": "Choose a message to read it.",
+    "notFound": "This message was not found.",
+    "back": "Back to contact messages",
+    "unread": "Unread",
+    "markUnread": "Mark as unread",
+    "from": "From {{name}}",
+    "replyTo": "Reply to",
+    "sent": "Sent {{when}}",
+    "readOnly": "Read only: replying from here is not available yet.",
+    "updateFailed": "Could not update the message."
   }
 }

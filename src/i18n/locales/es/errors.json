@@ -47,5 +47,9 @@
   "loadProfile": "No se pudo cargar el perfil",
   "loadPins": "No se pudieron cargar los pines",
   "loadFilters": "No se pudieron cargar los filtros",
-  "generic": "Error"
+  "generic": "Error",
+  "contactFailed": "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+  "contactRateLimited": "Ya recibimos varios mensajes tuyos. Espera un rato antes de enviar otro.",
+  "loadContact": "No se pudieron cargar los mensajes de contacto. Inténtalo de nuevo.",
+  "contactUpdateFailed": "No se pudo actualizar el mensaje. Inténtalo de nuevo."
 }

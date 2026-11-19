@@ -9,6 +9,7 @@ vi.mock('../services/pinRequests', () => ({
   REVIEW_PAGE_SIZE: 10,
 }))
 
+import { countUnreadContacts } from '../services/contactMessages'
 import { getAuthSnapshot } from '../services/authService'
 import { ADMIN, SIGNED_OUT } from '../test/auth'
 import AdminPage from './AdminPage'
@@ -33,13 +34,20 @@ describe('AdminPage', () => {
     expect(window.location.hash).toBe('#/admin/solicitudes')
   })
 
-  it('lists the five sections and marks the current one', () => {
+  it('lists the six sections and marks the current one', () => {
     window.location.hash = '#/admin/usuarios'
     render(<AdminPage />)
     const nav = screen.getByRole('navigation', { name: 'Administración' })
-    expect(nav.querySelectorAll('a')).toHaveLength(5)
+    expect(nav.querySelectorAll('a')).toHaveLength(6)
     expect(screen.getByRole('link', { name: 'Usuarios' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Mensajes' })).toHaveAttribute('href', '#/admin/mensajes')
+  })
+
+  it('badges the unread contact messages on their tab', async () => {
+    vi.mocked(countUnreadContacts).mockResolvedValue(4)
+    window.location.hash = '#/admin/usuarios'
+    render(<AdminPage />)
+    expect(await screen.findByLabelText('4 mensajes de contacto sin leer')).toBeInTheDocument()
   })
 
   it('badges the pending requests', async () => {

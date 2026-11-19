@@ -5,7 +5,8 @@
     "pines": "Pines",
     "proyectos": "Proyectos",
     "usuarios": "Usuarios",
-    "mensajes": "Mensajes"
+    "mensajes": "Mensajes",
+    "contacto": "Contacto"
   },
   "pending_one": "{{count}} pendiente",
   "pending_other": "{{count}} pendientes",
@@ -154,5 +155,22 @@
     "loadFailed": "No se pudieron cargar los proyectos. Inténtalo de nuevo.",
     "updatedToast": "Proyecto actualizado",
     "createdToast": "Proyecto creado"
+  },
+  "pendingContacts_one": "{{count}} mensaje de contacto sin leer",
+  "pendingContacts_other": "{{count}} mensajes de contacto sin leer",
+  "contactInbox": {
+    "none": "Aún no hay mensajes de contacto.",
+    "list": "Mensajes de contacto",
+    "message": "Mensaje de contacto",
+    "choose": "Elige un mensaje para leerlo.",
+    "notFound": "No se encontró este mensaje.",
+    "back": "Volver a los mensajes de contacto",
+    "unread": "Sin leer",
+    "markUnread": "Marcar como no leído",
+    "from": "De {{name}}",
+    "replyTo": "Responder a",
+    "sent": "Enviado {{when}}",
+    "readOnly": "Solo lectura: aún no se puede responder desde aquí.",
+    "updateFailed": "No se pudo actualizar el mensaje."
   }
 }

@@ -1,0 +1,15 @@
+{
+  "title": "Contact",
+  "intro": "Want more information about house churches or a particular project? Write to us and we will get back to you.",
+  "name": "Name",
+  "contact": "Email or phone",
+  "contactHint": "How you would like us to reply.",
+  "message": "Message",
+  "send": "Send message",
+  "sending": "Sending…",
+  "invalidContact": "Enter a valid email or phone number.",
+  "sentTitle": "Message sent",
+  "sentText": "Thanks for writing to us. We will reply soon.",
+  "another": "Send another message",
+  "count": "{{count}} / {{max}}"
+}

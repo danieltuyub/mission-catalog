@@ -47,5 +47,9 @@
   "loadProfile": "Could not load the profile",
   "loadPins": "Could not load the pins",
   "loadFilters": "Could not load the filters",
-  "generic": "Error"
+  "generic": "Error",
+  "contactFailed": "Could not send the message. Try again.",
+  "contactRateLimited": "We already received several messages from you. Wait a while before sending another.",
+  "loadContact": "Could not load the contact messages. Try again.",
+  "contactUpdateFailed": "Could not update the message. Try again."
 }

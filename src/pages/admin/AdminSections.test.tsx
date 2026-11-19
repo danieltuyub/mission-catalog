@@ -31,6 +31,12 @@ const svc = vi.hoisted(() => ({
   getProjectById: vi.fn(),
 }))
 
+vi.mock('../../services/contactMessages', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../services/contactMessages')>()),
+  listContactMessages: vi.fn(),
+  setContactRead: vi.fn(),
+  subscribeToContacts: vi.fn(() => () => {}),
+}))
 vi.mock('../../services/adminUsers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../services/adminUsers')>()),
   listUsers: svc.listUsers,
@@ -94,7 +100,9 @@ import { DEFAULT_ADMIN_SORT, saveAdminPageSize, saveAdminSort } from '../../serv
 import { getAuthSnapshot } from '../../services/authService'
 import { getToast } from '../../services/toast'
 import { ADMIN } from '../../test/auth'
+import ContactInboxSection from './ContactInboxSection'
 import ModerationSection from './ModerationSection'
+import { listContactMessages, setContactRead } from '../../services/contactMessages'
 import PinRequestsSection from './PinRequestsSection'
 import PinsSection from './PinsSection'
 import ProjectsAdminSection from './ProjectsAdminSection'
@@ -763,5 +771,47 @@ describe('ModerationSection', () => {
     svc.listAllConversations.mockResolvedValue([])
     render(<ModerationSection />)
     expect(await screen.findByText('Aún no hay conversaciones.')).toBeInTheDocument()
+  })
+})
+
+describe('ContactInboxSection', () => {
+  const msg = (id: string, readAt: string | null) => ({ id, name: `Persona ${id}`, contact: id === 'c1' ? 'ana@correo.com' : '+52 55 1234 5678', body: `Texto ${id}`, language: 'es', createdAt: '2026-11-18T10:00:00Z', readAt })
+
+  beforeEach(() => {
+    window.location.hash = '#/admin/contacto'
+    vi.mocked(listContactMessages).mockReset().mockResolvedValue([msg('c1', null), msg('c2', '2026-11-18T11:00:00Z')])
+    vi.mocked(setContactRead).mockReset().mockResolvedValue(undefined)
+  })
+
+  it('lists them and marks the unread ones', async () => {
+    render(<ContactInboxSection />)
+    expect(await screen.findByText('Persona c1')).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: 'Sin leer' })).toHaveLength(1)
+  })
+
+  it('marks one read when it is opened, and lets the admin mark it unread again', async () => {
+    window.location.hash = '#/admin/contacto/c1'
+    render(<ContactInboxSection />)
+    expect(await screen.findByRole('link', { name: 'ana@correo.com' })).toHaveAttribute('href', 'mailto:ana@correo.com')
+    await waitFor(() => expect(setContactRead).toHaveBeenCalledWith('c1', true))
+    expect(screen.queryByRole('img', { name: 'Sin leer' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar como no leído' }))
+    expect(setContactRead).toHaveBeenLastCalledWith('c1', false)
+    expect(await screen.findByRole('img', { name: 'Sin leer' })).toBeInTheDocument()
+    expect(setContactRead).toHaveBeenCalledTimes(2)
+  })
+
+  it('links a phone number to call it, and does not touch one already read', async () => {
+    window.location.hash = '#/admin/contacto/c2'
+    render(<ContactInboxSection />)
+    expect(await screen.findByRole('link', { name: '+52 55 1234 5678' })).toHaveAttribute('href', 'tel:+525512345678')
+    expect(setContactRead).not.toHaveBeenCalled()
+  })
+
+  it('says when there is nothing', async () => {
+    vi.mocked(listContactMessages).mockResolvedValue([])
+    render(<ContactInboxSection />)
+    expect(await screen.findByText('Aún no hay mensajes de contacto.')).toBeInTheDocument()
   })
 })

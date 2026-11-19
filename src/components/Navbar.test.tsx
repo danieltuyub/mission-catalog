@@ -3,6 +3,7 @@ import { ADMIN, LOADING, NAMED, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthSnapshot, signOut } from '../services/authService'
+import { countUnreadContacts } from '../services/contactMessages'
 import { countUnreadMessages } from '../services/unreadMessages'
 import { getToast } from '../services/toast'
 import Navbar from './Navbar'
@@ -29,7 +30,26 @@ describe('Navbar', () => {
     const panel = () => document.getElementById('user-menu')!
     afterEach(() => {
       vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+      vi.mocked(countUnreadMessages).mockResolvedValue(0)
+      vi.mocked(countUnreadContacts).mockResolvedValue(0)
       window.location.hash = ''
+    })
+
+    it('hides Contacto from admins, in the menu and in the footer', () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      render(<Navbar current="mapa" />)
+      expect(screen.queryByRole('link', { name: 'Contacto' })).not.toBeInTheDocument()
+      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+      render(<Navbar current="mapa" />)
+      expect(screen.getByRole('link', { name: 'Contacto' })).toBeInTheDocument()
+    })
+
+    it('adds the unread contact messages to the badge of an admin', async () => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+      vi.mocked(countUnreadMessages).mockResolvedValue(1)
+      vi.mocked(countUnreadContacts).mockResolvedValue(2)
+      render(<Navbar current="mapa" />)
+      expect(await screen.findByRole('button', { name: /3 mensajes sin leer/ })).toBeInTheDocument()
     })
 
     it('offers the login at the end of the menu when signed out', () => {

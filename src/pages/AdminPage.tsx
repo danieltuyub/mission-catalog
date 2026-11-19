@@ -4,14 +4,16 @@ import BackLink from '../components/BackLink'
 import PageHeader from '../components/PageHeader'
 import PanelTabs from '../components/PanelTabs'
 import { useAdminSection, type AdminSection } from '../hooks/useRoute'
+import { useUnreadContacts } from '../hooks/useUnreadContacts'
 import { countPendingRequests } from '../services/pinRequests'
+import ContactInboxSection from './admin/ContactInboxSection'
 import ModerationSection from './admin/ModerationSection'
 import PinRequestsSection from './admin/PinRequestsSection'
 import PinsSection from './admin/PinsSection'
 import ProjectsAdminSection from './admin/ProjectsAdminSection'
 import UsersSection from './admin/UsersSection'
 
-const ADMIN_TABS: readonly { id: AdminSection }[] = [{ id: 'solicitudes' }, { id: 'pines' }, { id: 'proyectos' }, { id: 'usuarios' }, { id: 'mensajes' }]
+const ADMIN_TABS: readonly { id: AdminSection }[] = [{ id: 'solicitudes' }, { id: 'pines' }, { id: 'proyectos' }, { id: 'usuarios' }, { id: 'mensajes' }, { id: 'contacto' }]
 
 const CONTENT: Record<AdminSection, ComponentType> = {
   solicitudes: PinRequestsSection,
@@ -19,6 +21,16 @@ const CONTENT: Record<AdminSection, ComponentType> = {
   proyectos: ProjectsAdminSection,
   usuarios: UsersSection,
   mensajes: ModerationSection,
+  contacto: ContactInboxSection,
+}
+
+function CountBadge({ count, label }: { count: number; label: string }) {
+  if (count <= 0) return null
+  return (
+    <span aria-label={label} className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold leading-none text-white">
+      {count > 9 ? '9+' : count}
+    </span>
+  )
 }
 
 /** The admin panel. Wrapped in `RequireAuth` (users.manage) by the router. */
@@ -26,6 +38,7 @@ export default function AdminPage() {
   const { t } = useTranslation('admin')
   const section = useAdminSection()
   const [pending, setPending] = useState(0)
+  const unreadContacts = useUnreadContacts()
 
   // `#/admin`, or an unknown section: the first one.
   useEffect(() => {
@@ -60,13 +73,10 @@ export default function AdminPage() {
           id,
           label: t(`tabs.${id}`),
           badge:
-            id === 'solicitudes' && pending > 0 ? (
-              <span
-                aria-label={t('pending', { count: pending })}
-                className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold leading-none text-white"
-              >
-                {pending > 9 ? '9+' : pending}
-              </span>
+            id === 'solicitudes' ? (
+              <CountBadge count={pending} label={t('pending', { count: pending })} />
+            ) : id === 'contacto' ? (
+              <CountBadge count={unreadContacts} label={t('pendingContacts', { count: unreadContacts })} />
             ) : undefined,
         }))}
       />
