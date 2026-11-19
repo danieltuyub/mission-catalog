@@ -41,6 +41,11 @@ export function isPrivateRoute(): boolean {
   return name === 'cuenta' || name === 'admin' || (name === 'proyectos' && (id === NEW_PROJECT || action === EDIT))
 }
 
+/** Reactive `isPrivateRoute`. */
+export function usePrivateRoute(): boolean {
+  return useSyncExternalStore(subscribe, isPrivateRoute)
+}
+
 export function useRoute(): Route {
   return useSyncExternalStore(subscribe, getRouteSnapshot)
 }

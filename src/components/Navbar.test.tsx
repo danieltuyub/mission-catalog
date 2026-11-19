@@ -6,6 +6,7 @@ import { getAuthSnapshot, signOut } from '../services/authService'
 import { countUnreadContacts } from '../services/contactMessages'
 import { countUnreadMessages } from '../services/unreadMessages'
 import { getToast } from '../services/toast'
+import Footer from './Footer'
 import Navbar from './Navbar'
 
 describe('Navbar', () => {
@@ -246,5 +247,32 @@ describe('Navbar', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Menú de usuario' }))
       expect(screen.getByRole('button', { name: 'Abrir menú' })).toHaveAttribute('aria-expanded', 'false')
     })
+  })
+})
+
+describe('Footer', () => {
+  afterEach(() => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(SIGNED_OUT)
+    window.location.hash = ''
+  })
+
+  it('invites visitors to write to us on public pages', () => {
+    window.location.hash = '#/mapa'
+    render(<Footer />)
+    expect(screen.getByRole('link', { name: 'Contáctanos' })).toBeInTheDocument()
+  })
+
+  it.each(['#/cuenta/mensajes', '#/admin/usuarios', '#/proyectos/nuevo'])('is the short one on %s', (hash) => {
+    window.location.hash = hash
+    render(<Footer />)
+    expect(screen.queryByRole('link', { name: 'Contáctanos' })).not.toBeInTheDocument()
+    expect(screen.getByText(/© /)).toBeInTheDocument()
+  })
+
+  it('does not invite an admin anywhere', () => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+    window.location.hash = '#/mapa'
+    render(<Footer />)
+    expect(screen.queryByRole('link', { name: 'Contáctanos' })).not.toBeInTheDocument()
   })
 })
