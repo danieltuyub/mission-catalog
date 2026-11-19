@@ -1,5 +1,6 @@
 import type { LatLngTuple } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import AdminPinsMap from '../../components/AdminPinsMap'
 import Combobox from '../../components/Combobox'
 import Pagination from '../../components/Pagination'
@@ -28,6 +29,7 @@ const SEARCHABLE_FROM = 10
 
 /** "Pines": every pin on the map. Edit its text or remove it. */
 export default function PinsSection() {
+  const { t } = useTranslation('admin')
   const [pins, setPins] = useState<Pin[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
@@ -55,12 +57,12 @@ export default function PinsSection() {
         setPins(list)
         setError(null)
       },
-      () => !cancelled && setError('No se pudieron cargar los pines. Inténtalo de nuevo.'),
+      () => !cancelled && setError(t('pins.loadFailed')),
     )
     return () => {
       cancelled = true
     }
-  }, [version])
+  }, [version, t])
 
   // Who answers for each pin (private table): when it cannot be read the selectors just start empty.
   useEffect(() => {
@@ -124,9 +126,9 @@ export default function PinsSection() {
       await deletePin(pin)
       setPins((list) => (list ?? []).filter((p) => p.id !== pin.id))
       setSelectedId((id) => (id === pin.id ? null : id))
-      showToast('Pin eliminado')
+      showToast(t('pins.deleted'))
     } catch {
-      showToast('No se pudo eliminar el pin')
+      showToast(t('pins.deleteFailed'))
     }
     setBusy(null)
   }
@@ -146,10 +148,10 @@ export default function PinsSection() {
   const shown = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
 
   return (
-    <section aria-label="Pines" className="space-y-4">
+    <section aria-label={t('pins.label')} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <SearchBox
-          label="Buscar pin"
+          label={t('pins.search')}
           value={query}
           onChange={(v) => {
             setQuery(v)
@@ -161,14 +163,14 @@ export default function PinsSection() {
             <div className="w-56">
               <Combobox
                 id="pins-country-filter"
-                aria-label="Filtrar por país"
-                listLabel="Países con pines"
-                placeholder={`Todos los países (${pins.length})`}
+                aria-label={t('pins.filterCountry')}
+                listLabel={t('pins.countriesWithPins')}
+                placeholder={t('pins.allCountriesCount', { count: pins.length })}
                 text={countryText}
                 options={[
-                  { value: ALL, label: 'Todos los países' },
+                  { value: ALL, label: t('pins.allCountries') },
                   ...countries.map((c) => ({ value: c, label: `${c} (${pins.filter((p) => p.country === c).length})` })),
-                  ...(withoutCountry > 0 ? [{ value: NO_COUNTRY, label: `Sin país (${withoutCountry})` }] : []),
+                  ...(withoutCountry > 0 ? [{ value: NO_COUNTRY, label: t('pins.noCountryCount', { count: withoutCountry }) }] : []),
                 ]}
                 onText={(text) => {
                   setCountryText(text)
@@ -176,7 +178,7 @@ export default function PinsSection() {
                   if (!text.trim()) chooseCountry(ALL)
                 }}
                 onPick={(value) => {
-                  setCountryText(value === ALL ? '' : value === NO_COUNTRY ? 'Sin país' : value)
+                  setCountryText(value === ALL ? '' : value === NO_COUNTRY ? t('pins.noCountry') : value)
                   chooseCountry(value)
                 }}
                 inputClassName={`${inputClass} w-full`}
@@ -184,23 +186,23 @@ export default function PinsSection() {
             </div>
           ) : (
             <select
-              aria-label="Filtrar por país"
+              aria-label={t('pins.filterCountry')}
               value={country}
               onChange={(e) => chooseCountry(e.target.value)}
               className={inputClass}
             >
-              <option value={ALL}>Todos los países ({pins.length})</option>
+              <option value={ALL}>{t('pins.allCountriesCount', { count: pins.length })}</option>
               {countries.map((c) => (
                 <option key={c} value={c}>
                   {c} ({pins.filter((p) => p.country === c).length})
                 </option>
               ))}
-              {withoutCountry > 0 && <option value={NO_COUNTRY}>Sin país ({withoutCountry})</option>}
+              {withoutCountry > 0 && <option value={NO_COUNTRY}>{t('pins.noCountryCount', { count: withoutCountry })}</option>}
             </select>
           )}
           {inCountry && regions.length > 0 && (
             <select
-              aria-label="Filtrar por estado"
+              aria-label={t('pins.filterRegion')}
               value={region}
               onChange={(e) => {
                 setRegion(e.target.value)
@@ -208,13 +210,13 @@ export default function PinsSection() {
               }}
               className={inputClass}
             >
-              <option value={ALL}>Todos los estados</option>
+              <option value={ALL}>{t('pins.allRegions')}</option>
               {regions.map((r) => (
                 <option key={r} value={r}>
                   {r} ({byCountry.filter((p) => p.region === r).length})
                 </option>
               ))}
-              {withoutRegion > 0 && <option value={NO_REGION}>Sin estado ({withoutRegion})</option>}
+              {withoutRegion > 0 && <option value={NO_REGION}>{t('pins.noRegionCount', { count: withoutRegion })}</option>}
             </select>
           )}
           {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
@@ -223,12 +225,12 @@ export default function PinsSection() {
       {/* Below `lg` the list and the map take turns. */}
       <div className="lg:hidden">
         <Chips
-          label="Vista"
+          label={t('pins.view')}
           value={view}
           onChange={setView}
           options={[
-            { id: 'list', label: 'Lista' },
-            { id: 'map', label: 'Mapa' },
+            { id: 'list', label: t('pins.list') },
+            { id: 'map', label: t('pins.map') },
           ]}
         />
       </div>
@@ -236,7 +238,7 @@ export default function PinsSection() {
       <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
         <div className={`space-y-4 ${view === 'map' ? 'hidden lg:block' : ''}`}>
       {shown.length === 0 ? (
-        <Empty>{pins.length === 0 ? 'Aún no hay pines en el mapa.' : 'Ningún pin coincide con la búsqueda.'}</Empty>
+        <Empty>{pins.length === 0 ? t('pins.none') : t('pins.noMatch')}</Empty>
       ) : (
         <ul className="space-y-3">
           {shown.map((pin) => {
@@ -258,8 +260,8 @@ export default function PinsSection() {
                   <h3 className="truncate font-semibold text-brand-primary">
                     <button
                       type="button"
-                      title="Ver en el mapa"
-                      aria-label={`${pin.title}: ver en el mapa`}
+                      title={t('pins.seeOnMap')}
+                      aria-label={t('pins.seeOnMapAria', { title: pin.title })}
                       aria-pressed={selected}
                       onClick={() => setSelectedId(pin.id)}
                       className="max-w-full truncate text-left hover:underline focus-visible:outline-2 focus-visible:outline-brand-sage"
@@ -269,10 +271,10 @@ export default function PinsSection() {
                   </h3>
                   {pin.description && <p className="mt-1 line-clamp-2 text-sm text-stone-500">{pin.description}</p>}
                   <p className="mt-2 text-xs text-stone-400">
-                    {[kindLabel(pin.kind), placeLabel(pin) || 'Sin país'].filter(Boolean).join(' · ')}
+                    {[kindLabel(pin.kind), placeLabel(pin) || t('pins.noCountry')].filter(Boolean).join(' · ')}
                   </p>
                   {pin.languages.length > 0 && (
-                    <ul aria-label="Idiomas" className="mt-1.5 flex flex-wrap gap-1.5">
+                    <ul aria-label={t('pins.languages')} className="mt-1.5 flex flex-wrap gap-1.5">
                       {pin.languages.map((code) => (
                         <li key={code} className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-600">
                           {languageLabel(code)}
@@ -282,8 +284,8 @@ export default function PinsSection() {
                   )}
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-stone-600">
-                      Contacto:{' '}
-                      <span className="text-stone-900">{contacts.has(pin.id) ? nameOf(contacts.get(pin.id)!) : 'Sin contacto'}</span>
+                      {t('pins.contact')}{' '}
+                      <span className="text-stone-900">{contacts.has(pin.id) ? nameOf(contacts.get(pin.id)!) : t('pins.noContact')}</span>
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
@@ -294,12 +296,12 @@ export default function PinsSection() {
                         }}
                         className={`${ghostButton} lg:hidden`}
                       >
-                        Ver en el mapa
+                        {t('pins.seeOnMap')}
                       </button>
                       <button type="button" onClick={() => setEditing(pin)} className={ghostButton}>
-                        Editar
+                        {t('edit')}
                       </button>
-                      <ConfirmButton label="Eliminar" confirmLabel="Sí, eliminar" disabled={busy !== null} onConfirm={() => remove(pin)} />
+                      <ConfirmButton label={t('delete')} confirmLabel={t('yesDelete')} disabled={busy !== null} onConfirm={() => remove(pin)} />
                     </div>
                   </div>
                 </div>
@@ -346,13 +348,13 @@ export default function PinsSection() {
                 // The pin itself is saved: say so instead of failing the whole edit.
                 setPins((list) => (list ?? []).map((p) => (p.id === saved.id ? saved : p)))
                 setEditing(null)
-                showToast('Pin guardado, pero no se pudo cambiar el contacto')
+                showToast(t('pins.savedNoContact'))
                 return
               }
             }
             setPins((list) => (list ?? []).map((p) => (p.id === saved.id ? saved : p)))
             setEditing(null)
-            showToast('Pin actualizado')
+            showToast(t('pins.saved'))
           }}
         />
       )}

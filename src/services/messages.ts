@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import type { Message } from '../types'
 import { supabase } from './supabaseClient'
 
@@ -5,10 +6,10 @@ const TABLE = 'messages'
 /** The database enforces the same limit. */
 export const MAX_MESSAGE_LENGTH = 2000
 
-const FAILED = 'No se pudo enviar el mensaje. Inténtalo de nuevo.'
-const NO_CONTACT = 'Este proyecto aún no tiene un contacto asignado.'
-const NO_PIN_CONTACT = 'Este pin aún no tiene un contacto asignado.'
-const DENIED = 'Tu cuenta no puede enviar mensajes a este contacto.'
+const FAILED = () => tError('messageFailed')
+const NO_CONTACT = () => tError('noProjectContact')
+const NO_PIN_CONTACT = () => tError('noPinContact')
+const DENIED = () => tError('messageDenied')
 const PERMISSION_DENIED = '42501'
 const NOT_NULL_VIOLATION = '23502'
 
@@ -25,8 +26,8 @@ export async function sendProjectMessage(projectId: string, body: string): Promi
     .single()
 
   if (error) {
-    if (error.code === NOT_NULL_VIOLATION) throw new Error(NO_CONTACT)
-    throw new Error(error.code === PERMISSION_DENIED ? DENIED : FAILED)
+    if (error.code === NOT_NULL_VIOLATION) throw new Error(NO_CONTACT())
+    throw new Error(error.code === PERMISSION_DENIED ? DENIED() : FAILED())
   }
   return data as Message
 }
@@ -40,8 +41,8 @@ export async function sendPinMessage(pinId: string, body: string): Promise<Messa
     .single()
 
   if (error) {
-    if (error.code === NOT_NULL_VIOLATION) throw new Error(NO_PIN_CONTACT)
-    throw new Error(error.code === PERMISSION_DENIED ? DENIED : FAILED)
+    if (error.code === NOT_NULL_VIOLATION) throw new Error(NO_PIN_CONTACT())
+    throw new Error(error.code === PERMISSION_DENIED ? DENIED() : FAILED())
   }
   return data as Message
 }
@@ -74,7 +75,7 @@ interface ConversationRow {
   messages: { body: string; sender_id: string; sender_name: string; created_at: string }[]
 }
 
-const LOAD_FAILED = 'No se pudieron cargar tus mensajes. Inténtalo de nuevo.'
+const LOAD_FAILED = () => tError('loadMessages')
 /** Most recent conversations and messages shown; older ones stay out for now. */
 const MAX_CONVERSATIONS = 50
 const MAX_THREAD_MESSAGES = 200
@@ -93,7 +94,7 @@ export async function listConversations(userId: string): Promise<ConversationSum
       .limit(1, { referencedTable: 'messages' }),
     supabase.from(TABLE).select('conversation_id').eq('recipient_id', userId).is('read_at', null),
   ])
-  if (conversations.error || unread.error) throw new Error(LOAD_FAILED)
+  if (conversations.error || unread.error) throw new Error(LOAD_FAILED())
 
   const unreadBy = new Map<string, number>()
   for (const row of unread.data ?? []) {
@@ -129,7 +130,7 @@ export async function listThread(conversationId: string): Promise<Message[]> {
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(MAX_THREAD_MESSAGES)
-  if (error) throw new Error(LOAD_FAILED)
+  if (error) throw new Error(LOAD_FAILED())
   return (data as Message[]).reverse()
 }
 
@@ -140,7 +141,7 @@ export async function sendReply(to: { otherId: string; projectId: string | null;
     .insert({ recipient_id: to.otherId, project_id: to.projectId, pin_id: to.pinId, body: body.trim() })
     .select()
     .single()
-  if (error) throw new Error(error.code === PERMISSION_DENIED ? DENIED : FAILED)
+  if (error) throw new Error(error.code === PERMISSION_DENIED ? DENIED() : FAILED())
   return data as Message
 }
 
@@ -177,7 +178,7 @@ export async function listAllConversations(): Promise<ModerationConversation[]> 
     .limit(MAX_CONVERSATIONS * 4)
     .order('created_at', { referencedTable: 'messages', ascending: false })
     .limit(1, { referencedTable: 'messages' })
-  if (error) throw new Error('No se pudieron cargar las conversaciones. Inténtalo de nuevo.')
+  if (error) throw new Error(tError('loadConversations'))
   return (data as unknown as (Omit<ConversationRow, 'messages'> & { messages: { body: string }[] })[]).map((row) => {
     const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
     const pin = Array.isArray(row.pins) ? row.pins[0] : row.pins

@@ -62,5 +62,20 @@
   },
   "message": {
     "send": "Enviar mensaje"
-  }
+  },
+  "saved": {
+    "loadFailed": "No se pudieron cargar tus proyectos guardados",
+    "removed": "Proyecto quitado de guardados",
+    "undo": "Deshacer",
+    "saved": "Proyecto guardado",
+    "removeFailed": "No se pudo quitar el proyecto de guardados",
+    "saveFailed": "No se pudo guardar el proyecto",
+    "signIn": "Inicia sesión para guardar proyectos",
+    "noPermission": "Tu cuenta no tiene permiso para guardar proyectos"
+  },
+  "user": {
+    "deleted": "Usuario eliminado",
+    "unassigned": "Sin asignar"
+  },
+  "noResults": "Sin resultados"
 }

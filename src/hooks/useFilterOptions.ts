@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import { useEffect, useState } from 'react'
 import { getProjectFilterOptions, type FilterOptions } from '../services/projectService'
 
@@ -9,7 +10,7 @@ export function useFilterOptions() {
     let cancelled = false
     getProjectFilterOptions()
       .then((data) => !cancelled && setOptions(data))
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : 'Failed to load filters'))
+      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : tError('loadFilters')))
     return () => {
       cancelled = true
     }

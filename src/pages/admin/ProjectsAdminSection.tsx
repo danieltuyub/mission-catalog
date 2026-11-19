@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import Pagination from '../../components/Pagination'
 import Select from '../../components/Select'
 import { STATUS_META, useStatusLabel } from '../../components/projectStatus'
@@ -30,12 +31,12 @@ import { ghostButton, matches, primaryButton } from './styles'
  *  - from 64rem: + Lugar; from 72rem: + Actualizado.
  * `show` hides a column where it has no room of its own.
  */
-const COLUMNS: readonly { id: AdminProjectSortKey; label: string; show: string }[] = [
-  { id: 'name', label: 'Proyecto', show: '' },
-  { id: 'status', label: 'Estado', show: '' },
-  { id: 'place', label: 'Lugar', show: '@3xl:@max-5xl:hidden' },
-  { id: 'creator', label: 'Creador', show: '' },
-  { id: 'updated', label: 'Actualizado', show: '@3xl:@max-6xl:hidden' },
+const COLUMNS: readonly { id: AdminProjectSortKey; show: string }[] = [
+  { id: 'name', show: '' },
+  { id: 'status', show: '' },
+  { id: 'place', show: '@3xl:@max-5xl:hidden' },
+  { id: 'creator', show: '' },
+  { id: 'updated', show: '@3xl:@max-6xl:hidden' },
 ]
 /** Actions are fixed in width, so the columns line up even while a row asks to confirm a deletion. */
 const GRID_MEDIUM = 'minmax(0,1fr) 6rem minmax(0,11rem) 13rem'
@@ -43,7 +44,6 @@ const GRID_LARGE = 'minmax(0,2fr) 6rem minmax(0,1.3fr) minmax(0,1.2fr) 13rem'
 const GRID_XLARGE = 'minmax(0,2fr) 6rem minmax(0,1.3fr) minmax(0,1.2fr) 7rem 13rem'
 const ROW =
   'grid gap-x-4 gap-y-1 @3xl:[grid-template-columns:var(--cols-m)] @5xl:[grid-template-columns:var(--cols-l)] @6xl:[grid-template-columns:var(--cols-xl)]'
-const updatedFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** A value in the row; in the compact card it carries its own label, in the table the header does (screen readers always get it). */
 function Cell({ label, strong = false, className = '', children }: { label: string; strong?: boolean; className?: string; children: ReactNode }) {
@@ -77,6 +77,8 @@ const placeOf = (p: AdminProject) => [p.region, p.country].filter(Boolean).join(
 
 /** "Proyectos": the whole catalog in a compact list, with owner assignment and removal. */
 export default function ProjectsAdminSection() {
+  const { t, i18n } = useTranslation('admin')
+  const updatedFormat = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = useStatusLabel()
   const { nameOf } = useUsers()
   const [projects, setProjects] = useState<AdminProject[] | null>(null)
@@ -98,12 +100,12 @@ export default function ProjectsAdminSection() {
         setProjects(list)
         setError(null)
       },
-      () => !cancelled && setError('No se pudieron cargar los proyectos. Inténtalo de nuevo.'),
+      () => !cancelled && setError(t('projects.loadFailed')),
     )
     return () => {
       cancelled = true
     }
-  }, [version])
+  }, [version, t])
 
   const sorted = useMemo(() => {
     const value = (p: AdminProject) =>
@@ -124,9 +126,9 @@ export default function ProjectsAdminSection() {
     try {
       await deleteProjectWithImages(project.id)
       setProjects((list) => (list ?? []).filter((p) => p.id !== project.id))
-      showToast('Proyecto eliminado')
+      showToast(t('projects.deleted'))
     } catch {
-      showToast('No se pudo eliminar el proyecto')
+      showToast(t('projects.deleteFailed'))
     }
     setBusy(null)
   }
@@ -140,10 +142,10 @@ export default function ProjectsAdminSection() {
   const shown = filtered.slice((current - 1) * pageSize, current * pageSize)
 
   return (
-    <section aria-label="Proyectos" className="space-y-4">
+    <section aria-label={t('projects.label')} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <SearchBox
-          label="Buscar proyecto"
+          label={t('projects.search')}
           value={query}
           onChange={(v) => {
             setQuery(v)
@@ -152,7 +154,7 @@ export default function ProjectsAdminSection() {
         />
         <div className="flex items-center gap-3">
           <Select
-            label="Proyectos por página"
+            label={t('perPage', { ns: 'projects' })}
             icon={<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />}
             value={String(pageSize)}
             options={PAGE_SIZE_OPTIONS}
@@ -164,13 +166,13 @@ export default function ProjectsAdminSection() {
             }}
           />
           <a href={ADMIN_NEW_PROJECT_URL} className={primaryButton}>
-            Nuevo proyecto
+            {t('projects.new')}
           </a>
         </div>
       </div>
 
       {shown.length === 0 ? (
-        <Empty>{projects.length === 0 ? 'Aún no hay proyectos.' : 'Ningún proyecto coincide con la búsqueda.'}</Empty>
+        <Empty>{projects.length === 0 ? t('projects.none') : t('projects.noMatch')}</Empty>
       ) : (
         <div className="@container">
         <div
@@ -183,10 +185,10 @@ export default function ProjectsAdminSection() {
                 key={c.id}
                 type="button"
                 onClick={() => sortBy(c.id)}
-                aria-label={`Ordenar por ${c.label}${sort.key === c.id ? (sort.descending ? ', de mayor a menor' : ', de menor a mayor') : ''}`}
+                aria-label={`${t('projects.sortBy', { col: t(`projects.${c.id === 'name' ? 'name' : c.id}`) })}${sort.key === c.id ? (sort.descending ? t('projects.desc') : t('projects.asc')) : ''}`}
                 className={`${c.show} inline-flex min-w-0 items-center gap-1 text-left uppercase tracking-wide hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage`}
               >
-                <span className="truncate">{c.label}</span>
+                <span className="truncate">{t(`projects.${c.id}`)}</span>
                 <span aria-hidden="true" className={sort.key === c.id ? 'text-brand-primary' : 'opacity-0'}>
                   {sort.descending && sort.key === c.id ? '↓' : '↑'}
                 </span>
@@ -215,22 +217,22 @@ export default function ProjectsAdminSection() {
                   </div>
                   {/* A card: the values run together in lines. A table: each one is a cell of the grid. */}
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 @3xl:contents">
-                    <Cell label="Estado">{statusLabel(p.status)}</Cell>
-                    <Cell label="Lugar" className={COLUMNS[2].show}>
+                    <Cell label={t('projects.status')}>{statusLabel(p.status)}</Cell>
+                    <Cell label={t('projects.place')} className={COLUMNS[2].show}>
                       {place || '—'}
                     </Cell>
-                    <Cell label="Creador" strong>
+                    <Cell label={t('projects.creator')} strong>
                       {nameOf(p.created_by ?? null)}
                     </Cell>
-                    <Cell label="Actualizado" className={COLUMNS[4].show}>
+                    <Cell label={t('projects.updated')} className={COLUMNS[4].show}>
                       {Number.isNaN(updated.getTime()) ? '—' : updatedFormat.format(updated)}
                     </Cell>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 @3xl:justify-end">
                     <a href={adminEditUrl(p.id)} className={ghostButton}>
-                      Editar
+                      {t('edit')}
                     </a>
-                    <ConfirmButton label="Eliminar" confirmLabel="Sí, eliminar" disabled={busy !== null} onConfirm={() => remove(p)} />
+                    <ConfirmButton label={t('delete')} confirmLabel={t('yesDelete')} disabled={busy !== null} onConfirm={() => remove(p)} />
                   </div>
                 </li>
               )
@@ -238,7 +240,7 @@ export default function ProjectsAdminSection() {
           </ul>
           <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-t border-stone-200 bg-stone-50 px-4 py-2.5">
             <p className="text-sm text-stone-500">
-              {(current - 1) * pageSize + 1}–{(current - 1) * pageSize + shown.length} de {filtered.length}
+              {t('projects.range', { from: (current - 1) * pageSize + 1, to: (current - 1) * pageSize + shown.length, total: filtered.length })}
             </p>
             {totalPages > 1 && <Pagination page={current} totalPages={totalPages} onChange={setPage} />}
           </div>
@@ -246,7 +248,7 @@ export default function ProjectsAdminSection() {
         </div>
       )}
       {editId ? (
-        <ProjectModal label="Editar proyecto" onClose={closeModal}>
+        <ProjectModal label={t('edit', { ns: 'project' })} onClose={closeModal}>
           <ProjectEditor
             key={editId}
             id={editId}
@@ -255,19 +257,19 @@ export default function ProjectsAdminSection() {
               // The row changes in place: the list is not read again.
               setProjects((list) => (list ?? []).map((p) => (p.id === saved.id ? toRow(saved) : p)))
               closeModal()
-              showToast('Proyecto actualizado')
+              showToast(t('projects.updatedToast'))
             }}
           />
         </ProjectModal>
       ) : (
         creating && (
-          <ProjectModal label="Nuevo proyecto" onClose={closeModal}>
+          <ProjectModal label={t('new', { ns: 'project' })} onClose={closeModal}>
             <ProjectCreator
               onCancel={closeModal}
               onCreated={(created) => {
                 setProjects((list) => [...(list ?? []), toRow(created)])
                 closeModal()
-                showToast('Proyecto creado')
+                showToast(t('projects.createdToast'))
               }}
             />
           </ProjectModal>

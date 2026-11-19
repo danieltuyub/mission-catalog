@@ -1,17 +1,20 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { dangerButton, ghostButton, inputClass } from './styles'
 
 export function Loading() {
-  return <p className="py-10 text-center text-stone-500">Cargando…</p>
+  const { t } = useTranslation('admin')
+  return <p className="py-10 text-center text-stone-500">{t('loading')}</p>
 }
 
 export function LoadError({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useTranslation('admin')
   return (
     <div role="alert" className="rounded-2xl bg-white p-6 text-sm text-red-700 shadow ring-1 ring-black/5">
       <p>{message}</p>
       {onRetry && (
         <button type="button" onClick={onRetry} className={`${ghostButton} mt-3`}>
-          Reintentar
+          {t('retry')}
         </button>
       )}
     </div>
@@ -22,7 +25,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="rounded-2xl bg-white p-6 text-sm text-stone-500 shadow ring-1 ring-black/5">{children}</p>
 }
 
-/** A destructive button that asks "¿Seguro?" before acting: nothing here can be undone. */
+/** A destructive button that asks for confirmation before acting: nothing here can be undone. */
 export function ConfirmButton({
   label,
   confirmLabel,
@@ -34,6 +37,7 @@ export function ConfirmButton({
   onConfirm: () => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation('admin')
   const [asking, setAsking] = useState(false)
   if (!asking)
     return (
@@ -42,7 +46,7 @@ export function ConfirmButton({
       </button>
     )
   return (
-    <span className="inline-flex items-center gap-2" role="group" aria-label="Confirmar">
+    <span className="inline-flex items-center gap-2" role="group" aria-label={t('confirm')}>
       <button
         type="button"
         disabled={disabled}
@@ -55,7 +59,7 @@ export function ConfirmButton({
         {confirmLabel}
       </button>
       <button type="button" onClick={() => setAsking(false)} className={ghostButton}>
-        Cancelar
+        {t('cancel')}
       </button>
     </span>
   )

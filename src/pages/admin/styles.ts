@@ -1,3 +1,5 @@
+import i18n from '../../i18n'
+
 export const ghostButton =
   'inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/10 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50'
 export const primaryButton =
@@ -9,7 +11,10 @@ export const inputClass =
 
 export const card = 'rounded-2xl bg-white p-4 shadow ring-1 ring-black/5'
 
-export const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long' })
+/** Long dates in the current language (read at call time, so a language change shows on the next render). */
+export const dateFormat = {
+  format: (date: Date) => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(date),
+}
 
 /** Case and accent insensitive "contains". */
 export const matches = (text: string, query: string) =>

@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import { useEffect, useState } from 'react'
 import { getProfile, type Profile } from '../services/accountService'
 
@@ -17,7 +18,7 @@ export function useProfile(userId: string) {
       .catch(
         (e: unknown) =>
           !cancelled &&
-          setResult({ userId, profile: null, error: e instanceof Error ? e.message : 'Failed to load profile' }),
+          setResult({ userId, profile: null, error: e instanceof Error ? e.message : tError('loadProfile') }),
       )
     return () => {
       cancelled = true

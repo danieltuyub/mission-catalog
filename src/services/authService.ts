@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import type { Session } from '@supabase/supabase-js'
 import { getProfile } from './accountService'
 import { supabase } from './supabaseClient'
@@ -79,11 +80,11 @@ export function getAuthSnapshot(): AuthState {
 export async function signIn(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
   if (!error) return
-  if (error.code === 'user_banned') throw new Error('Tu cuenta está bloqueada. Contacta a un administrador.')
+  if (error.code === 'user_banned') throw new Error(tError('banned'))
   throw new Error(
     error.code === 'invalid_credentials'
-      ? 'Correo o contraseña incorrectos'
-      : 'No se pudo iniciar sesión. Intenta de nuevo.',
+      ? tError('badCredentials')
+      : tError('signInFailed'),
   )
 }
 

@@ -1,3 +1,4 @@
+import i18n, { tError } from '../i18n'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listUsers, userLabel, type AdminUser } from '../services/adminUsers'
 
@@ -11,7 +12,7 @@ export function useUsers() {
     let cancelled = false
     listUsers().then(
       (users) => !cancelled && setResult({ users, error: null }),
-      (e: unknown) => !cancelled && setResult({ users: null, error: e instanceof Error ? e.message : 'Error' }),
+      (e: unknown) => !cancelled && setResult({ users: null, error: e instanceof Error ? e.message : tError('generic') }),
     )
     return () => {
       cancelled = true
@@ -21,7 +22,7 @@ export function useUsers() {
   const users = result?.users ?? null
   const nameOf = useMemo(() => {
     const names = new Map((users ?? []).map((u) => [u.id, userLabel(u)]))
-    return (id: string | null) => (id ? (names.get(id) ?? 'Usuario eliminado') : 'Sin asignar')
+    return (id: string | null) => (id ? (names.get(id) ?? i18n.t('user.deleted')) : i18n.t('user.unassigned'))
   }, [users])
 
   return { users: users ?? [], loading: result === null, error: result?.error ?? null, reload, nameOf }

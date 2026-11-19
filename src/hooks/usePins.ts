@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { updatePinWithImage } from '../services/pinEdit'
 import { createPin, getPins, removePinImage, uploadPinImage, type NewPin, type PinPatch } from '../services/pinService'
@@ -11,7 +12,7 @@ export function usePins() {
     let cancelled = false
     getPins()
       .then((data) => !cancelled && setPins(data))
-      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : 'Failed to load pins'))
+      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : tError('loadPins')))
     return () => {
       cancelled = true
     }

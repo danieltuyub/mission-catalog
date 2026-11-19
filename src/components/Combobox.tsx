@@ -1,4 +1,5 @@
 import { useId, useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { fold } from '../services/textFold'
 
 export interface ComboOption {
@@ -37,6 +38,7 @@ export default function Combobox({
   listLabel,
   'aria-label': ariaLabel,
 }: Props) {
+  const { t } = useTranslation()
   const listId = useId()
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -103,7 +105,7 @@ export default function Combobox({
           aria-label={listLabel}
           className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md bg-white py-1 text-sm text-gray-900 shadow-lg ring-1 ring-black/10"
         >
-          {shown.length === 0 && <li className="px-3 py-2 text-gray-500">Sin resultados</li>}
+          {shown.length === 0 && <li className="px-3 py-2 text-gray-500">{t('noResults')}</li>}
           {shown.map((o, i) => (
             <li
               key={o.value}

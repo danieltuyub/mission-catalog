@@ -1,3 +1,4 @@
+import i18n from '../i18n'
 import { useEffect, useSyncExternalStore } from 'react'
 import { loginToastAction } from '../services/authRedirect'
 import { can } from '../services/permissions'
@@ -60,7 +61,7 @@ function ensureLoaded(userId: string) {
       if (store.userId !== userId) return
       // Usable without the saved marks rather than stuck: saving still works.
       setStore({ userId, ids: EMPTY, ready: true })
-      showToast('No se pudieron cargar tus proyectos guardados')
+      showToast(i18n.t('saved.loadFailed'))
     },
   )
 }
@@ -75,18 +76,18 @@ async function toggleSaved(projectId: string) {
   try {
     await (wasSaved ? unsaveProject(projectId) : saveProject(projectId))
     if (wasSaved) {
-      showToast('Proyecto quitado de guardados', {
-        label: 'Deshacer',
+      showToast(i18n.t('saved.removed'), {
+        label: i18n.t('saved.undo'),
         onClick: () => {
           if (store.userId === userId) void toggleSaved(projectId)
         },
       })
     } else {
-      showToast('Proyecto guardado')
+      showToast(i18n.t('saved.saved'))
     }
   } catch {
     if (store.userId === userId) setStore({ ...store, ids: withProject(store.ids, projectId, wasSaved) })
-    showToast(wasSaved ? 'No se pudo quitar el proyecto de guardados' : 'No se pudo guardar el proyecto')
+    showToast(wasSaved ? i18n.t('saved.removeFailed') : i18n.t('saved.saveFailed'))
   } finally {
     pending.delete(projectId)
   }
@@ -112,8 +113,8 @@ export function useSavedProjects() {
     loading: auth.loading || (!!auth.userId && canSave && !mine?.ready),
     isSaved: (projectId: string) => !!mine?.ids.has(projectId),
     toggle: (projectId: string) => {
-      if (!auth.userId) showToast('Inicia sesión para guardar proyectos', loginToastAction())
-      else if (!canSave) showToast('Tu cuenta no tiene permiso para guardar proyectos')
+      if (!auth.userId) showToast(i18n.t('saved.signIn'), loginToastAction())
+      else if (!canSave) showToast(i18n.t('saved.noPermission'))
       else void toggleSaved(projectId)
     },
   }

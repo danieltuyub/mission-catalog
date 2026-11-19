@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import type { PinKind, PinRequest } from '../types'
 import { compressImage } from './imageUtils'
 import { setPinContact } from './pinContacts'
@@ -10,9 +11,9 @@ const BUCKET = 'pin-request-images'
 /** The database enforces the same limit. */
 export const MAX_PENDING_REQUESTS = 5
 
-const FAILED = 'No se pudo enviar la solicitud. Inténtalo de nuevo.'
-const LIMIT = `Ya tienes ${MAX_PENDING_REQUESTS} solicitudes pendientes. Espera a que se revisen para enviar otra.`
-const DENIED = 'Tu cuenta no puede solicitar pines o ya alcanzaste el límite de solicitudes pendientes.'
+const FAILED = () => tError('sendRequestFailed')
+const LIMIT = () => tError('pendingLimit', { count: MAX_PENDING_REQUESTS })
+const DENIED = () => tError('pinRequestDenied')
 const PERMISSION_DENIED = '42501'
 
 export interface NewPinRequest {
@@ -49,15 +50,15 @@ export async function requestPin(userId: string, input: NewPinRequest, image?: F
     .select('id', { count: 'exact', head: true })
     .eq('requested_by', userId)
     .eq('status', 'pending')
-  if (countError) throw new Error(FAILED)
-  if ((count ?? 0) >= MAX_PENDING_REQUESTS) throw new Error(LIMIT)
+  if (countError) throw new Error(FAILED())
+  if ((count ?? 0) >= MAX_PENDING_REQUESTS) throw new Error(LIMIT())
 
   let image_path: string | undefined
   if (image) {
     try {
       image_path = await uploadRequestImage(userId, image)
     } catch {
-      throw new Error('No se pudo subir la imagen. Inténtalo de nuevo.')
+      throw new Error(tError('uploadFailed'))
     }
   }
 
@@ -68,7 +69,7 @@ export async function requestPin(userId: string, input: NewPinRequest, image?: F
   if (error) {
     // Don't leave an orphan file behind.
     if (image_path) void supabase.storage.from(BUCKET).remove([image_path]).catch(() => {})
-    throw new Error(error.code === PERMISSION_DENIED ? DENIED : FAILED)
+    throw new Error(error.code === PERMISSION_DENIED ? DENIED() : FAILED())
   }
   return data as PinRequest
 }
@@ -80,14 +81,14 @@ export async function listMyRequests(userId: string): Promise<PinRequest[]> {
     .select('*')
     .eq('requested_by', userId)
     .order('created_at', { ascending: false })
-  if (error) throw new Error('No se pudieron cargar tus solicitudes. Inténtalo de nuevo.')
+  if (error) throw new Error(tError('loadMyRequests'))
   return data as PinRequest[]
 }
 
 /** The bucket is private: a link that works for an hour. */
 export async function requestImageUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600)
-  if (error || !data) throw new Error('No se pudo cargar la imagen')
+  if (error || !data) throw new Error(tError('loadImage'))
   return data.signedUrl
 }
 
@@ -95,8 +96,8 @@ export async function requestImageUrl(path: string): Promise<string> {
 
 /** Requests per page in the review list. */
 export const REVIEW_PAGE_SIZE = 10
-const REVIEW_FAILED = 'No se pudo completar la acción. Inténtalo de nuevo.'
-const ALREADY_REVIEWED = 'Esta solicitud ya fue revisada.'
+const REVIEW_FAILED = () => tError('reviewFailed')
+const ALREADY_REVIEWED = () => tError('alreadyReviewed')
 
 export type ReviewFilter = 'pending' | 'reviewed'
 
@@ -110,7 +111,7 @@ export async function listRequestsPage(
   const { data, error, count } = await (filter === 'pending' ? base.eq('status', 'pending') : base.neq('status', 'pending'))
     .order('created_at', { ascending: false })
     .range(from, from + REVIEW_PAGE_SIZE - 1)
-  if (error) throw new Error('No se pudieron cargar las solicitudes. Inténtalo de nuevo.')
+  if (error) throw new Error(tError('loadRequests'))
   return { requests: data as PinRequest[], total: count ?? 0 }
 }
 
@@ -137,12 +138,12 @@ export async function countPendingRequests(): Promise<number> {
 /** Moves a pending request to `status`; false when someone else already reviewed it. */
 async function setStatus(id: string, from: PinRequest['status'], to: PinRequest['status']): Promise<boolean> {
   const { data, error } = await supabase.from(TABLE).update({ status: to }).eq('id', id).eq('status', from).select('id')
-  if (error) throw new Error(REVIEW_FAILED)
+  if (error) throw new Error(REVIEW_FAILED())
   return !!data && data.length > 0
 }
 
 export async function rejectRequest(id: string): Promise<void> {
-  if (!(await setStatus(id, 'pending', 'rejected'))) throw new Error(ALREADY_REVIEWED)
+  if (!(await setStatus(id, 'pending', 'rejected'))) throw new Error(ALREADY_REVIEWED())
 }
 
 /** The request's photo, copied from the private bucket to the public one. */
@@ -165,7 +166,7 @@ async function publishRequestImage(path: string): Promise<string> {
 export type PinEdits = Place & { kind: PinKind | null; languages: string[] }
 
 export async function approveRequest(request: PinRequest, edits: PinEdits = request): Promise<void> {
-  if (!(await setStatus(request.id, 'pending', 'approved'))) throw new Error(ALREADY_REVIEWED)
+  if (!(await setStatus(request.id, 'pending', 'approved'))) throw new Error(ALREADY_REVIEWED())
   let imagePath: string | undefined
   let pinId: string
   try {
@@ -186,7 +187,7 @@ export async function approveRequest(request: PinRequest, edits: PinEdits = requ
   } catch {
     if (imagePath) void removePinImage(imagePath).catch(() => {})
     await setStatus(request.id, 'approved', 'pending').catch(() => {})
-    throw new Error('No se pudo publicar el pin. La solicitud sigue pendiente.')
+    throw new Error(tError('publishFailed'))
   }
   // Whoever proposed it answers for it. Not essential: the admin can set it later.
   await setPinContact(pinId, request.requested_by).catch(() => {})

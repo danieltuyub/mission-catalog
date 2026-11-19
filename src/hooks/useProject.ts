@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import { useEffect, useState } from 'react'
 import { can } from '../services/permissions'
 import { getProjectById } from '../services/projectService'
@@ -29,7 +30,7 @@ export function useProject(id: string) {
           setResult({
             key,
             project: null,
-            error: e instanceof Error ? e.message : 'Failed to load project',
+            error: e instanceof Error ? e.message : tError('loadProject'),
           }),
       )
     return () => {

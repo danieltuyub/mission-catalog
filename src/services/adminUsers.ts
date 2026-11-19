@@ -1,14 +1,12 @@
+import i18n, { tError } from '../i18n'
 import { supabase } from './supabaseClient'
 
 export type Role = 'subscriber' | 'creator' | 'admin'
 
-export const ROLES: readonly { id: Role; label: string }[] = [
-  { id: 'subscriber', label: 'Suscriptor' },
-  { id: 'creator', label: 'Creador' },
-  { id: 'admin', label: 'Administrador' },
-]
+export const ROLES: readonly { id: Role }[] = [{ id: 'subscriber' }, { id: 'creator' }, { id: 'admin' }]
 
-export const roleLabel = (role: Role | null) => ROLES.find((r) => r.id === role)?.label ?? 'Sin rol'
+/** The name of a role in the current language. */
+export const roleLabel = (role: Role | null) => i18n.t(`admin:roles.${role ?? 'none'}`)
 
 export interface AdminUser {
   id: string
@@ -34,7 +32,7 @@ interface UserRow {
   banned_until?: string | null
 }
 
-const FAILED = 'No se pudo completar la acción. Inténtalo de nuevo.'
+const FAILED = () => tError('actionFailed')
 
 /** Name for lists: "First Last", else the email. */
 export const userLabel = (u: Pick<AdminUser, 'firstName' | 'lastName' | 'email'>) =>
@@ -46,7 +44,7 @@ const highest = (roles: string[]): Role | null =>
 /** Every user, newest first (admins only: the database refuses anyone else). */
 export async function listUsers(): Promise<AdminUser[]> {
   const { data, error } = await supabase.rpc('admin_list_users')
-  if (error) throw new Error('No se pudieron cargar los usuarios. Inténtalo de nuevo.')
+  if (error) throw new Error(tError('loadUsers'))
   return (data as UserRow[]).map((r) => ({
     id: r.user_id,
     email: r.email ?? '',
@@ -62,8 +60,8 @@ export async function listUsers(): Promise<AdminUser[]> {
 export async function setUserRole(userId: string, role: Role): Promise<void> {
   const { error } = await supabase.rpc('admin_set_user_role', { target: userId, new_role: role })
   if (!error) return
-  if (error.message.includes('own_role')) throw new Error('No puedes cambiar tu propio rol')
-  throw new Error(FAILED)
+  if (error.message.includes('own_role')) throw new Error(tError('ownRole'))
+  throw new Error(FAILED())
 }
 
 /** "Indefinitely" is a date this far away: the database has no other way to say "no end". */
@@ -82,8 +80,8 @@ export function blockState(u: Pick<AdminUser, 'bannedUntil'>, now = new Date()):
 export async function setUserBan(userId: string, until: Date | null): Promise<void> {
   const { error } = await supabase.rpc('admin_set_user_ban', { target: userId, until_ts: until ? until.toISOString() : null })
   if (!error) return
-  if (error.message.includes('own_ban')) throw new Error('No puedes bloquear tu propia cuenta')
-  throw new Error(FAILED)
+  if (error.message.includes('own_ban')) throw new Error(tError('ownBan'))
+  throw new Error(FAILED())
 }
 
 export async function updateUserName(userId: string, firstName: string, lastName: string): Promise<void> {
@@ -92,7 +90,7 @@ export async function updateUserName(userId: string, firstName: string, lastName
     .update({ first_name: firstName.trim(), last_name: lastName.trim() })
     .eq('user_id', userId)
     .select('user_id')
-  if (error || !data || data.length === 0) throw new Error(FAILED)
+  if (error || !data || data.length === 0) throw new Error(FAILED())
 }
 
 export interface NewUserInput {
@@ -104,15 +102,15 @@ export interface NewUserInput {
 }
 
 /** What the function answers, by code, in words for the admin. */
-const CREATE_ERRORS: Record<string, string> = {
-  email_exists: 'Ya existe un usuario con ese correo',
-  invalid_email: 'Escribe un correo válido',
-  invalid_password: 'La contraseña debe tener entre 8 y 72 caracteres',
-  invalid_name: 'El nombre o el apellido es demasiado largo',
-  invalid_role: 'Elige un rol válido',
-  forbidden: 'Tu cuenta no puede crear usuarios',
-  unauthorized: 'Tu sesión expiró: vuelve a iniciar sesión',
-}
+const CREATE_ERRORS = {
+  email_exists: 'emailExists',
+  invalid_email: 'invalidEmail',
+  invalid_password: 'invalidPassword',
+  invalid_name: 'invalidName',
+  invalid_role: 'invalidRole',
+  forbidden: 'forbidden',
+  unauthorized: 'unauthorized',
+} as const
 
 async function errorCode(error: unknown): Promise<string | null> {
   const response = (error as { context?: unknown } | null)?.context
@@ -133,9 +131,10 @@ export async function createUser(input: NewUserInput): Promise<string> {
   const { data, error } = await supabase.functions.invoke('admin-create-user', { body: input })
   if (error) {
     const code = await errorCode(error)
-    throw new Error((code && CREATE_ERRORS[code]) || 'No se pudo crear el usuario. Inténtalo de nuevo.')
+    const known = code ? CREATE_ERRORS[code as keyof typeof CREATE_ERRORS] : undefined
+    throw new Error(tError(known ?? 'createUserFailed'))
   }
   const id = (data as { id?: unknown } | null)?.id
-  if (typeof id !== 'string') throw new Error('No se pudo crear el usuario. Inténtalo de nuevo.')
+  if (typeof id !== 'string') throw new Error(tError('createUserFailed'))
   return id
 }

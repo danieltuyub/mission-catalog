@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import { supabase } from './supabaseClient'
 
 export interface Profile {
@@ -21,19 +22,21 @@ export async function updateProfile(userId: string, profile: Profile): Promise<v
   const { data, error } = await supabase.from('profiles').update(profile).eq('user_id', userId).select('user_id')
   if (error) throw error
   // RLS hides rows that are not yours, and a missing profile updates nothing: both look the same.
-  if (!data || data.length === 0) throw new Error('No se encontró tu perfil')
+  if (!data || data.length === 0) throw new Error(tError('profileNotFound'))
 }
 
-const PASSWORD_ERRORS: Record<string, string> = {
-  same_password: 'La nueva contraseña debe ser distinta de la actual',
-  weak_password: 'La contraseña es demasiado débil: usa más caracteres y mezcla letras y números',
-  reauthentication_needed: 'Por seguridad, cierra sesión, vuelve a entrar e inténtalo de nuevo',
-}
+const PASSWORD_ERRORS = {
+  same_password: 'samePassword',
+  weak_password: 'weakPassword',
+  reauthentication_needed: 'reauth',
+} as const
+
+const passwordError = (code: string | undefined) => tError(PASSWORD_ERRORS[(code ?? '') as keyof typeof PASSWORD_ERRORS] ?? 'passwordFailed')
 
 export async function changePassword(password: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({ password })
   if (!error) return
-  throw new Error(PASSWORD_ERRORS[error.code ?? ''] ?? 'No se pudo cambiar la contraseña. Intenta de nuevo.')
+  throw new Error(passwordError(error.code))
 }
 
 /**
@@ -43,5 +46,5 @@ export async function changePassword(password: string): Promise<void> {
 export async function completeFirstPassword(password: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } })
   if (!error) return
-  throw new Error(PASSWORD_ERRORS[error.code ?? ''] ?? 'No se pudo cambiar la contraseña. Intenta de nuevo.')
+  throw new Error(passwordError(error.code))
 }

@@ -1,3 +1,4 @@
+import { tError } from '../i18n'
 import { useEffect, useState } from 'react'
 import {
   DEFAULT_DIRECTION,
@@ -38,7 +39,7 @@ export function useProjects(options: GetProjectsOptions = {}) {
       .catch(
         (e: unknown) =>
           !cancelled &&
-          setResult({ key, error: e instanceof Error ? e.message : 'Failed to load projects' }),
+          setResult({ key, error: e instanceof Error ? e.message : tError('loadProjects') }),
       )
     return () => {
       cancelled = true

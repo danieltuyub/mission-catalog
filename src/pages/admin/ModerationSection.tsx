@@ -1,15 +1,27 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAdminConversationId } from '../../hooks/useRoute'
 import { useUsers } from '../../hooks/useUsers'
 import { listAllConversations, listThread, type ModerationConversation } from '../../services/messages'
 import type { Message } from '../../types'
 import { Empty, LoadError, Loading } from './ui'
 
-const whenFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+/** Day, month and time in the current language. */
+function useWhen() {
+  const { i18n } = useTranslation()
+  const format = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return (iso: string) => format.format(new Date(iso))
+}
 
-const title = (c: ModerationConversation) => c.projectName ?? c.pinTitle ?? 'Conversación directa'
+function useTitle() {
+  const { t } = useTranslation('admin')
+  return (c: ModerationConversation) => c.projectName ?? c.pinTitle ?? t('moderation.direct')
+}
 
 function Thread({ conversation, userA, userB }: { conversation: ModerationConversation; userA: string; userB: string }) {
+  const { t } = useTranslation('admin')
+  const when = useWhen()
+  const title = useTitle()
   const [messages, setMessages] = useState<Message[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -17,19 +29,19 @@ function Thread({ conversation, userA, userB }: { conversation: ModerationConver
     let cancelled = false
     listThread(conversation.id).then(
       (loaded) => !cancelled && setMessages(loaded),
-      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : 'Error'),
+      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : t('error')),
     )
     return () => {
       cancelled = true
     }
-  }, [conversation.id])
+  }, [conversation.id, t])
 
   return (
     <>
       <header className="flex items-center gap-3 border-b border-stone-100 px-4 py-3">
         <a
           href="#/admin/mensajes"
-          aria-label="Volver a las conversaciones"
+          aria-label={t('moderation.back')}
           className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage md:hidden"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -51,7 +63,7 @@ function Thread({ conversation, userA, userB }: { conversation: ModerationConver
             {error}
           </p>
         )}
-        {!messages && !error && <p className="py-6 text-center text-stone-500">Cargando…</p>}
+        {!messages && !error && <p className="py-6 text-center text-stone-500">{t('loading')}</p>}
         {messages?.map((m) => {
           const first = m.sender_id === conversation.userA
           return (
@@ -59,19 +71,22 @@ function Thread({ conversation, userA, userB }: { conversation: ModerationConver
               <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${first ? 'bg-white text-stone-800 ring-1 ring-black/5' : 'bg-brand-primary text-brand-blush'}`}>
                 <p className={`mb-0.5 text-[11px] font-medium ${first ? 'text-stone-500' : 'text-brand-blush/70'}`}>{m.sender_name || (first ? userA : userB)}</p>
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                <p className={`mt-1 text-right text-[11px] ${first ? 'text-stone-400' : 'text-brand-blush/60'}`}>{whenFormat.format(new Date(m.created_at))}</p>
+                <p className={`mt-1 text-right text-[11px] ${first ? 'text-stone-400' : 'text-brand-blush/60'}`}>{when(m.created_at)}</p>
               </div>
             </div>
           )
         })}
       </div>
-      <p className="border-t border-stone-100 px-4 py-2 text-center text-xs text-stone-500">Solo lectura: moderación</p>
+      <p className="border-t border-stone-100 px-4 py-2 text-center text-xs text-stone-500">{t('moderation.readOnly')}</p>
     </>
   )
 }
 
 /** "Mensajes": every conversation, read only. Opening one does not mark anything as read. */
 export default function ModerationSection() {
+  const { t } = useTranslation('admin')
+  const when = useWhen()
+  const title = useTitle()
   const activeId = useAdminConversationId()
   const { nameOf } = useUsers()
   const [conversations, setConversations] = useState<ModerationConversation[] | null>(null)
@@ -86,23 +101,23 @@ export default function ModerationSection() {
         setConversations(list)
         setError(null)
       },
-      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : 'Error'),
+      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : t('error')),
     )
     return () => {
       cancelled = true
     }
-  }, [version])
+  }, [version, t])
 
   if (error && !conversations) return <LoadError message={error} onRetry={() => setVersion((v) => v + 1)} />
   if (!conversations) return <Loading />
-  if (conversations.length === 0) return <Empty>Aún no hay conversaciones.</Empty>
+  if (conversations.length === 0) return <Empty>{t('moderation.none')}</Empty>
 
   const active = conversations.find((c) => c.id === activeId)
 
   return (
     <div className="grid gap-4 md:grid-cols-[20rem_minmax(0,1fr)]">
       <nav
-        aria-label="Conversaciones"
+        aria-label={t('moderation.list')}
         className={`${activeId ? 'hidden md:block' : ''} max-h-[34rem] overflow-y-auto rounded-2xl bg-white shadow ring-1 ring-black/5`}
       >
         <ul className="divide-y divide-stone-100">
@@ -117,7 +132,7 @@ export default function ModerationSection() {
                   <span title={title(c)} className="truncate text-sm font-medium text-brand-primary">
                     {title(c)}
                   </span>
-                  <span className="shrink-0 text-xs text-stone-400">{whenFormat.format(new Date(c.lastMessageAt))}</span>
+                  <span className="shrink-0 text-xs text-stone-400">{when(c.lastMessageAt)}</span>
                 </div>
                 <p className="truncate text-xs text-stone-500">
                   {nameOf(c.userA)} ↔ {nameOf(c.userB)}
@@ -129,14 +144,14 @@ export default function ModerationSection() {
         </ul>
       </nav>
       <section
-        aria-label="Conversación"
+        aria-label={t('moderation.conversation')}
         className={`${activeId ? 'flex' : 'hidden md:flex'} h-[34rem] flex-col overflow-hidden rounded-2xl bg-white shadow ring-1 ring-black/5`}
       >
         {active ? (
           <Thread key={active.id} conversation={active} userA={nameOf(active.userA)} userB={nameOf(active.userB)} />
         ) : (
           <p className="m-auto px-6 text-center text-stone-500">
-            {activeId ? 'No se encontró esta conversación.' : 'Elige una conversación para leerla.'}
+            {activeId ? t('moderation.notFound') : t('moderation.choose')}
           </p>
         )}
       </section>

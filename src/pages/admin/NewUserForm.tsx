@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { createUser, ROLES, type Role } from '../../services/adminUsers'
+import { useTranslation } from 'react-i18next'
+import { createUser, ROLES, roleLabel, type Role } from '../../services/adminUsers'
 import { MIN_PASSWORD_LENGTH } from '../../services/accountService'
 import { generatePassword } from '../../services/passwords'
 import { showToast } from '../../services/toast'
@@ -15,6 +16,7 @@ const MAX_PASSWORD_LENGTH = 72
 
 /** "Nuevo usuario": an account with a temporary password the admin hands over (until emails can be sent). */
 export default function NewUserForm({ onCreated, onClose }: Props) {
+  const { t } = useTranslation('admin')
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -28,7 +30,7 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (saving) return
-    if (password.length < MIN_PASSWORD_LENGTH) return setError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`)
+    if (password.length < MIN_PASSWORD_LENGTH) return setError(t('newUser.tooShort', { count: MIN_PASSWORD_LENGTH }))
     setSaving(true)
     setError(null)
     try {
@@ -36,7 +38,7 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
       setCreated({ email: email.trim(), password })
       onCreated()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el usuario')
+      setError(err instanceof Error ? err.message : t('newUser.failed'))
     }
     setSaving(false)
   }
@@ -53,39 +55,40 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text)
-      showToast('Copiado')
+      showToast(t('newUser.copied'))
     } catch {
-      showToast('No se pudo copiar: selecciónalo y cópialo a mano')
+      showToast(t('newUser.copyFailed'))
     }
   }
 
   if (created) {
     return (
-      <section aria-label="Usuario creado" className={`${card} space-y-3`}>
-        <h3 className="font-semibold text-brand-primary">Usuario creado</h3>
+      <section aria-label={t('newUser.created')} className={`${card} space-y-3`}>
+        <h3 className="font-semibold text-brand-primary">{t('newUser.created')}</h3>
         <p className="text-sm text-stone-600">
-          Entrégale estos datos. <strong className="font-medium">La contraseña no se vuelve a mostrar</strong>; al entrar por primera vez le pedirá elegir una propia.
+          {t('newUser.handOver')} <strong className="font-medium">{t('newUser.passwordOnce')}</strong>
+          {t('newUser.handOverEnd')}
         </p>
         <dl className="space-y-2 text-sm">
           {[
-            ['Correo', created.email],
-            ['Contraseña temporal', created.password],
-          ].map(([label, value]) => (
-            <div key={label} className="flex flex-wrap items-center gap-2">
+            ['email', t('newUser.email'), created.email, t('newUser.copyEmail')],
+            ['password', t('newUser.tempPassword'), created.password, t('newUser.copyPassword')],
+          ].map(([key, label, value, copyLabel]) => (
+            <div key={key} className="flex flex-wrap items-center gap-2">
               <dt className="w-40 text-stone-500">{label}</dt>
               <dd className="rounded-md bg-stone-100 px-2 py-1 font-mono text-stone-900 select-all">{value}</dd>
-              <button type="button" onClick={() => copy(value)} aria-label={`Copiar ${label.toLowerCase()}`} className={ghostButton}>
-                Copiar
+              <button type="button" onClick={() => copy(value)} aria-label={copyLabel} className={ghostButton}>
+                {t('newUser.copy')}
               </button>
             </div>
           ))}
         </dl>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className={primaryButton}>
-            Listo
+            {t('newUser.done')}
           </button>
           <button type="button" onClick={another} className={ghostButton}>
-            Crear otro
+            {t('newUser.another')}
           </button>
         </div>
       </section>
@@ -93,11 +96,11 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
   }
 
   return (
-    <form onSubmit={submit} aria-label="Nuevo usuario" className={`${card} space-y-3`}>
-      <h3 className="font-semibold text-brand-primary">Nuevo usuario</h3>
+    <form onSubmit={submit} aria-label={t('newUser.title')} className={`${card} space-y-3`}>
+      <h3 className="font-semibold text-brand-primary">{t('newUser.title')}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm text-stone-600 sm:col-span-2">
-          Correo
+          {t('newUser.email')}
           <input
             type="email"
             required
@@ -109,25 +112,25 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
           />
         </label>
         <label className="block text-sm text-stone-600">
-          Nombre
+          {t('newUser.firstName')}
           <input value={firstName} maxLength={80} onChange={(e) => setFirstName(e.target.value)} className={`${inputClass} mt-1 w-full`} />
         </label>
         <label className="block text-sm text-stone-600">
-          Apellido
+          {t('newUser.lastName')}
           <input value={lastName} maxLength={80} onChange={(e) => setLastName(e.target.value)} className={`${inputClass} mt-1 w-full`} />
         </label>
         <label className="block text-sm text-stone-600">
-          Rol
+          {t('newUser.role')}
           <select value={role} onChange={(e) => setRole(e.target.value as Role)} className={`${inputClass} mt-1 w-full`}>
             {ROLES.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.label}
+                {roleLabel(r.id)}
               </option>
             ))}
           </select>
         </label>
         <div className="text-sm text-stone-600">
-          <label htmlFor="new-user-password">Contraseña temporal</label>
+          <label htmlFor="new-user-password">{t('newUser.tempPassword')}</label>
           <div className="mt-1 flex gap-2">
             <input
               id="new-user-password"
@@ -140,13 +143,13 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
               className={`${inputClass} min-w-0 flex-1 font-mono`}
             />
             <button type="button" onClick={() => setPassword(generatePassword())} className={ghostButton}>
-              Regenerar
+              {t('newUser.regenerate')}
             </button>
           </div>
         </div>
       </div>
       <p className="text-xs text-stone-500">
-        La cuenta queda confirmada y, al entrar por primera vez, el usuario deberá elegir su propia contraseña.
+        {t('newUser.note')}
       </p>
       {error && (
         <p role="alert" className="text-sm text-red-700">
@@ -155,10 +158,10 @@ export default function NewUserForm({ onCreated, onClose }: Props) {
       )}
       <div className="flex gap-2">
         <button type="submit" disabled={saving} className={primaryButton}>
-          {saving ? 'Creando…' : 'Crear usuario'}
+          {saving ? t('newUser.creating') : t('newUser.create')}
         </button>
         <button type="button" onClick={onClose} disabled={saving} className={ghostButton}>
-          Cancelar
+          {t('cancel')}
         </button>
       </div>
     </form>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Pagination from '../../components/Pagination'
 import PinAttributeFields from '../../components/PinAttributeFields'
 import PlaceFields from '../../components/PlaceFields'
@@ -24,8 +25,8 @@ import { Chips, ConfirmButton, Empty, LoadError, Loading } from './ui'
 import { card, dateFormat, inputClass, primaryButton } from './styles'
 
 const STATUS_CHIP = {
-  approved: { label: 'Aprobada', chip: 'bg-green-100 text-green-800' },
-  rejected: { label: 'Rechazada', chip: 'bg-red-100 text-red-800' },
+  approved: { chip: 'bg-green-100 text-green-800' },
+  rejected: { chip: 'bg-red-100 text-red-800' },
 } as const
 
 /** Place to settle before approving (the requester's is the starting point), and the two decisions. */
@@ -42,6 +43,7 @@ function RequestReview({
   onApprove: (edits: PinEdits) => void
   onReject: () => void
 }) {
+  const { t } = useTranslation('admin')
   const [place, setPlace] = useState<Place>(request)
   const [attrs, setAttrs] = useState({ kind: request.kind ?? '', languages: request.languages })
   return (
@@ -69,9 +71,9 @@ function RequestReview({
           onClick={() => onApprove({ ...canonicalPlace(place, known), kind: attrs.kind as PinKind, languages: attrs.languages })}
           className={primaryButton}
         >
-          {busy === request.id ? 'Publicando…' : 'Aprobar'}
+          {busy === request.id ? t('requests.publishing') : t('requests.approve')}
         </button>
-        <ConfirmButton label="Rechazar" confirmLabel="Sí, rechazar" disabled={busy !== null} onConfirm={onReject} />
+        <ConfirmButton label={t('requests.reject')} confirmLabel={t('requests.yesReject')} disabled={busy !== null} onConfirm={onReject} />
       </div>
     </div>
   )
@@ -79,6 +81,7 @@ function RequestReview({
 
 /** "Solicitudes de pines": what members propose. Approving publishes the pin on the map. */
 export default function PinRequestsSection() {
+  const { t } = useTranslation('admin')
   const { nameOf } = useUsers()
   const [filter, setFilter] = useState<ReviewFilter>('pending')
   const [page, setPage] = useState(1)
@@ -114,21 +117,21 @@ export default function PinRequestsSection() {
           setError(null)
         }
       },
-      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : 'Error'),
+      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : t('error')),
     )
     return () => {
       cancelled = true
     }
-  }, [filter, page, version])
+  }, [filter, page, version, t])
 
   async function review(request: PinRequest, action: 'approve' | 'reject', edits?: PinEdits) {
     setBusy(request.id)
     try {
       if (action === 'approve') await approveRequest(request, edits)
       else await rejectRequest(request.id)
-      showToast(action === 'approve' ? 'Pin publicado en el mapa' : 'Solicitud rechazada')
+      showToast(action === 'approve' ? t('requests.published') : t('requests.rejectedToast'))
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo completar la acción')
+      showToast(e instanceof Error ? e.message : t('requests.actionFailed'))
     }
     // Moved to the other list, or reviewed by someone else already: show what is true now.
     reload()
@@ -142,24 +145,24 @@ export default function PinRequestsSection() {
   const totalPages = Math.max(Math.ceil(total / REVIEW_PAGE_SIZE), 1)
 
   return (
-    <section aria-label="Solicitudes de pines" className="space-y-4">
+    <section aria-label={t('requests.label')} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <Chips
-          label="Estado"
+          label={t('requests.state')}
           value={filter}
           onChange={(next) => {
             setFilter(next)
             setPage(1)
           }}
           options={[
-            { id: 'pending', label: 'Pendientes', count: pending },
-            { id: 'reviewed', label: 'Revisadas', count: reviewed },
+            { id: 'pending', label: t('requests.pending'), count: pending },
+            { id: 'reviewed', label: t('requests.reviewed'), count: reviewed },
           ]}
         />
         {totalPages > 1 && <Pagination page={Math.min(page, totalPages)} totalPages={totalPages} onChange={setPage} />}
       </div>
       {shown.length === 0 ? (
-        <Empty>{filter === 'pending' ? 'No hay solicitudes pendientes.' : 'Aún no hay solicitudes revisadas.'}</Empty>
+        <Empty>{filter === 'pending' ? t('requests.nonePending') : t('requests.noneReviewed')}</Empty>
       ) : (
         <ul className="space-y-3">
           {shown.map((r) => (
@@ -172,7 +175,7 @@ export default function PinRequestsSection() {
                   </h3>
                   {r.status !== 'pending' && (
                     <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${STATUS_CHIP[r.status].chip}`}>
-                      {STATUS_CHIP[r.status].label}
+                      {t(`requests.${r.status}`)}
                     </span>
                   )}
                 </div>

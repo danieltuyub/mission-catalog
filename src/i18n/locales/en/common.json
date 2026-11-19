@@ -62,5 +62,20 @@
   },
   "message": {
     "send": "Send message"
-  }
+  },
+  "saved": {
+    "loadFailed": "Could not load your saved projects",
+    "removed": "Project removed from saved",
+    "undo": "Undo",
+    "saved": "Project saved",
+    "removeFailed": "Could not remove the project from saved",
+    "saveFailed": "Could not save the project",
+    "signIn": "Sign in to save projects",
+    "noPermission": "Your account is not allowed to save projects"
+  },
+  "user": {
+    "deleted": "Deleted user",
+    "unassigned": "Unassigned"
+  },
+  "noResults": "No results"
 }
