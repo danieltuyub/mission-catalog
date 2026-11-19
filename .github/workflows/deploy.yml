@@ -1,0 +1,112 @@
+# Lint and tests on every push and pull request; a push to main, or a manual run, also builds and publishes to the VPS.
+#
+# Publishing: the build is uploaded to <VPS_PATH>/releases/<commit>/ and the `current` link is switched to it
+# in one step, so nginx never serves a half-copied folder and going back is pointing `current` at an older release.
+# Setup of the server and the secrets: README, "Deploy (GitHub Actions + nginx)".
+name: CI and deploy
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, types and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # Scripts are skipped: the `supabase` CLI would download its binary, and nothing here needs it.
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npx tsc -b
+      - run: npm test
+        env:
+          # The tests mock Supabase; these only satisfy the client's check that the variables exist.
+          VITE_SUPABASE_URL: http://localhost:54321
+          VITE_SUPABASE_ANON_KEY: test
+
+  deploy:
+    name: Build and publish
+    needs: check
+    # A push to main, or a manual run (Actions tab -> Run workflow) of whichever branch is chosen there.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment: production
+    # One deploy at a time; a newer push waits instead of cancelling one that is already copying.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      RELEASES_TO_KEEP: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx vite build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Prepare SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # The server's key is pinned: a changed or unknown host fails the deploy instead of being trusted.
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload the release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH }}
+        run: |
+          # The path is parsed by the remote shell: keep it to plain characters.
+          case "$VPS_PATH" in
+            /*) ;;
+            *) echo "VPS_PATH must be an absolute path" >&2; exit 1 ;;
+          esac
+          case "$VPS_PATH" in
+            *[!A-Za-z0-9_./-]*) echo "VPS_PATH may only contain letters, digits and _ . / -" >&2; exit 1 ;;
+          esac
+          SSH="ssh -p $VPS_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          $SSH "$VPS_USER@$VPS_HOST" "mkdir -p -- $VPS_PATH/releases/$GITHUB_SHA"
+          rsync -az --delete -e "$SSH" dist/ "$VPS_USER@$VPS_HOST:$VPS_PATH/releases/$GITHUB_SHA/"
+
+      - name: Switch to the new release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH }}
+        run: |
+          SSH="ssh -p $VPS_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          $SSH "$VPS_USER@$VPS_HOST" 'bash -s' -- "$VPS_PATH" "$GITHUB_SHA" "$RELEASES_TO_KEEP" <<'REMOTE'
+          set -euo pipefail
+          base=$1; sha=$2; keep=$3
+          cd "$base"
+          # A link is replaced by renaming another one over it: that is atomic, `ln -sfn` alone is not.
+          ln -sfn "releases/$sha" current.new
+          mv -T current.new current
+          # Older releases go, never the one now in use.
+          now=$(readlink current)
+          ls -1dt releases/*/ | sed 's:/$::' | tail -n +"$((keep + 1))" | { grep -vxF "$now" || true; } | xargs -r rm -rf --
+          echo "Published $sha"
+          REMOTE
