@@ -19,6 +19,8 @@ export interface AdminUser {
   role: Role | null
   createdAt: string
   lastSignInAt: string | null
+  /** Blocked until this moment (ISO); null when never blocked. May be in the past: see `blockState`. */
+  bannedUntil: string | null
 }
 
 interface UserRow {
@@ -29,6 +31,7 @@ interface UserRow {
   roles: string[]
   created_at: string
   last_sign_in_at: string | null
+  banned_until?: string | null
 }
 
 const FAILED = 'No se pudo completar la acción. Inténtalo de nuevo.'
@@ -52,6 +55,7 @@ export async function listUsers(): Promise<AdminUser[]> {
     role: highest(r.roles),
     createdAt: r.created_at,
     lastSignInAt: r.last_sign_in_at,
+    bannedUntil: r.banned_until ?? null,
   }))
 }
 
@@ -59,6 +63,26 @@ export async function setUserRole(userId: string, role: Role): Promise<void> {
   const { error } = await supabase.rpc('admin_set_user_role', { target: userId, new_role: role })
   if (!error) return
   if (error.message.includes('own_role')) throw new Error('No puedes cambiar tu propio rol')
+  throw new Error(FAILED)
+}
+
+/** "Indefinitely" is a date this far away: the database has no other way to say "no end". */
+export const INDEFINITE = '2999-01-01T00:00:00Z'
+
+export type BlockState = { kind: 'active' } | { kind: 'until'; until: Date } | { kind: 'indefinite' }
+
+export function blockState(u: Pick<AdminUser, 'bannedUntil'>, now = new Date()): BlockState {
+  if (!u.bannedUntil) return { kind: 'active' }
+  const until = new Date(u.bannedUntil)
+  if (until <= now) return { kind: 'active' }
+  return until >= new Date(INDEFINITE) ? { kind: 'indefinite' } : { kind: 'until', until }
+}
+
+/** Blocks the account until `until`, or lifts the block with null (admins only). */
+export async function setUserBan(userId: string, until: Date | null): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_user_ban', { target: userId, until_ts: until ? until.toISOString() : null })
+  if (!error) return
+  if (error.message.includes('own_ban')) throw new Error('No puedes bloquear tu propia cuenta')
   throw new Error(FAILED)
 }
 

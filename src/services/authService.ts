@@ -79,6 +79,7 @@ export function getAuthSnapshot(): AuthState {
 export async function signIn(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
   if (!error) return
+  if (error.code === 'user_banned') throw new Error('Tu cuenta está bloqueada. Contacta a un administrador.')
   throw new Error(
     error.code === 'invalid_credentials'
       ? 'Correo o contraseña incorrectos'

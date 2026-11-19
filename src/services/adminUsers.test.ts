@@ -26,7 +26,7 @@ vi.mock('./supabaseClient', () => ({
   },
 }))
 
-import { createUser, listUsers, setUserRole, updateUserName, userLabel } from './adminUsers'
+import { INDEFINITE, blockState, createUser, listUsers, setUserBan, setUserRole, updateUserName, userLabel } from './adminUsers'
 
 beforeEach(() => {
   sb.rpc.mockReset()
@@ -52,6 +52,29 @@ describe('listUsers', () => {
   it('fails with a message ready to show', async () => {
     sb.rpc.mockResolvedValue({ data: null, error: { message: 'forbidden' } })
     await expect(listUsers()).rejects.toThrow('No se pudieron cargar los usuarios')
+  })
+})
+
+describe('blocking', () => {
+  it('reads a block as active, timed or indefinite, and ignores one that already ended', () => {
+    const now = new Date('2026-06-01T00:00:00Z')
+    expect(blockState({ bannedUntil: null }, now)).toEqual({ kind: 'active' })
+    expect(blockState({ bannedUntil: '2026-05-01T00:00:00Z' }, now)).toEqual({ kind: 'active' })
+    expect(blockState({ bannedUntil: '2026-07-01T00:00:00Z' }, now)).toEqual({ kind: 'until', until: new Date('2026-07-01T00:00:00Z') })
+    expect(blockState({ bannedUntil: INDEFINITE }, now)).toEqual({ kind: 'indefinite' })
+  })
+
+  it('blocks and lifts through the database function', async () => {
+    sb.rpc.mockResolvedValue({ error: null })
+    await setUserBan('u1', new Date('2999-01-01T00:00:00Z'))
+    expect(sb.rpc).toHaveBeenCalledWith('admin_set_user_ban', { target: 'u1', until_ts: '2999-01-01T00:00:00.000Z' })
+    await setUserBan('u1', null)
+    expect(sb.rpc).toHaveBeenLastCalledWith('admin_set_user_ban', { target: 'u1', until_ts: null })
+  })
+
+  it('explains that your own account cannot be blocked', async () => {
+    sb.rpc.mockResolvedValue({ error: { message: 'own_ban' } })
+    await expect(setUserBan('me', null)).rejects.toThrow('No puedes bloquear tu propia cuenta')
   })
 })
 

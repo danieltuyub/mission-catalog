@@ -4,7 +4,7 @@ import FormSelect from '../../components/FormSelect'
 import Pagination from '../../components/Pagination'
 import { useAuth } from '../../hooks/useAuth'
 import { useUsers } from '../../hooks/useUsers'
-import { ROLES, roleLabel, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
+import { INDEFINITE, ROLES, blockState, roleLabel, setUserBan, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
 import { showToast } from '../../services/toast'
 import NewUserForm from './NewUserForm'
 import { Empty, LoadError, Loading, SearchBox } from './ui'
@@ -12,10 +12,30 @@ import { card, dateFormat, ghostButton, inputClass, matches, primaryButton } fro
 
 const PAGE_SIZE = 10
 
+const DAY = 86_400_000
+/** What the "Acceso" field can ask for. `keep` only exists while the account is blocked. */
+const ACCESS = [
+  { id: 'none', label: 'Activo' },
+  { id: '1d', label: 'Bloqueado 1 día', days: 1 },
+  { id: '7d', label: 'Bloqueado 7 días', days: 7 },
+  { id: '30d', label: 'Bloqueado 30 días', days: 30 },
+  { id: 'forever', label: 'Bloqueado indefinidamente' },
+] as const
+type Access = 'keep' | (typeof ACCESS)[number]['id']
+
+/** "hasta 5 dic 2026" / "indefinidamente", for a blocked account; null when it is active. */
+function blockText(u: AdminUser): string | null {
+  const state = blockState(u)
+  if (state.kind === 'active') return null
+  return state.kind === 'indefinite' ? 'indefinidamente' : `hasta ${dateFormat.format(state.until)}`
+}
+
 function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: boolean; onSaved: () => void; onCancel: () => void }) {
   const [first, setFirst] = useState(user.firstName)
   const [last, setLast] = useState(user.lastName)
   const [role, setRole] = useState<Role | ''>(user.role ?? '')
+  const blocked = blockText(user)
+  const [access, setAccess] = useState<Access>(blocked ? 'keep' : 'none')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,6 +47,12 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
     try {
       if (first !== user.firstName || last !== user.lastName) await updateUserName(user.id, first, last)
       if (role && role !== user.role) await setUserRole(user.id, role)
+      if (access !== 'keep' && !(access === 'none' && !blocked)) {
+        const choice = ACCESS.find((a) => a.id === access)
+        const until =
+          access === 'none' ? null : access === 'forever' ? new Date(INDEFINITE) : new Date(Date.now() + (choice && 'days' in choice ? choice.days : 1) * DAY)
+        await setUserBan(user.id, until)
+      }
       onSaved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar')
@@ -36,7 +62,7 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
 
   return (
     <form onSubmit={submit} aria-label={`Editar a ${user.email}`} className="space-y-3 border-t border-stone-100 pt-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block text-sm text-stone-600">
           Nombre
           <input value={first} maxLength={80} onChange={(e) => setFirst(e.target.value)} className={`${inputClass} mt-1 w-full`} />
@@ -62,6 +88,23 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
             ))}
           </FormSelect>
         </label>
+        <label className="block text-sm text-stone-600">
+          Acceso
+          <FormSelect
+            value={access}
+            disabled={self}
+            title={self ? 'No puedes bloquear tu propia cuenta' : undefined}
+            onChange={(e) => setAccess(e.target.value as Access)}
+            className={`${inputClass} mt-1 w-full`}
+          >
+            {blocked && <option value="keep">Bloqueado {blocked}</option>}
+            {ACCESS.map((a) => (
+              <option key={a.id} value={a.id}>
+                {blocked && a.id === 'none' ? 'Reactivar' : a.label}
+              </option>
+            ))}
+          </FormSelect>
+        </label>
       </div>
       {error && (
         <p role="alert" className="text-sm text-red-700">
@@ -80,7 +123,7 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
   )
 }
 
-/** "Usuarios": create accounts, edit anyone's name or role. Disabling accounts comes later. */
+/** "Usuarios": create accounts, edit anyone's name or role, block accounts. Disabling accounts comes later. */
 export default function UsersSection() {
   const { userId } = useAuth()
   const { users, loading, error, reload } = useUsers()
@@ -146,6 +189,9 @@ export default function UsersSection() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
+                    {blockText(u) && (
+                      <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">Bloqueado {blockText(u)}</span>
+                    )}
                     <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">{roleLabel(u.role)}</span>
                     <button
                       type="button"

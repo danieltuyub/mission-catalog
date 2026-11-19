@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const svc = vi.hoisted(() => ({
   listUsers: vi.fn(),
   setUserRole: vi.fn(),
+  setUserBan: vi.fn(),
   updateUserName: vi.fn(),
   createUser: vi.fn(),
   listRequestsPage: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock('../../services/adminUsers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../services/adminUsers')>()),
   listUsers: svc.listUsers,
   setUserRole: svc.setUserRole,
+  setUserBan: svc.setUserBan,
   updateUserName: svc.updateUserName,
   createUser: svc.createUser,
 }))
@@ -104,6 +106,7 @@ const user = (over: object) => ({
   role: 'subscriber',
   createdAt: '2026-01-01T00:00:00Z',
   lastSignInAt: null,
+  bannedUntil: null,
   ...over,
 })
 const USERS = [user({}), user({ id: 'u2', email: 'leo@x.com', firstName: 'Leo', lastName: '', role: 'creator' }), user({ id: 'admin-1', email: 'a@b.com', firstName: 'Yo', lastName: '', role: 'admin' })]
@@ -172,6 +175,36 @@ describe('UsersSection', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Guardar' }))
     expect(svc.updateUserName).toHaveBeenCalledWith('u1', 'Anita', 'Paz')
     expect(svc.setUserRole).not.toHaveBeenCalled()
+  })
+
+  it('blocks an account indefinitely, and only calls what changed', async () => {
+    svc.setUserBan.mockResolvedValue(undefined)
+    render(<UsersSection />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar a Ana Paz' }))
+    const form = await screen.findByRole('form', { name: 'Editar a ana@x.com' })
+    await userEvent.selectOptions(within(form).getByRole('combobox', { name: 'Acceso' }), 'forever')
+    await userEvent.click(within(form).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(svc.setUserBan).toHaveBeenCalledWith('u1', new Date('2999-01-01T00:00:00Z')))
+    expect(svc.setUserRole).not.toHaveBeenCalled()
+  })
+
+  it('shows blocked accounts and lifts the block', async () => {
+    svc.setUserBan.mockResolvedValue(undefined)
+    svc.listUsers.mockResolvedValue([user({ bannedUntil: '2999-01-01T00:00:00Z' })])
+    render(<UsersSection />)
+    expect(await screen.findByText('Bloqueado indefinidamente')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Editar a Ana Paz' }))
+    const access = await screen.findByRole('combobox', { name: 'Acceso' })
+    expect(access).toHaveValue('keep')
+    await userEvent.selectOptions(access, 'none')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(svc.setUserBan).toHaveBeenCalledWith('u1', null))
+  })
+
+  it('does not let an admin block their own account', async () => {
+    render(<UsersSection />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar a Yo' }))
+    expect(await screen.findByRole('combobox', { name: 'Acceso' })).toBeDisabled()
   })
 
   it('filters by name or email', async () => {

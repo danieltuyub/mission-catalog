@@ -39,6 +39,11 @@ describe('signIn', () => {
     await expect(signIn('a@b.com', 'x')).rejects.toThrow('Correo o contraseña incorrectos')
   })
 
+  it('tells a blocked account why it cannot sign in', async () => {
+    sb.signInWithPassword.mockResolvedValue({ error: { code: 'user_banned' } })
+    await expect(signIn('a@b.com', 'x')).rejects.toThrow('Tu cuenta está bloqueada')
+  })
+
   it('uses a generic message for other errors', async () => {
     sb.signInWithPassword.mockResolvedValue({ error: { code: 'unexpected_failure' } })
     await expect(signIn('a@b.com', 'x')).rejects.toThrow('No se pudo iniciar sesión')
