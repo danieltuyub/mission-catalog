@@ -8,8 +8,8 @@ export const CARD_HEIGHT_REM = 14
 export const CARD_GAP_REM = 1.25
 
 export const SORT_OPTIONS = [
-  { value: 'name', label: 'Nombre' },
-  { value: 'created_at', label: 'Fecha' },
+  { value: 'name', key: 'sort.name' },
+  { value: 'created_at', key: 'sort.created_at' },
 ] as const
 
 /** Wait before querying after a filter checkbox changes. */

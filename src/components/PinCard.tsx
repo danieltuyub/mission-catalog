@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { pinImageUrl } from '../services/pinService'
 import PinDetails from './PinDetails'
 import type { Pin } from '../types'
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function PinCard({ pin, onClose, onEdit }: Props) {
+  const { t } = useTranslation('map')
   const [shown, setShown] = useState<Pin | null>(pin)
   const [entered, setEntered] = useState(false)
   const [height, setHeight] = useState<number | null>(null)
@@ -71,7 +73,7 @@ export default function PinCard({ pin, onClose, onEdit }: Props) {
 
   return (
     <aside
-      aria-label="Detalle del pin"
+      aria-label={t('card.label')}
       className={`absolute right-4 top-4 z-[1000] max-h-[calc(100%-2rem)] w-80 max-w-[calc(100%-2rem)] overflow-y-auto rounded-xl bg-white p-4 shadow-xl ring-1 ring-black/5 transition-[opacity,translate] ease-out motion-reduce:translate-x-0 motion-reduce:transition-opacity ${
         visible
           ? 'translate-x-0 opacity-100 duration-[180ms]'
@@ -83,8 +85,8 @@ export default function PinCard({ pin, onClose, onEdit }: Props) {
           <button
             type="button"
             onClick={() => onEdit(shown)}
-            aria-label="Editar"
-            title="Editar"
+            aria-label={t('actions.edit', { ns: 'common' })}
+            title={t('actions.edit', { ns: 'common' })}
             className="flex size-8 items-center justify-center rounded-full text-gray-500 hover:bg-brand-blush/60 hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
           >
             <svg
@@ -104,8 +106,8 @@ export default function PinCard({ pin, onClose, onEdit }: Props) {
         <button
           type="button"
           onClick={onClose}
-          aria-label="Cerrar"
-          title="Cerrar"
+          aria-label={t('actions.close', { ns: 'common' })}
+          title={t('actions.close', { ns: 'common' })}
           className="flex size-8 items-center justify-center rounded-full text-gray-500 hover:bg-brand-blush/60 hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
         >
           <svg
@@ -144,11 +146,11 @@ export default function PinCard({ pin, onClose, onEdit }: Props) {
             />
           ) : (
             <div className="mt-3 flex h-36 items-center justify-center rounded-lg border border-dashed border-brand-sage/70 bg-brand-blush/30 text-sm text-brand-primary/60">
-              Foto
+              {t('card.photo')}
             </div>
           )}
 
-          <p className="mt-3 text-sm text-gray-700">{shown.description || 'Sin descripción'}</p>
+          <p className="mt-3 text-sm text-gray-700">{shown.description || t('card.noDescription')}</p>
 
           <PinDetails pin={shown} />
         </div>

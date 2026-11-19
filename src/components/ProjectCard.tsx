@@ -1,20 +1,19 @@
+import { useTranslation } from 'react-i18next'
 import { projectUrl, type EditOrigin } from '../services/editOrigin'
 import { projectPhotos } from '../services/projectImages'
 import type { Project } from '../types'
 import EditProjectLink from './EditProjectLink'
 import SaveProjectButton from './SaveProjectButton'
-import { STATUS_META } from './projectStatus'
+import { STATUS_META, useStatusLabel } from './projectStatus'
 
 const EMPTY = '—'
 
-const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' })
-
-const formatDate = (dateString?: string | null) => {
+const formatDate = (dateString: string | null | undefined, language: string) => {
   if (!dateString) return null
   const date = new Date(dateString)
   // If the date is invalid (NaN timestamp), return null
   if (isNaN(date.getTime())) return null
-  return dateFormat.format(date)
+  return new Intl.DateTimeFormat(language, { dateStyle: 'long', timeZone: 'UTC' }).format(date)
 }
 
 interface Props {
@@ -41,15 +40,17 @@ export default function ProjectCard({
   onToggleSaved,
   saveDisabled = false,
 }: Props) {
+  const { t, i18n } = useTranslation('projects')
+  const statusLabel = useStatusLabel()
   const status = STATUS_META[project.status]
   const cover = projectPhotos(project)[0]
   const details = [
-    { label: 'País', value: project.country },
-    { label: 'Región', value: project.region },
-    { label: 'Encargado', value: project.responsible },
+    { label: t('card.country'), value: project.country },
+    { label: t('card.region'), value: project.region },
+    { label: t('card.responsible'), value: project.responsible },
     {
-      label: 'Inicio',
-      value: formatDate(project.started_at),
+      label: t('card.started'),
+      value: formatDate(project.started_at, i18n.language),
     },
   ]
 
@@ -99,7 +100,7 @@ export default function ProjectCard({
           </a>
         </h3>
         <p className="mt-1 line-clamp-2 min-h-10 text-sm text-stone-500">
-          {project.description || 'Sin descripción'}
+          {project.description || t('card.noDescription')}
         </p>
 
         <dl className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-y-1 text-sm">
@@ -119,7 +120,7 @@ export default function ProjectCard({
         <span
           className={`mt-4 self-end rounded-full px-3 py-1 text-xs font-medium sm:absolute sm:bottom-5 sm:right-5 sm:mt-0 ${status.chip}`}
         >
-          {status.label}
+          {statusLabel(project.status)}
         </span>
       </div>
     </article>

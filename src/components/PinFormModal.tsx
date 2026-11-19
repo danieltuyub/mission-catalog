@@ -1,5 +1,6 @@
 import type { LatLngTuple } from 'leaflet'
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { validateImage } from '../services/imageUtils'
 import { isValidCountry } from '../services/countries'
 import { canonicalPlace, EMPTY_PLACE } from '../services/pinPlace'
@@ -39,7 +40,8 @@ interface Props {
 }
 
 export default function PinFormModal({ lat, lng, exactPosition, pin, request = false, known = [], contact, onSubmit, onCancel }: Props) {
-  const heading = pin ? 'Editar pin' : request ? 'Solicitar pin' : 'Nuevo pin'
+  const { t } = useTranslation('map')
+  const heading = pin ? t('form.edit') : request ? t('form.request') : t('form.new')
   const [title, setTitle] = useState(pin?.title ?? '')
   const [description, setDescription] = useState(pin?.description ?? '')
   const [place, setPlace] = useState(pin ?? EMPTY_PLACE)
@@ -91,7 +93,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
         contact: pin && contact ? contactId : undefined,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : request ? 'No se pudo enviar la solicitud' : 'No se pudo guardar el pin')
+      setError(err instanceof Error ? err.message : request ? t('form.failedRequest') : t('form.failedSave'))
       setSaving(false)
     }
   }
@@ -116,7 +118,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
           )}
           {request && (
             <p className="rounded-md bg-brand-blush/40 px-3 py-2 text-sm text-brand-primary">
-              Un administrador revisará tu solicitud antes de publicar el pin.
+              {t('form.reviewNote')}
             </p>
           )}
         </div>
@@ -124,7 +126,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
         <div className="grid flex-1 gap-x-6 gap-y-3 overflow-y-auto px-5 py-3 md:grid-cols-2">
           <div className="space-y-3">
             <label className="block text-sm text-gray-700">
-              Título
+              {t('form.title')}
               <input
                 autoFocus
                 required
@@ -135,7 +137,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
             </label>
 
             <label className="block text-sm text-gray-700">
-              Descripción
+              {t('form.description')}
               <textarea
                 rows={3}
                 value={description}
@@ -145,7 +147,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
             </label>
 
             <label className="block text-sm text-gray-700">
-              Imagen
+              {t('form.image')}
               <input
                 type="file"
                 accept="image/*"
@@ -154,14 +156,14 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
               />
             </label>
             {image ? (
-              <img src={image.url} alt="Vista previa" className="h-32 w-full rounded-lg object-cover" />
+              <img src={image.url} alt={t('form.preview')} className="h-32 w-full rounded-lg object-cover" />
             ) : (
               pin?.image_path &&
               !removed && (
                 <div className="relative">
                   <img
                     src={pinImageUrl(pin.image_path)}
-                    alt="Imagen actual"
+                    alt={t('form.currentImage')}
                     className="h-32 w-full rounded-lg object-cover"
                   />
                   <button
@@ -169,7 +171,7 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
                     onClick={() => setRemoved(true)}
                     className="absolute right-2 top-2 rounded-full bg-white/90 px-3 py-1 text-xs text-gray-700 shadow hover:bg-white"
                   >
-                    Quitar imagen
+                    {t('form.removeImage')}
                   </button>
                 </div>
               )
@@ -195,20 +197,20 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
 
             {pin && contact && (
               <label className="block text-sm text-gray-700">
-                Contacto
+                {t('form.contact')}
                 <FormSelect
                   value={contactId}
                   onChange={(e) => setContactId(e.target.value)}
                   className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-brand-sage focus:ring-1 focus:ring-brand-sage"
                 >
-                  <option value="">Sin contacto</option>
+                  <option value="">{t('form.noContact')}</option>
                   {contact.options.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.name}
                     </option>
                   ))}
                 </FormSelect>
-                <span className="mt-1 block text-xs text-gray-500">Recibe los mensajes enviados desde este pin.</span>
+                <span className="mt-1 block text-xs text-gray-500">{t('form.contactHint')}</span>
               </label>
             )}
 
@@ -227,14 +229,20 @@ export default function PinFormModal({ lat, lng, exactPosition, pin, request = f
             disabled={saving}
             className="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
           >
-            Cancelar
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button
             type="submit"
             disabled={saving || !title.trim() || !isValidCountry(place.country, pin?.country) || !isPinKind(attrs.kind)}
             className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90 disabled:opacity-50"
           >
-            {request ? (saving ? 'Enviando…' : 'Enviar solicitud') : saving ? 'Guardando…' : 'Guardar'}
+            {request
+              ? saving
+                ? t('actions.sending', { ns: 'common' })
+                : t('form.sendRequest')
+              : saving
+                ? t('actions.saving', { ns: 'common' })
+                : t('actions.save', { ns: 'common' })}
           </button>
         </div>
       </form>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import Pagination from '../../components/Pagination'
 import Select from '../../components/Select'
-import { STATUS_META } from '../../components/projectStatus'
+import { STATUS_META, useStatusLabel } from '../../components/projectStatus'
 import { useAdminEditProjectId, useAdminNewProject } from '../../hooks/useRoute'
 import { useUsers } from '../../hooks/useUsers'
 import { ADMIN_NEW_PROJECT_URL, ADMIN_PROJECTS_URL, adminEditUrl, projectUrl } from '../../services/editOrigin'
@@ -77,6 +77,7 @@ const placeOf = (p: AdminProject) => [p.region, p.country].filter(Boolean).join(
 
 /** "Proyectos": the whole catalog in a compact list, with owner assignment and removal. */
 export default function ProjectsAdminSection() {
+  const statusLabel = useStatusLabel()
   const { nameOf } = useUsers()
   const [projects, setProjects] = useState<AdminProject[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -106,10 +107,10 @@ export default function ProjectsAdminSection() {
 
   const sorted = useMemo(() => {
     const value = (p: AdminProject) =>
-      sort.key === 'name' ? p.name : sort.key === 'status' ? STATUS_META[p.status].label : sort.key === 'place' ? placeOf(p) : sort.key === 'creator' ? nameOf(p.created_by ?? null) : p.updated_at
+      sort.key === 'name' ? p.name : sort.key === 'status' ? statusLabel(p.status) : sort.key === 'place' ? placeOf(p) : sort.key === 'creator' ? nameOf(p.created_by ?? null) : p.updated_at
     const list = [...(projects ?? [])].sort((a, b) => collator.compare(value(a), value(b)) || collator.compare(a.name, b.name))
     return sort.descending ? list.reverse() : list
-  }, [projects, sort, nameOf])
+  }, [projects, sort, nameOf, statusLabel])
 
   function sortBy(key: AdminProjectSortKey) {
     const next = { key, descending: sort.key === key ? !sort.descending : false }
@@ -214,7 +215,7 @@ export default function ProjectsAdminSection() {
                   </div>
                   {/* A card: the values run together in lines. A table: each one is a cell of the grid. */}
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 @3xl:contents">
-                    <Cell label="Estado">{status.label}</Cell>
+                    <Cell label="Estado">{statusLabel(p.status)}</Cell>
                     <Cell label="Lugar" className={COLUMNS[2].show}>
                       {place || '—'}
                     </Cell>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { getPageWindow } from './pageWindow'
 
 interface Props {
@@ -7,10 +8,10 @@ interface Props {
 }
 
 const ARROWS = {
-  first: { label: 'Primera página', path: 'M11 17l-5-5 5-5M18 17l-5-5 5-5' },
-  prev: { label: 'Página anterior', path: 'M15 18l-6-6 6-6' },
-  next: { label: 'Página siguiente', path: 'M9 6l6 6-6 6' },
-  last: { label: 'Última página', path: 'M13 17l5-5-5-5M6 17l5-5-5-5' },
+  first: { path: 'M11 17l-5-5 5-5M18 17l-5-5 5-5' },
+  prev: { path: 'M15 18l-6-6 6-6' },
+  next: { path: 'M9 6l6 6-6 6' },
+  last: { path: 'M13 17l5-5-5-5M6 17l5-5-5-5' },
 }
 
 const BASE =
@@ -27,7 +28,9 @@ function ArrowButton({
   onClick: () => void
   className?: string
 }) {
-  const { label, path } = ARROWS[kind]
+  const { t } = useTranslation()
+  const { path } = ARROWS[kind]
+  const label = t(`pagination.${kind}`)
   return (
     <li className={className}>
       <button
@@ -56,13 +59,14 @@ function ArrowButton({
 }
 
 export default function Pagination({ page, totalPages, onChange }: Props) {
+  const { t } = useTranslation()
   if (totalPages <= 1) return null
 
   const atStart = page <= 1
   const atEnd = page >= totalPages
 
   return (
-    <nav aria-label="Paginación">
+    <nav aria-label={t('pagination.label')}>
       <ul className="flex h-10 items-center gap-0.5 rounded-full bg-white p-1 ring-1 ring-black/5">
         {/* First/last are hidden on small screens to save width. */}
         <ArrowButton kind="first" disabled={atStart} onClick={() => onChange(1)} className="hidden sm:block" />
@@ -72,7 +76,7 @@ export default function Pagination({ page, totalPages, onChange }: Props) {
             <button
               type="button"
               onClick={() => onChange(p)}
-              aria-label={`Página ${p}`}
+              aria-label={t('pagination.page', { page: p })}
               aria-current={p === page ? 'page' : undefined}
               className={`${BASE} ${
                 p === page

@@ -144,7 +144,7 @@ describe('ProjectsPage', () => {
       await userEvent.click(screen.getByRole('checkbox', { name: 'Solo míos' }))
       await waitFor(() => expect(lastOptions().filters.mine).toBe(true))
       expect(lastOptions().page).toBe(1)
-      expect(screen.getByLabelText('1 filtros activos')).toBeInTheDocument()
+      expect(screen.getByLabelText('1 filtro activo')).toBeInTheDocument()
 
       await userEvent.click(screen.getByRole('button', { name: 'Limpiar' }))
       await waitFor(() => expect(lastOptions().filters.mine).toBeUndefined())

@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { FilterOptions, ProjectFilters as Filters } from '../services/projectService'
 import { countActiveFilters } from '../services/filterUtils'
 import { FILTER_SEARCH_THRESHOLD } from '../pages/projectsConfig'
-import { STATUS_META, STATUS_ORDER } from './projectStatus'
+import { STATUS_META, STATUS_ORDER, useStatusLabel } from './projectStatus'
 
 interface Option {
   value: string
@@ -70,6 +71,7 @@ function CheckboxGroup({
   searchable?: boolean
   note?: string
 }) {
+  const { t } = useTranslation('projects')
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState(false)
   const q = normalize(query.trim())
@@ -91,8 +93,8 @@ function CheckboxGroup({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label={`Buscar en ${legend}`}
-            placeholder="Buscar…"
+            aria-label={t('filter.searchIn', { legend })}
+            placeholder={t('filter.search')}
             className="mb-2 h-9 w-full rounded-full bg-stone-50 px-4 text-sm text-brand-primary ring-1 ring-black/5 placeholder:text-stone-400 focus-visible:outline-2 focus-visible:outline-brand-sage"
           />
         )}
@@ -115,7 +117,7 @@ function CheckboxGroup({
             </li>
           ))}
         </ul>
-        {q && visible.length === 0 && <p className="text-sm text-stone-400">Sin resultados</p>}
+        {q && visible.length === 0 && <p className="text-sm text-stone-400">{t('filter.noResults')}</p>}
         {collapsible && (hidden > 0 || expanded) && (
           <button
             type="button"
@@ -123,7 +125,7 @@ function CheckboxGroup({
             onClick={() => setExpanded((e) => !e)}
             className="mt-1 rounded-full px-2 py-1 text-xs text-stone-500 underline underline-offset-2 hover:bg-brand-blush/50 hover:text-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage"
           >
-            {expanded ? 'Ver menos' : `Ver ${hidden} más`}
+            {expanded ? t('filter.showLess') : t('filter.showMore', { count: hidden })}
           </button>
         )}
       </fieldset>
@@ -180,13 +182,11 @@ export default function ProjectFilters({
   onClear,
   showMine = false,
 }: Props) {
+  const { t } = useTranslation('projects')
+  const statusLabel = useStatusLabel()
   const active = countActiveFilters(filters)
-  const note = optionsError
-    ? 'No se pudieron cargar las opciones'
-    : optionsLoading
-      ? 'Cargando…'
-      : undefined
-  const emptyNote = (values: string[] = []) => note ?? (values.length === 0 ? 'Sin opciones' : undefined)
+  const note = optionsError ? t('filter.loadFailed') : optionsLoading ? t('filter.loadingOptions') : undefined
+  const emptyNote = (values: string[] = []) => note ?? (values.length === 0 ? t('filter.noOptions') : undefined)
 
   return (
     <form
@@ -196,10 +196,10 @@ export default function ProjectFilters({
     >
       <div className="flex items-center justify-between gap-2">
         <h2 id="filters-title" className="flex items-center gap-2 text-lg font-semibold text-brand-primary">
-          Filtros
+          {t('filter.title')}
           {active > 0 && (
             <span
-              aria-label={`${active} filtros activos`}
+              aria-label={t('filter.active', { count: active })}
               className="rounded-full bg-brand-primary px-2 py-0.5 text-xs font-medium text-brand-blush"
             >
               {active}
@@ -210,8 +210,8 @@ export default function ProjectFilters({
           type="button"
           onClick={onClear}
           disabled={active === 0}
-          aria-label="Limpiar"
-          title="Limpiar filtros"
+          aria-label={t('filter.clear')}
+          title={t('filter.clearTitle')}
           className="flex size-9 items-center justify-center rounded-full text-brand-primary enabled:hover:bg-brand-blush/70 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand-sage"
         >
           <svg
@@ -243,14 +243,14 @@ export default function ProjectFilters({
               </svg>
             }
           >
-            Solo míos
+            {t('filter.mine')}
           </Chip>
         </div>
       )}
 
       <div className="border-t border-stone-100 pt-4">
         <fieldset className="min-w-0">
-          <Legend icon="status">Estado</Legend>
+          <Legend icon="status">{t('filter.status')}</Legend>
           <div className="flex flex-wrap gap-2">
             {STATUS_ORDER.map((status) => (
               <Chip
@@ -259,14 +259,14 @@ export default function ProjectFilters({
                 checked={filters.status.includes(status)}
                 onChange={() => onChange({ ...filters, status: toggle(filters.status, status) })}
               >
-                {STATUS_META[status].label}
+                {statusLabel(status)}
               </Chip>
             ))}
           </div>
         </fieldset>
       </div>
       <CheckboxGroup
-        legend="País"
+        legend={t('filter.country')}
         icon="country"
         options={asOptions(options?.country)}
         selected={filters.country}
@@ -275,7 +275,7 @@ export default function ProjectFilters({
         note={emptyNote(options?.country)}
       />
       <CheckboxGroup
-        legend="Región"
+        legend={t('filter.region')}
         icon="region"
         options={asOptions(options?.region)}
         selected={filters.region}
@@ -284,7 +284,7 @@ export default function ProjectFilters({
         note={emptyNote(options?.region)}
       />
       <CheckboxGroup
-        legend="Encargado"
+        legend={t('filter.responsible')}
         icon="responsible"
         options={asOptions(options?.responsible)}
         selected={filters.responsible}

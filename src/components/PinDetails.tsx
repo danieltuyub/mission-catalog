@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { loginUrl } from '../services/authRedirect'
 import { can } from '../services/permissions'
@@ -11,8 +12,6 @@ import { placeLabel } from '../services/pinPlace'
 import { sharePin } from '../services/shareProject'
 import { showToast } from '../services/toast'
 import type { Pin } from '../types'
-
-const sinceFormat = new Intl.DateTimeFormat('es', { month: 'long', year: 'numeric' })
 
 function Icon({ d }: { d: string }) {
   return (
@@ -45,6 +44,7 @@ function Row({ icon, label, children }: { icon: keyof typeof ICONS; label: strin
 
 /** What a pin is, where, who speaks there, since when, and how to share it. Rows without data are left out. */
 export default function PinDetails({ pin }: { pin: Pin }) {
+  const { t, i18n } = useTranslation('map')
   const place = placeLabel(pin)
   const since = new Date(pin.created_at)
   const auth = useAuth()
@@ -66,21 +66,21 @@ export default function PinDetails({ pin }: { pin: Pin }) {
 
   function startMessage() {
     if (auth.loading) return
-    if (!auth.userId) showToast('Inicia sesión para enviar mensajes', {
-        label: 'Iniciar sesión',
+    if (!auth.userId) showToast(t('details.signInToMessage'), {
+        label: t('details.signIn'),
         // Back to this pin, not just the map.
         onClick: () => {
           window.location.hash = loginUrl(`/mapa?pin=${encodeURIComponent(pin.id)}`)
         },
       })
-    else if (!can(auth, 'messages.send')) showToast('Tu cuenta no puede enviar mensajes')
+    else if (!can(auth, 'messages.send')) showToast(t('details.cannotSend'))
     else setComposing(true)
   }
 
   async function share() {
     const result = await sharePin(pin.id, pin.title)
-    if (result === 'copied') showToast('Enlace copiado')
-    else if (result === 'failed') showToast('No se pudo compartir el pin')
+    if (result === 'copied') showToast(t('details.linkCopied'))
+    else if (result === 'failed') showToast(t('details.shareFailed'))
   }
 
   return (
@@ -89,15 +89,15 @@ export default function PinDetails({ pin }: { pin: Pin }) {
         <button
           type="button"
           disabled={contact === null || contact === 'none'}
-          title={contact === 'none' ? 'Este pin aún no tiene un contacto asignado' : undefined}
+          title={contact === 'none' ? t('details.noContactTitle') : undefined}
           onClick={startMessage}
           className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand-primary text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d={ICONS.mail} />
           </svg>
-          Enviar mensaje
-          {contact === 'none' && <span className="text-xs font-normal opacity-80">· Sin contacto</span>}
+          {t('message.send', { ns: 'common' })}
+          {contact === 'none' && <span className="text-xs font-normal opacity-80">· {t('details.noContact')}</span>}
         </button>
       )}
 
@@ -108,8 +108,8 @@ export default function PinDetails({ pin }: { pin: Pin }) {
           onSend={async (body) => {
             await sendPinMessage(pin.id, body)
             setComposing(false)
-            showToast('Mensaje enviado', {
-              label: 'Ver mensajes',
+            showToast(t('details.sent'), {
+              label: t('details.viewMessages'),
               onClick: () => {
                 window.location.hash = '#/cuenta/mensajes'
               },
@@ -120,7 +120,7 @@ export default function PinDetails({ pin }: { pin: Pin }) {
 
       <dl className="mt-4 space-y-3.5">
         {pin.languages.length > 0 && (
-          <Row icon="globe" label={pin.languages.length > 1 ? 'Idiomas' : 'Idioma'}>
+          <Row icon="globe" label={pin.languages.length > 1 ? t('details.languages') : t('details.language')}>
             <ul className="mt-1 flex flex-wrap gap-1.5">
               {pin.languages.map((code) => (
                 <li key={code} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
@@ -131,23 +131,23 @@ export default function PinDetails({ pin }: { pin: Pin }) {
           </Row>
         )}
         {pin.kind && (
-          <Row icon="tag" label="Tipo">
+          <Row icon="tag" label={t('details.type')}>
             {kindLabel(pin.kind)}
           </Row>
         )}
         {place && (
-          <Row icon="place" label="Lugar">
+          <Row icon="place" label={t('details.place')}>
             {place}
           </Row>
         )}
         {!Number.isNaN(since.getTime()) && (
-          <Row icon="calendar" label="En el mapa desde">
-            {sinceFormat.format(since)}
+          <Row icon="calendar" label={t('details.since')}>
+            {new Intl.DateTimeFormat(i18n.language, { month: 'long', year: 'numeric' }).format(since)}
           </Row>
         )}
-        <Row icon="share" label="Compartir este pin">
+        <Row icon="share" label={t('details.share')}>
           <button type="button" onClick={share} className="text-brand-primary underline underline-offset-2 hover:text-brand-sage focus-visible:outline-2 focus-visible:outline-brand-sage">
-            Copiar enlace
+            {t('details.copyLink')}
           </button>
         </Row>
       </dl>

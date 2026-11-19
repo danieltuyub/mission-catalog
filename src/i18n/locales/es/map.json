@@ -1,0 +1,93 @@
+{
+  "notice": {
+    "placing": "Toca el mapa para elegir la ubicación",
+    "locating": "Buscando tu ubicación…",
+    "denied": "Permiso de ubicación denegado. Se muestra la vista por defecto.",
+    "unavailable": "No se pudo determinar tu ubicación.",
+    "unsupported": "Este navegador no admite geolocalización."
+  },
+  "pinNotFound": "No se encontró ese pin",
+  "signInToRequest": "Inicia sesión para solicitar un pin",
+  "requestSent": "Solicitud enviada. Un administrador la revisará.",
+  "card": {
+    "label": "Detalle del pin",
+    "photo": "Foto",
+    "noDescription": "Sin descripción"
+  },
+  "details": {
+    "signInToMessage": "Inicia sesión para enviar mensajes",
+    "signIn": "Iniciar sesión",
+    "cannotSend": "Tu cuenta no puede enviar mensajes",
+    "linkCopied": "Enlace copiado",
+    "shareFailed": "No se pudo compartir el pin",
+    "noContactTitle": "Este pin aún no tiene un contacto asignado",
+    "noContact": "Sin contacto",
+    "sent": "Mensaje enviado",
+    "viewMessages": "Ver mensajes",
+    "language": "Idioma",
+    "languages": "Idiomas",
+    "type": "Tipo",
+    "place": "Lugar",
+    "since": "En el mapa desde",
+    "share": "Compartir este pin",
+    "copyLink": "Copiar enlace"
+  },
+  "locate": {
+    "unavailable": "Geolocalización no disponible",
+    "go": "Ir a mi ubicación"
+  },
+  "request": {
+    "cancel": "Cancelar",
+    "start": "Solicitar pin"
+  },
+  "composer": {
+    "about": "Sobre {{name}}",
+    "message": "Mensaje",
+    "failed": "No se pudo enviar el mensaje"
+  },
+  "form": {
+    "new": "Nuevo pin",
+    "request": "Solicitar pin",
+    "edit": "Editar pin",
+    "reviewNote": "Un administrador revisará tu solicitud antes de publicar el pin.",
+    "title": "Título",
+    "description": "Descripción",
+    "image": "Imagen",
+    "preview": "Vista previa",
+    "currentImage": "Imagen actual",
+    "removeImage": "Quitar imagen",
+    "contact": "Contacto",
+    "noContact": "Sin contacto",
+    "contactHint": "Recibe los mensajes enviados desde este pin.",
+    "sendRequest": "Enviar solicitud",
+    "failedRequest": "No se pudo enviar la solicitud",
+    "failedSave": "No se pudo guardar el pin"
+  },
+  "fields": {
+    "kind": "Tipo",
+    "chooseKind": "Elige un tipo",
+    "languages": "Idiomas",
+    "remove": "Quitar {{name}}",
+    "maxLanguages": "Máximo {{count}} idiomas",
+    "searchLanguage": "Buscar idioma",
+    "region": "Estado o región",
+    "city": "Ciudad",
+    "country": "País",
+    "countries": "Países",
+    "chooseCountry": "Elige un país de la lista"
+  },
+  "kind": {
+    "person": "Persona",
+    "family": "Familia",
+    "house_church": "Iglesia en casa",
+    "church": "Iglesia"
+  },
+  "localLanguage": {
+    "nah": "Náhuatl",
+    "quc": "K'iche'",
+    "kek": "Q'eqchi'",
+    "mam": "Mam",
+    "cak": "Kaqchikel",
+    "yua": "Maya yucateco"
+  }
+}

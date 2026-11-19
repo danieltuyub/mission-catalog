@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { MAX_MESSAGE_LENGTH } from '../services/messages'
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function MessageComposer({ projectName, onSend, onCancel }: Props) {
+  const { t } = useTranslation('map')
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +32,7 @@ export default function MessageComposer({ projectName, onSend, onCancel }: Props
     try {
       await onSend(text)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje')
+      setError(err instanceof Error ? err.message : t('composer.failed'))
       setSending(false)
     }
   }
@@ -50,15 +52,15 @@ export default function MessageComposer({ projectName, onSend, onCancel }: Props
       >
         <div>
           <h2 id="message-title" className="text-lg font-semibold text-brand-primary">
-            Enviar mensaje
+            {t('message.send', { ns: 'common' })}
           </h2>
           <p title={projectName} className="truncate text-sm text-stone-500">
-            Sobre {projectName}
+            {t('composer.about', { name: projectName })}
           </p>
         </div>
 
         <label className="block text-sm text-gray-700">
-          Mensaje
+          {t('composer.message')}
           <textarea
             autoFocus
             required
@@ -86,14 +88,14 @@ export default function MessageComposer({ projectName, onSend, onCancel }: Props
             disabled={sending}
             className="h-10 rounded-full px-4 text-sm text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-brand-sage disabled:opacity-50"
           >
-            Cancelar
+            {t('actions.cancel', { ns: 'common' })}
           </button>
           <button
             type="submit"
             disabled={sending || !text}
             className="h-10 rounded-full bg-brand-primary px-5 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
           >
-            {sending ? 'Enviando…' : 'Enviar'}
+            {sending ? t('actions.sending', { ns: 'common' }) : t('actions.send', { ns: 'common' })}
           </button>
         </div>
       </form>

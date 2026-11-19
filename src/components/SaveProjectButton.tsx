@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface Props {
   saved: boolean
   onToggle: () => void
@@ -8,12 +10,13 @@ interface Props {
 
 /** Round heart icon that saves or unsaves a project. Same look as the edit icon; position it with `className`. */
 export default function SaveProjectButton({ saved, onToggle, disabled = false, className = '' }: Props) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
       aria-pressed={saved}
-      aria-label="Guardar proyecto"
-      title={saved ? 'Quitar de guardados' : 'Guardar proyecto'}
+      aria-label={t('project.save')}
+      title={saved ? t('project.unsave') : t('project.save')}
       disabled={disabled}
       onClick={onToggle}
       className={`inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:cursor-wait disabled:opacity-60 disabled:hover:bg-white ${className}`}

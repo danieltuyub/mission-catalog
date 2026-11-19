@@ -1,0 +1,93 @@
+{
+  "notice": {
+    "placing": "Tap the map to choose the location",
+    "locating": "Locating you…",
+    "denied": "Location permission denied. Showing the default view.",
+    "unavailable": "Could not determine your location.",
+    "unsupported": "This browser does not support geolocation."
+  },
+  "pinNotFound": "That pin was not found",
+  "signInToRequest": "Sign in to request a pin",
+  "requestSent": "Request sent. An administrator will review it.",
+  "card": {
+    "label": "Pin details",
+    "photo": "Photo",
+    "noDescription": "No description"
+  },
+  "details": {
+    "signInToMessage": "Sign in to send messages",
+    "signIn": "Sign in",
+    "cannotSend": "Your account cannot send messages",
+    "linkCopied": "Link copied",
+    "shareFailed": "Could not share the pin",
+    "noContactTitle": "This pin has no contact assigned yet",
+    "noContact": "No contact",
+    "sent": "Message sent",
+    "viewMessages": "View messages",
+    "language": "Language",
+    "languages": "Languages",
+    "type": "Type",
+    "place": "Place",
+    "since": "On the map since",
+    "share": "Share this pin",
+    "copyLink": "Copy link"
+  },
+  "locate": {
+    "unavailable": "Geolocation not available",
+    "go": "Go to my location"
+  },
+  "request": {
+    "cancel": "Cancel",
+    "start": "Request pin"
+  },
+  "composer": {
+    "about": "About {{name}}",
+    "message": "Message",
+    "failed": "Could not send the message"
+  },
+  "form": {
+    "new": "New pin",
+    "request": "Request pin",
+    "edit": "Edit pin",
+    "reviewNote": "An administrator will review your request before the pin is published.",
+    "title": "Title",
+    "description": "Description",
+    "image": "Image",
+    "preview": "Preview",
+    "currentImage": "Current image",
+    "removeImage": "Remove image",
+    "contact": "Contact",
+    "noContact": "No contact",
+    "contactHint": "Receives the messages sent from this pin.",
+    "sendRequest": "Send request",
+    "failedRequest": "Could not send the request",
+    "failedSave": "Could not save the pin"
+  },
+  "fields": {
+    "kind": "Type",
+    "chooseKind": "Choose a type",
+    "languages": "Languages",
+    "remove": "Remove {{name}}",
+    "maxLanguages": "Maximum {{count}} languages",
+    "searchLanguage": "Search language",
+    "region": "State or region",
+    "city": "City",
+    "country": "Country",
+    "countries": "Countries",
+    "chooseCountry": "Choose a country from the list"
+  },
+  "kind": {
+    "person": "Person",
+    "family": "Family",
+    "house_church": "House church",
+    "church": "Church"
+  },
+  "localLanguage": {
+    "nah": "Nahuatl",
+    "quc": "K'iche'",
+    "kek": "Q'eqchi'",
+    "mam": "Mam",
+    "cak": "Kaqchikel",
+    "yua": "Yucatec Maya"
+  }
+}

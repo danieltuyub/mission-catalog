@@ -27,5 +27,40 @@
     "contactUs": "Contact us",
     "about": "A map of house churches and mission projects.",
     "place": "Mérida, Yucatán"
+  },
+  "status": {
+    "open": "Open",
+    "paused": "Paused",
+    "closed": "Closed"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "first": "First page",
+    "prev": "Previous page",
+    "next": "Next page",
+    "last": "Last page",
+    "page": "Page {{page}}"
+  },
+  "sort": {
+    "asc": "Ascending order",
+    "desc": "Descending order",
+    "hint": "{{label}} (click to change)"
+  },
+  "project": {
+    "save": "Save project",
+    "unsave": "Remove from saved",
+    "edit": "Edit project"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "send": "Send",
+    "sending": "Sending…",
+    "close": "Close",
+    "edit": "Edit"
+  },
+  "message": {
+    "send": "Send message"
   }
 }

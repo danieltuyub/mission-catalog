@@ -1,0 +1,48 @@
+{
+  "title": "Projects",
+  "new": "New project",
+  "sortGroup": "Project order",
+  "sortBy": "Sort projects",
+  "sort": {
+    "name": "Name",
+    "created_at": "Date"
+  },
+  "perPage": "Projects per page",
+  "loading": "Loading projects…",
+  "loadError": "Could not load the projects: {{error}}",
+  "noMatch": "No project matches the filters",
+  "clear": "Clear filters",
+  "empty": "There are no projects yet",
+  "filters": "Filters",
+  "results_one": "{{count}} result",
+  "results_other": "{{count}} results",
+  "total_one": "{{count}} project",
+  "total_other": "{{count}} projects",
+  "card": {
+    "country": "Country",
+    "region": "Region",
+    "responsible": "Responsible",
+    "started": "Started",
+    "noDescription": "No description"
+  },
+  "filter": {
+    "title": "Filters",
+    "active_one": "{{count}} active filter",
+    "active_other": "{{count}} active filters",
+    "clear": "Clear",
+    "clearTitle": "Clear filters",
+    "mine": "Only mine",
+    "status": "Status",
+    "country": "Country",
+    "region": "Region",
+    "responsible": "Responsible",
+    "searchIn": "Search in {{legend}}",
+    "search": "Search…",
+    "noResults": "No results",
+    "showLess": "Show less",
+    "showMore": "Show {{count}} more",
+    "loadFailed": "Could not load the options",
+    "loadingOptions": "Loading…",
+    "noOptions": "No options"
+  }
+}

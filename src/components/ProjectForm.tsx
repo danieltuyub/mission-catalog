@@ -4,7 +4,7 @@ import { validateImage } from '../services/imageUtils'
 import type { ImageInput, NewProject } from '../services/projectAdmin'
 import { projectImageUrl } from '../services/projectImages'
 import type { Project, ProjectStatus } from '../types'
-import { STATUS_META, STATUS_ORDER } from './projectStatus'
+import { STATUS_ORDER, useStatusLabel } from './projectStatus'
 
 export const MAX_IMAGES = 10
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -86,6 +86,7 @@ const Icon = ({ d }: { d: string }) => (
 )
 
 export default function ProjectForm({ project, creator, onSubmit, onCancel }: Props) {
+  const statusLabel = useStatusLabel()
   const [values, setValues] = useState({
     name: project?.name ?? '',
     responsible: project?.responsible ?? '',
@@ -215,7 +216,7 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
             <FormSelect id="project-status" value={values.status} onChange={set('status')} className={control}>
               {STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_META[s].label}
+                  {statusLabel(s)}
                 </option>
               ))}
             </FormSelect>

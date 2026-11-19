@@ -27,5 +27,40 @@
     "contactUs": "Contáctanos",
     "about": "Un mapa de las iglesias en casa y proyectos misioneros.",
     "place": "Mérida, Yucatán"
+  },
+  "status": {
+    "open": "Abierto",
+    "paused": "Pausado",
+    "closed": "Cerrado"
+  },
+  "pagination": {
+    "label": "Paginación",
+    "first": "Primera página",
+    "prev": "Página anterior",
+    "next": "Página siguiente",
+    "last": "Última página",
+    "page": "Página {{page}}"
+  },
+  "sort": {
+    "asc": "Orden ascendente",
+    "desc": "Orden descendente",
+    "hint": "{{label}} (clic para cambiar)"
+  },
+  "project": {
+    "save": "Guardar proyecto",
+    "unsave": "Quitar de guardados",
+    "edit": "Editar proyecto"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "close": "Cerrar",
+    "edit": "Editar"
+  },
+  "message": {
+    "send": "Enviar mensaje"
   }
 }

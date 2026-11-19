@@ -1,6 +1,7 @@
 import FormSelect from './FormSelect'
 import { useId, useState } from 'react'
-import { LANGUAGES, languageLabel, MAX_LANGUAGES } from '../services/languages'
+import { useTranslation } from 'react-i18next'
+import { getLanguages, languageLabel, MAX_LANGUAGES } from '../services/languages'
 import { PIN_KINDS } from '../services/pinKinds'
 import Combobox from './Combobox'
 
@@ -20,9 +21,10 @@ interface Props {
 
 /** Type (required) and languages (up to 5, searchable list) of a pin. */
 export default function PinAttributeFields({ value, onChange, inputClassName, className = 'space-y-3', labelClassName = 'block text-sm' }: Props) {
+  const { t } = useTranslation('map')
   const id = useId()
   const [text, setText] = useState('')
-  const available = LANGUAGES.filter((l) => !value.languages.includes(l.code)).map((l) => ({ value: l.code, label: l.label }))
+  const available = getLanguages().filter((l) => !value.languages.includes(l.code)).map((l) => ({ value: l.code, label: l.label }))
   const full = value.languages.length >= MAX_LANGUAGES
 
   const add = (code: string) => {
@@ -34,7 +36,7 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
   return (
     <div className={className}>
       <label className={labelClassName}>
-        Tipo
+        {t('fields.kind')}
         <FormSelect
           required
           value={value.kind}
@@ -42,18 +44,18 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
           className={inputClassName}
         >
           <option value="" disabled>
-            Elige un tipo
+            {t('fields.chooseKind')}
           </option>
           {PIN_KINDS.map((k) => (
             <option key={k.id} value={k.id}>
-              {k.label}
+              {t(`kind.${k.id}`)}
             </option>
           ))}
         </FormSelect>
       </label>
 
       <div className={labelClassName}>
-        <label htmlFor={`${id}-lang`}>Idiomas</label>
+        <label htmlFor={`${id}-lang`}>{t('fields.languages')}</label>
         {value.languages.length > 0 && (
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {value.languages.map((code) => (
@@ -61,7 +63,7 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
                 {languageLabel(code)}
                 <button
                   type="button"
-                  aria-label={`Quitar ${languageLabel(code)}`}
+                  aria-label={t('fields.remove', { name: languageLabel(code) })}
                   onClick={() => remove(code)}
                   className="flex size-4 items-center justify-center rounded-full hover:bg-stone-200 focus-visible:outline-2 focus-visible:outline-brand-sage"
                 >
@@ -74,7 +76,7 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
           </ul>
         )}
         {full ? (
-          <p className="mt-1 text-xs text-gray-500">Máximo {MAX_LANGUAGES} idiomas</p>
+          <p className="mt-1 text-xs text-gray-500">{t('fields.maxLanguages', { count: MAX_LANGUAGES })}</p>
         ) : (
           <Combobox
             id={`${id}-lang`}
@@ -82,8 +84,8 @@ export default function PinAttributeFields({ value, onChange, inputClassName, cl
             onText={setText}
             onPick={add}
             options={available}
-            listLabel="Idiomas"
-            placeholder="Buscar idioma"
+            listLabel={t('fields.languages')}
+            placeholder={t('fields.searchLanguage')}
             inputClassName={inputClassName}
           />
         )}

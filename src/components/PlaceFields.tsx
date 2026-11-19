@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { useTranslation } from 'react-i18next'
 import { COUNTRIES, isValidCountry } from '../services/countries'
 import { PLACE_MAX_LENGTH, placeSuggestions, type Place } from '../services/pinPlace'
 import type { Pin } from '../types'
@@ -23,11 +24,12 @@ interface Props {
 
 /** Country (required), region and city, with the places already in use as suggestions. */
 export default function PlaceFields({ value, onChange, known, inputClassName, currentCountry = '', className = 'space-y-3', labelClassName = 'block text-sm' }: Props) {
+  const { t } = useTranslation('map')
   const id = useId()
   const suggestions = placeSuggestions(known, value)
   const fields = [
-    { key: 'region', label: 'Estado o región', options: suggestions.regions, required: false },
-    { key: 'city', label: 'Ciudad', options: suggestions.cities, required: false },
+    { key: 'region', label: t('fields.region'), options: suggestions.regions, required: false },
+    { key: 'city', label: t('fields.city'), options: suggestions.cities, required: false },
   ] as const
 
   const countryId = `${id}-country`
@@ -36,19 +38,19 @@ export default function PlaceFields({ value, onChange, known, inputClassName, cu
   return (
     <div className={className}>
       <div className={`${labelClassName} sm:col-span-2`}>
-        <label htmlFor={countryId}>País</label>
+        <label htmlFor={countryId}>{t('fields.country')}</label>
         <Combobox
           id={countryId}
           text={value.country}
           onText={(country) => onChange({ ...value, country })}
           onPick={(country) => onChange({ ...value, country })}
           options={COUNTRY_OPTIONS}
-          listLabel="Países"
+          listLabel={t('fields.countries')}
           required
           maxLength={PLACE_MAX_LENGTH}
           inputClassName={inputClassName}
         />
-        {invalidCountry && <p className="mt-1 text-xs text-red-700">Elige un país de la lista</p>}
+        {invalidCountry && <p className="mt-1 text-xs text-red-700">{t('fields.chooseCountry')}</p>}
       </div>
       {fields.map((f) => (
         <label key={f.key} className={labelClassName}>

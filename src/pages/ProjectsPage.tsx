@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import AnimatedHeight from '../components/AnimatedHeight'
 import PageHeader from '../components/PageHeader'
 import Pagination from '../components/Pagination'
@@ -45,11 +46,6 @@ import {
   SORT_OPTIONS,
 } from './projectsConfig'
 
-function resultsLabel(total: number, filtered: boolean): string {
-  if (filtered) return `${total} ${total === 1 ? 'resultado' : 'resultados'}`
-  return `${total} ${total === 1 ? 'proyecto' : 'proyectos'}`
-}
-
 interface Props {
   /** Initial projects per page (a size picked earlier in the session wins). */
   pageSize?: number
@@ -66,6 +62,8 @@ export default function ProjectsPage({
   minSlots = DEFAULT_MIN_SLOTS,
   filterDebounceMs = FILTER_DEBOUNCE_MS,
 }: Props) {
+  const { t } = useTranslation('projects')
+  const resultsLabel = (total: number, filtered: boolean) => t(filtered ? 'results' : 'total', { count: total })
   const [page, setPageState] = useState(() => loadPage() ?? 1)
   const [pageSize, setPageSize] = useState(() => loadPageSize() ?? initialPageSize)
   const [sort, setSort] = useState<ProjectSort>(() => loadSort() ?? DEFAULT_SORT)
@@ -172,7 +170,7 @@ export default function ProjectsPage({
             onClick={() => setFiltersOpen((o) => !o)}
             className="mb-5 flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage xl:hidden"
           >
-            Filtros{activeFilters > 0 && ` (${activeFilters})`}
+            {t('filters')}{activeFilters > 0 && ` (${activeFilters})`}
             <svg
               viewBox="0 0 24 24"
               aria-hidden="true"
@@ -201,7 +199,7 @@ export default function ProjectsPage({
         <div className="min-w-0">
           <PageHeader
             ref={headerRef}
-            title="Proyectos"
+            title={t('title')}
             badge={
               <p
                 role="status"
@@ -219,8 +217,8 @@ export default function ProjectsPage({
               {canCreate && (
                 <a
                   href="#/proyectos/nuevo"
-                  aria-label="Nuevo proyecto"
-                  title="Nuevo proyecto"
+                  aria-label={t('new')}
+                  title={t('new')}
                   className="inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -230,21 +228,21 @@ export default function ProjectsPage({
               )}
               <div
                 role="group"
-                aria-label="Orden de proyectos"
+                aria-label={t('sortGroup')}
                 className="flex h-10 items-center rounded-full bg-white p-1 ring-1 ring-black/5"
               >
                 <SortDirectionToggle value={direction} onChange={changeDirection} />
                 <span aria-hidden="true" className="mx-1 h-5 w-px bg-stone-200" />
                 <Select
                   bare
-                  label="Ordenar proyectos"
+                  label={t('sortBy')}
                   value={sort}
-                  options={SORT_OPTIONS}
+                  options={SORT_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
                   onChange={changeSort}
                 />
               </div>
               <Select
-                label="Proyectos por página"
+                label={t('perPage')}
                 icon={<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />}
                 value={String(pageSize)}
                 options={sizeSelectOptions}
@@ -255,28 +253,28 @@ export default function ProjectsPage({
           </PageHeader>
 
           {loading && projects.length === 0 && (
-            <p className="py-24 text-center text-stone-500">Cargando proyectos…</p>
+            <p className="py-24 text-center text-stone-500">{t('loading')}</p>
           )}
           {error && (
             <p role="alert" className="py-24 text-center text-red-700">
-              No se pudieron cargar los proyectos: {error}
+              {t('loadError', { error })}
             </p>
           )}
           {!loading && !error && projects.length === 0 && (
             <div className="py-24 text-center text-stone-500">
               {filtered ? (
                 <>
-                  <p>Ningún proyecto coincide con los filtros</p>
+                  <p>{t('noMatch')}</p>
                   <button
                     type="button"
                     onClick={clearFilters}
                     className="mt-3 rounded-full px-4 py-1.5 text-sm text-brand-primary underline hover:bg-brand-blush/70 focus-visible:outline-2 focus-visible:outline-brand-sage"
                   >
-                    Limpiar filtros
+                    {t('clear')}
                   </button>
                 </>
               ) : (
-                <p>Aún no hay proyectos</p>
+                <p>{t('empty')}</p>
               )}
             </div>
           )}

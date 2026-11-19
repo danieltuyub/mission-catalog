@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface Props {
   onClick: () => void
   /** Without a recipient: stays visible and focusable, but does nothing. Say why in `title`. */
@@ -7,13 +9,14 @@ interface Props {
 }
 
 /** Round chat icon that starts a message to the project's contact. Same look as the heart and edit icons. */
-export default function SendMessageButton({ onClick, unavailable = false, title = 'Enviar mensaje', className = '' }: Props) {
+export default function SendMessageButton({ onClick, unavailable = false, title, className = '' }: Props) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
-      aria-label="Enviar mensaje"
+      aria-label={t('message.send')}
       aria-disabled={unavailable}
-      title={title}
+      title={title ?? t('message.send')}
       onClick={unavailable ? undefined : onClick}
       className={`inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${
         unavailable ? 'cursor-not-allowed opacity-60' : 'hover:bg-brand-blush'

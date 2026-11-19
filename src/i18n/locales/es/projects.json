@@ -1,0 +1,48 @@
+{
+  "title": "Proyectos",
+  "new": "Nuevo proyecto",
+  "sortGroup": "Orden de proyectos",
+  "sortBy": "Ordenar proyectos",
+  "sort": {
+    "name": "Nombre",
+    "created_at": "Fecha"
+  },
+  "perPage": "Proyectos por página",
+  "loading": "Cargando proyectos…",
+  "loadError": "No se pudieron cargar los proyectos: {{error}}",
+  "noMatch": "Ningún proyecto coincide con los filtros",
+  "clear": "Limpiar filtros",
+  "empty": "Aún no hay proyectos",
+  "filters": "Filtros",
+  "results_one": "{{count}} resultado",
+  "results_other": "{{count}} resultados",
+  "total_one": "{{count}} proyecto",
+  "total_other": "{{count}} proyectos",
+  "card": {
+    "country": "País",
+    "region": "Región",
+    "responsible": "Encargado",
+    "started": "Inicio",
+    "noDescription": "Sin descripción"
+  },
+  "filter": {
+    "title": "Filtros",
+    "active_one": "{{count}} filtro activo",
+    "active_other": "{{count}} filtros activos",
+    "clear": "Limpiar",
+    "clearTitle": "Limpiar filtros",
+    "mine": "Solo míos",
+    "status": "Estado",
+    "country": "País",
+    "region": "Región",
+    "responsible": "Encargado",
+    "searchIn": "Buscar en {{legend}}",
+    "search": "Buscar…",
+    "noResults": "Sin resultados",
+    "showLess": "Ver menos",
+    "showMore": "Ver {{count}} más",
+    "loadFailed": "No se pudieron cargar las opciones",
+    "loadingOptions": "Cargando…",
+    "noOptions": "Sin opciones"
+  }
+}

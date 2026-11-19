@@ -1,14 +1,21 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import enCommon from './locales/en/common.json'
+import enMap from './locales/en/map.json'
+import enProjects from './locales/en/projects.json'
 import esCommon from './locales/es/common.json'
+import esMap from './locales/es/map.json'
+import esProjects from './locales/es/projects.json'
 
 export const LANGUAGES = ['es', 'en'] as const
 export type Language = (typeof LANGUAGES)[number]
 /** The base language: every key exists here first, and it is what a missing translation falls back to. */
 export const DEFAULT_LANGUAGE: Language = 'es'
 
-export const resources = { es: { common: esCommon }, en: { common: enCommon } } as const
+export const resources = {
+  es: { common: esCommon, map: esMap, projects: esProjects },
+  en: { common: enCommon, map: enMap, projects: enProjects },
+} as const
 
 const STORAGE_KEY = 'lang'
 
@@ -42,7 +49,7 @@ void i18n.use(initReactI18next).init({
   lng: initialLanguage(),
   fallbackLng: DEFAULT_LANGUAGE,
   defaultNS: 'common',
-  ns: ['common'],
+  ns: ['common', 'map', 'projects'],
   interpolation: { escapeValue: false }, // React already escapes
   initAsync: false, // resources are bundled: ready on the first render
 })

@@ -1,6 +1,7 @@
 import L, { type LatLngTuple } from 'leaflet'
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useMap } from 'react-leaflet'
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 
 /** Leaflet control (top-left, below the zoom buttons) that recenters the map on the user. */
 export default function LocateControl({ onLocate, zoom, disabled = false }: Props) {
+  const { t } = useTranslation('map')
   const map = useMap()
   const [busy, setBusy] = useState(false)
 
@@ -41,7 +43,7 @@ export default function LocateControl({ onLocate, zoom, disabled = false }: Prop
     }
   }
 
-  const label = disabled ? 'Geolocalización no disponible' : 'Ir a mi ubicación'
+  const label = disabled ? t('locate.unavailable') : t('locate.go')
 
   return createPortal(
     <a

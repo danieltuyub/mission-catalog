@@ -43,7 +43,7 @@ describe('ProjectFilters', () => {
     it('is checked and counted as an active filter when on', () => {
       setup({ showMine: true, filters: { ...EMPTY_FILTERS, mine: true } })
       expect(screen.getByRole('checkbox', { name: 'Solo míos' })).toBeChecked()
-      expect(screen.getByLabelText('1 filtros activos')).toBeInTheDocument()
+      expect(screen.getByLabelText('1 filtro activo')).toBeInTheDocument()
     })
   })
 

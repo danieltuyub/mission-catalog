@@ -8,6 +8,7 @@ import {
   useMap,
   useMapEvents,
 } from 'react-leaflet'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { useGeolocation, type GeoStatus } from '../hooks/useGeolocation'
 import { usePins } from '../hooks/usePins'
@@ -44,12 +45,12 @@ const userIcon = L.divIcon({
   html: '<div style="width:16px;height:16px;box-sizing:border-box;border-radius:9999px;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)"></div>',
 })
 
-const GEO_MESSAGES: Partial<Record<GeoStatus, string>> = {
-  loading: 'Locating you…',
-  denied: 'Location permission denied. Showing default view.',
-  unavailable: 'Could not determine your location.',
-  unsupported: 'Geolocation is not supported by this browser.',
-}
+const GEO_KEYS = {
+  loading: 'notice.locating',
+  denied: 'notice.denied',
+  unavailable: 'notice.unavailable',
+  unsupported: 'notice.unsupported',
+} as const satisfies Partial<Record<GeoStatus, string>>
 
 function FlyToPosition({ position }: { position: LatLngTuple | null }) {
   const map = useMap()
@@ -116,6 +117,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 }
 
 export default function MapView() {
+  const { t } = useTranslation('map')
   const [savedView] = useState(loadMapView)
   const { status, position, locate } = useGeolocation()
   const auth = useAuth()
@@ -144,8 +146,8 @@ export default function MapView() {
   useEffect(() => {
     if (!sharedId || sharedPin || pins.length === 0 || missingShown.current) return
     missingShown.current = true
-    showToast('No se encontró ese pin')
-  }, [sharedId, sharedPin, pins.length])
+    showToast(t('pinNotFound'))
+  }, [sharedId, sharedPin, pins.length, t])
 
   useEffect(() => {
     if (!selectedId || draft || editingId) return
@@ -167,7 +169,7 @@ export default function MapView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [placing])
 
-  const notice = placing ? 'Toca el mapa para elegir la ubicación' : (error ?? GEO_MESSAGES[status])
+  const notice = placing ? t('notice.placing') : (error ?? (status in GEO_KEYS ? t(GEO_KEYS[status as keyof typeof GEO_KEYS]) : undefined))
 
   return (
     <div className="relative h-full w-full">
@@ -260,9 +262,9 @@ export default function MapView() {
           onSubmit={async ({ image, ...data }) => {
             const place = { lat: draft.lat, lng: draft.lng }
             if (draft.request) {
-              if (!auth.userId) throw new Error('Inicia sesión para solicitar un pin')
+              if (!auth.userId) throw new Error(t('signInToRequest'))
               await requestPin(auth.userId, { ...place, ...data }, image)
-              showToast('Solicitud enviada. Un administrador la revisará.')
+              showToast(t('requestSent'))
             } else {
               const created = await addPin({ ...place, ...data }, image)
               // Whoever creates a pin answers for it until an admin changes that.

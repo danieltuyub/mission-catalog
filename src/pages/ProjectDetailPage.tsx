@@ -7,7 +7,7 @@ import SaveProjectButton from '../components/SaveProjectButton'
 import SendMessageButton from '../components/SendMessageButton'
 import ShareProjectButton from '../components/ShareProjectButton'
 import ProjectDetailSkeleton from '../components/ProjectDetailSkeleton'
-import { STATUS_META } from '../components/projectStatus'
+import { STATUS_META, useStatusLabel } from '../components/projectStatus'
 import { useDelayed } from '../hooks/useDelayed'
 import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
@@ -54,6 +54,7 @@ const linkClass =
   'underline decoration-stone-300 underline-offset-2 hover:decoration-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage'
 
 export default function ProjectDetailPage({ id }: { id: string }) {
+  const statusLabel = useStatusLabel()
   const { project, loading, error, full } = useProject(id)
   const auth = useAuth()
   const { isSaved, toggle: toggleSaved, loading: savedLoading } = useSavedProjects()
@@ -146,7 +147,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
             badge={
               status && (
                 <span className={`translate-y-0.5 rounded-full px-3 py-1 text-xs font-medium ${status.chip}`}>
-                  {status.label}
+                  {project && statusLabel(project.status)}
                 </span>
               )
             }

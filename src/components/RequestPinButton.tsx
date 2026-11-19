@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface Props {
   /** True while the user is choosing the location on the map. */
   active: boolean
@@ -6,6 +8,7 @@ interface Props {
 
 /** Map button for people who cannot create pins: starts (or cancels) choosing a spot for a request. */
 export default function RequestPinButton({ active, onToggle }: Props) {
+  const { t } = useTranslation('map')
   return (
     <button
       type="button"
@@ -18,7 +21,7 @@ export default function RequestPinButton({ active, onToggle }: Props) {
       <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {active ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 7v6M9 10h6" />}
       </svg>
-      {active ? 'Cancelar' : 'Solicitar pin'}
+      {active ? t('request.cancel') : t('request.start')}
     </button>
   )
 }

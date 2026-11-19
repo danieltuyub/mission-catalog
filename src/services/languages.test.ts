@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { LANGUAGES, languageLabel, MAX_LANGUAGES } from './languages'
+import { getLanguages, languageLabel, MAX_LANGUAGES } from './languages'
 import { isPinKind, kindLabel } from './pinKinds'
 
-describe('LANGUAGES', () => {
+describe('languages', () => {
+  const LANGUAGES = getLanguages('es')
   it('has about fifty, the most spoken first and the rest alphabetically', () => {
     expect(LANGUAGES.length).toBeGreaterThanOrEqual(50)
     expect(LANGUAGES.slice(0, 4).map((l) => l.code)).toEqual(['es', 'en', 'pt', 'fr'])
