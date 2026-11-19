@@ -202,8 +202,9 @@ export default function UsersSection() {
             const self = u.id === userId
             return (
               <li key={u.id} className={`${card} flex flex-col gap-4`}>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
+                {/* Phone: Edit stays top right, the badges go under the text. From sm: text, badges and Edit in one row. */}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 sm:flex">
+                  <div className="min-w-0 sm:flex-1">
                     <h3 className="truncate font-semibold text-brand-primary">
                       {userLabel(u)}
                       {self && <span className="ml-2 text-xs font-normal text-stone-400">{t('users.you')}</span>}
@@ -214,21 +215,21 @@ export default function UsersSection() {
                       {u.lastSignInAt && ` · ${t('users.lastAccess', { date: dateFormat.format(new Date(u.lastSignInAt)) })}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="col-span-2 row-start-2 flex flex-wrap items-center gap-2 sm:order-2 sm:mt-1.5 sm:gap-3">
                     {blockText(u) && (
                       <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t('users.blocked', { when: blockText(u) })}</span>
                     )}
                     <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">{roleLabel(u.role)}</span>
-                    <button
-                      type="button"
-                      aria-expanded={editing === u.id}
-                      aria-label={t('users.editAria', { name: userLabel(u) })}
-                      onClick={() => setEditing(editing === u.id ? null : u.id)}
-                      className={ghostButton}
-                    >
-                      {t('edit')}
-                    </button>
                   </div>
+                  <button
+                    type="button"
+                    aria-expanded={editing === u.id}
+                    aria-label={t('users.editAria', { name: userLabel(u) })}
+                    onClick={() => setEditing(editing === u.id ? null : u.id)}
+                    className={`${ghostButton} col-start-2 row-start-1 sm:order-3`}
+                  >
+                    {t('edit')}
+                  </button>
                 </div>
                 <Collapsible open={editing === u.id}>
                   <UserEditor

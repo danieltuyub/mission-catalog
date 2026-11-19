@@ -164,8 +164,8 @@ export default function AuditSection() {
               const known = (AUDIT_ACTIONS as readonly string[]).includes(e.action)
               return (
                 <li key={e.id} className="flex flex-col gap-3 px-4 py-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-brand-primary">
                         {known ? t(`audit.actions.${e.action as (typeof AUDIT_ACTIONS)[number]}`) : t('audit.unknownAction')}
                         {e.entityLabel && <span className="font-normal text-stone-600">: {e.entityLabel}</span>}
@@ -175,7 +175,7 @@ export default function AuditSection() {
                       </p>
                     </div>
                     {(e.before || e.after) && (
-                      <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : e.id)} className={ghostButton}>
+                      <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : e.id)} className={`${ghostButton} shrink-0`}>
                         {expanded ? t('audit.hide') : t('audit.details')}
                       </button>
                     )}

@@ -37,8 +37,8 @@ function RequestItem({ request }: { request: PinRequest }) {
     <li className="flex gap-4 rounded-2xl bg-white p-4 shadow ring-1 ring-black/5">
       {request.image_path && <RequestImage path={request.image_path} />}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h3 title={request.title} className="min-w-0 truncate font-semibold text-brand-primary">
+        <div className="flex items-start justify-between gap-2">
+          <h3 title={request.title} className="min-w-0 flex-1 truncate font-semibold text-brand-primary">
             {request.title}
           </h3>
           <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${status.chip}`}>{t(`requests.${request.status}`)}</span>

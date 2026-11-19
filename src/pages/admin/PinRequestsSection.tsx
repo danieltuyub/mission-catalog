@@ -169,8 +169,8 @@ export default function PinRequestsSection() {
             <li key={r.id} className={`${card} flex gap-4`}>
               {r.image_path && <RequestImage path={r.image_path} />}
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h3 title={r.title} className="min-w-0 truncate font-semibold text-brand-primary">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 title={r.title} className="min-w-0 flex-1 truncate font-semibold text-brand-primary">
                     {r.title}
                   </h3>
                   {r.status !== 'pending' && (
