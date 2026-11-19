@@ -98,7 +98,7 @@ curl -X POST "$VITE_SUPABASE_URL/functions/v1/admin-create-user" \
   -d '{"email":"nuevo@example.com","password":"Temporal-123456","firstName":"Ana","lastName":"Paz","role":"subscriber"}'
 ```
 
-## Deploy (GitHub Actions + nginx)
+## Deploy (GitHub Actions + Caddy)
 
 `.github/workflows/deploy.yml`:
 
@@ -125,18 +125,18 @@ Repository **Settings → Secrets and variables → Actions** (or the `productio
 
 ```bash
 # A user that can only write the site's folder (no sudo, no password)
-sudo adduser --disabled-password --gecos "" deploy
-sudo mkdir -p /var/www/mission-catalog && sudo chown deploy: /var/www/mission-catalog
+sudo adduser --disabled-password --gecos "" ghdeployer
+sudo mkdir -p /var/www/mission-catalog && sudo chown ghdeployer: /var/www/mission-catalog
 
 # The deploy key and its public half: see "Where each value comes from" (VPS_SSH_KEY)
 ```
 
-nginx and the certificate: see "nginx and TLS" below.
+Caddy and the certificate: see "Caddy and TLS" below.
 
 ### Going back
 
 ```bash
-ssh deploy@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -sfn releases/<commit> current.new && mv -T current.new current'
+ssh ghdeployer@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -sfn releases/<commit> current.new && mv -T current.new current'
 ```
 
 (`mv -T` is GNU: fine on Linux.) The next push to main publishes again from there.
@@ -147,16 +147,16 @@ ssh deploy@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -sfn 
 | --- | --- |
 | `VPS_HOST` | the name you ssh to (`catalog.example.com`) or the server's IP. Use the same text in `VPS_KNOWN_HOSTS` |
 | `VPS_PORT` | `sudo sshd -T \| grep '^port'` on the VPS (22 unless you changed it) |
-| `VPS_USER` | `deploy`, the user created in "Server, once" |
+| `VPS_USER` | `ghdeployer`, the user created in "Server, once" |
 | `VPS_PATH` | the folder from "Server, once": `/var/www/mission-catalog` |
-| `VPS_SSH_KEY` | on the VPS: `sudo -u deploy ssh-keygen -t ed25519 -N "" -C github-actions -f /tmp/deploy_key`, then `sudo -u deploy sh -c 'install -m 700 -d ~/.ssh && cat /tmp/deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'`, then `sudo cat /tmp/deploy_key`, paste **all of it** (with the `BEGIN`/`END` lines) into the secret and `sudo shred -u /tmp/deploy_key /tmp/deploy_key.pub` |
+| `VPS_SSH_KEY` | on the VPS: `sudo -u ghdeployer ssh-keygen -t ed25519 -N "" -C github-actions -f /tmp/deploy_key`, then `sudo -u ghdeployer sh -c 'install -m 700 -d ~/.ssh && cat /tmp/deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'`, then `sudo cat /tmp/deploy_key`, paste **all of it** (with the `BEGIN`/`END` lines) into the secret and `sudo shred -u /tmp/deploy_key /tmp/deploy_key.pub` |
 | `VPS_KNOWN_HOSTS` | on the VPS: `echo "catalog.example.com $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"`. With a port other than 22 the line starts with `[catalog.example.com]:2222` |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API (the project URL and the anon / publishable key) |
 | `SUPABASE_PROJECT_REF` | the `<ref>` in `https://<ref>.supabase.co` |
 | `SUPABASE_ACCESS_TOKEN` | Supabase → Account (your avatar) → Access Tokens → Generate new token |
 | `SUPABASE_DB_PASSWORD` | Supabase → Project Settings → Database (reset it there if lost) |
 
-The key and the known-hosts line are the only ones that need the VPS. Test the key from your own machine before pasting it: `ssh -i deploy_key -p 22 deploy@catalog.example.com 'echo ok'`.
+The key and the known-hosts line are the only ones that need the VPS. Test the key from your own machine before pasting it: `ssh -i deploy_key -p 22 ghdeployer@catalog.example.com 'echo ok'`.
 
 ### Migrations from GitHub
 
@@ -169,71 +169,53 @@ The key and the known-hosts line are the only ones that need the VPS. Test the k
 - If linking or pushing fails with a network error, the runner cannot reach the database directly (Supabase's direct host can be IPv6 only). The CLI normally goes through the pooler once linked; if it does not, apply from your machine as before.
 - The Edge Function is still deployed by hand (`npx supabase functions deploy admin-create-user`).
 
-### nginx and TLS
+### Caddy and TLS
 
-Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once".
+Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once". Caddy gets and renews the Let's Encrypt certificate by itself: no certbot.
 
-1. **DNS.** An `A` record (and `AAAA` if the server has IPv6) for `catalog.example.com` pointing at the VPS. Wait until `dig +short catalog.example.com` shows it.
-2. **Packages and firewall.**
+1. **DNS.** An `A` record (and `AAAA` if the server has IPv6) for `catalog.example.com` pointing at the VPS. Wait until `dig +short catalog.example.com` shows it. Without it the certificate cannot be issued.
+2. **Packages and firewall.** Install Caddy from its [official apt repository](https://caddyserver.com/docs/install#debian-ubuntu-raspbian), then:
 
    ```bash
-   sudo apt update && sudo apt install -y nginx
-   sudo ufw allow 'Nginx Full'   # 80 and 443 (and keep your SSH rule)
+   sudo ufw allow 80,443/tcp   # keep your SSH rule
    ```
 
-3. **Folder permissions.** nginx (`www-data`) must be able to walk into the folder and read the files:
+   Nothing else may listen on 80 or 443 (another Apache, nginx or Plesk), or Caddy cannot start.
+3. **Folder permissions.** Caddy (user `caddy`) must be able to walk into the folder and read the files:
 
    ```bash
    sudo chmod 755 /var/www /var/www/mission-catalog
    ```
 
-4. **The site, first on port 80 only.** `/etc/nginx/sites-available/mission-catalog`:
+4. **The site.** `/etc/caddy/Caddyfile`:
 
-   ```nginx
-   server {
-       listen 80;
-       listen [::]:80;
-       server_name catalog.example.com;
+   ```caddy
+   catalog.example.com {
+       root * /var/www/mission-catalog/current
+       file_server
+       encode zstd gzip
 
-       root /var/www/mission-catalog/current;
-       index index.html;
+       header {
+           Strict-Transport-Security "max-age=31536000"
+           X-Content-Type-Options "nosniff"
+           Referrer-Policy "strict-origin-when-cross-origin"
+       }
 
        # Hashed files never change: cache them for good. The page itself is re-read to see a new release.
-       location /assets/ {
-           add_header Cache-Control "public, max-age=31536000, immutable";
-       }
-       location = /index.html {
-           add_header Cache-Control "no-cache";
-       }
+       @assets path /assets/*
+       header @assets Cache-Control "public, max-age=31536000, immutable"
+       @index path /index.html
+       header @index Cache-Control "no-cache"
    }
    ```
 
    ```bash
-   sudo ln -s /etc/nginx/sites-available/mission-catalog /etc/nginx/sites-enabled/
-   sudo nginx -t && sudo systemctl reload nginx
+   sudo caddy validate --config /etc/caddy/Caddyfile
+   sudo systemctl reload caddy
    ```
 
-   The app routes with `#`: there is no rewrite to configure. `root` follows the `current` link, so a deploy needs no reload. Another site on the same VPS only needs its own `server_name` and folder. Until the first deploy `current` does not exist and nginx answers 404 or 403: that is expected.
+   The app routes with `#`: there is no rewrite to configure. `root` follows the `current` link, so a deploy needs no reload. Another site on the same VPS is one more block with its own domain and folder. Until the first deploy `current` does not exist and Caddy answers 404: that is expected. Do not add a `Content-Security-Policy` without testing: the app talks to Supabase and loads map tiles.
 
-5. **The certificate (Let's Encrypt).**
+5. **Check.** `curl -I https://catalog.example.com` answers `200` after the first deploy. `journalctl -u caddy -n 50` shows the certificate being issued, or why it failed.
 
-   ```bash
-   sudo apt install -y certbot python3-certbot-nginx
-   sudo certbot --nginx -d catalog.example.com --redirect -m you@example.com --agree-tos
-   ```
-
-   certbot adds the `listen 443 ssl` block and the certificate paths to that same file, and redirects port 80 to 443. It installs a systemd timer that renews by itself: check it with `systemctl list-timers | grep certbot` and `sudo certbot renew --dry-run`.
-
-6. **Optional hardening**, inside the 443 `server` block certbot wrote:
-
-   ```nginx
-   add_header Strict-Transport-Security "max-age=31536000" always;
-   add_header X-Content-Type-Options "nosniff" always;
-   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-   ```
-
-   `add_header` inside a `location` replaces the ones of the `server`: repeat them there if you want them on `/assets/` too. Do not add a `Content-Security-Policy` without testing: the app talks to Supabase and loads map tiles.
-
-7. **Check.** `curl -I https://catalog.example.com` answers `200` after the first deploy, and `sudo nginx -T | grep -n "server_name"` lists every site the server knows.
-
-If the site lives under a sub-path (`/catalog/`), set `base` in `vite.config.ts` first and use `alias` instead of `root`.
+If the site lives under a sub-path (`/catalog/`), set `base` in `vite.config.ts` first and replace `root`/`file_server` with `handle_path /catalog/* { root * /var/www/mission-catalog/current; file_server }`.
