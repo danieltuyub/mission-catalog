@@ -69,6 +69,7 @@
     "mismatch": "The passwords do not match",
     "passwordUpdated": "Password updated",
     "passwordFailed": "Could not change the password",
-    "minHint": "At least {{count}} characters."
+    "minHint": "At least {{count}} characters.",
+    "language": "Language"
   }
 }

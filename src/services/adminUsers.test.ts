@@ -38,14 +38,15 @@ describe('listUsers', () => {
   it('maps rows and keeps the highest role', async () => {
     sb.rpc.mockResolvedValue({
       data: [
-        { user_id: 'u1', email: 'a@b.com', first_name: 'Ana', last_name: 'Paz', roles: ['subscriber', 'creator'], created_at: 'c', last_sign_in_at: null },
+        { user_id: 'u1', email: 'a@b.com', first_name: 'Ana', last_name: 'Paz', roles: ['subscriber', 'creator'], created_at: 'c', last_sign_in_at: null, language: 'en' },
         { user_id: 'u2', email: null, first_name: '', last_name: '', roles: [], created_at: 'c', last_sign_in_at: 'l' },
       ],
       error: null,
     })
     const [a, b] = await listUsers()
     expect(sb.rpc).toHaveBeenCalledWith('admin_list_users')
-    expect(a).toMatchObject({ id: 'u1', email: 'a@b.com', role: 'creator', lastSignInAt: null })
+    expect(a).toMatchObject({ id: 'u1', email: 'a@b.com', role: 'creator', lastSignInAt: null, language: 'en' })
+    expect(b.language).toBeNull()
     expect(b).toMatchObject({ id: 'u2', email: '', role: null, lastSignInAt: 'l' })
   })
 

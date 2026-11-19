@@ -69,6 +69,7 @@
     "mismatch": "Las contraseñas no coinciden",
     "passwordUpdated": "Contraseña actualizada",
     "passwordFailed": "No se pudo cambiar la contraseña",
-    "minHint": "Mínimo {{count}} caracteres."
+    "minHint": "Mínimo {{count}} caracteres.",
+    "language": "Idioma"
   }
 }

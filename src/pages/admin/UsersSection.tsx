@@ -5,7 +5,8 @@ import FormSelect from '../../components/FormSelect'
 import Pagination from '../../components/Pagination'
 import { useAuth } from '../../hooks/useAuth'
 import { useUsers } from '../../hooks/useUsers'
-import { INDEFINITE, ROLES, blockState, roleLabel, setUserBan, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
+import { LANGUAGES, LANGUAGE_NAMES, isLanguage, type Language } from '../../i18n'
+import { INDEFINITE, ROLES, blockState, roleLabel, setUserBan, setUserLanguage, setUserRole, updateUserName, userLabel, type AdminUser, type Role } from '../../services/adminUsers'
 import { showToast } from '../../services/toast'
 import NewUserForm from './NewUserForm'
 import { Empty, LoadError, Loading, SearchBox } from './ui'
@@ -38,6 +39,7 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
   const [first, setFirst] = useState(user.firstName)
   const [last, setLast] = useState(user.lastName)
   const [role, setRole] = useState<Role | ''>(user.role ?? '')
+  const [language, setLanguageValue] = useState<Language | ''>(user.language ?? '')
   const { t } = useTranslation('admin')
   const blockText = useBlockText()
   const blocked = blockText(user)
@@ -53,6 +55,7 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
     try {
       if (first !== user.firstName || last !== user.lastName) await updateUserName(user.id, first, last)
       if (role && role !== user.role) await setUserRole(user.id, role)
+      if (language !== (user.language ?? '')) await setUserLanguage(user.id, language || null)
       if (access !== 'keep' && !(access === 'none' && !blocked)) {
         const choice = ACCESS.find((a) => a.id === access)
         const until =
@@ -68,7 +71,7 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
 
   return (
     <form onSubmit={submit} aria-label={t('users.formAria', { email: user.email })} className="space-y-3 border-t border-stone-100 pt-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block text-sm text-stone-600">
           {t('users.firstName')}
           <input value={first} maxLength={80} onChange={(e) => setFirst(e.target.value)} className={`${inputClass} mt-1 w-full`} />
@@ -107,6 +110,21 @@ function UserEditor({ user, self, onSaved, onCancel }: { user: AdminUser; self: 
             {ACCESS.map((a) => (
               <option key={a.id} value={a.id}>
                 {blocked && a.id === 'none' ? t('users.reactivate') : t(a.key)}
+              </option>
+            ))}
+          </FormSelect>
+        </label>
+        <label className="block text-sm text-stone-600">
+          {t('users.language')}
+          <FormSelect
+            value={language}
+            onChange={(e) => setLanguageValue(isLanguage(e.target.value) ? e.target.value : '')}
+            className={`${inputClass} mt-1 w-full`}
+          >
+            <option value="">{t('users.languageNone')}</option>
+            {LANGUAGES.map((l) => (
+              <option key={l} value={l} lang={l}>
+                {LANGUAGE_NAMES[l]}
               </option>
             ))}
           </FormSelect>

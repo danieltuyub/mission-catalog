@@ -1,8 +1,10 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import FormSelect from '../../components/FormSelect'
 import { useAuth } from '../../hooks/useAuth'
 import { useProfile } from '../../hooks/useProfile'
-import { changePassword, MIN_PASSWORD_LENGTH, updateProfile, type Profile } from '../../services/accountService'
+import i18n, { LANGUAGES, LANGUAGE_NAMES, currentLanguage, isLanguage, setLanguage, type Language } from '../../i18n'
+import { changePassword, MIN_PASSWORD_LENGTH, setPreferredLanguage, updateProfile, type Profile } from '../../services/accountService'
 import { setProfileNames } from '../../services/authService'
 
 const control =
@@ -43,6 +45,9 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
   const [nameMissing, setNameMissing] = useState(false)
   const [firstName, setFirstName] = useState(initial.first_name)
   const [lastName, setLastName] = useState(initial.last_name)
+  // Without a saved one, the form starts on the language in use: leaving it alone changes nothing.
+  const startLanguage = initial.language ?? currentLanguage()
+  const [language, setLanguageValue] = useState<Language>(startLanguage)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -61,7 +66,12 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
       const saved = { first_name: firstName.trim(), last_name: lastName.trim() }
       await updateProfile(userId, saved)
       setProfileNames(saved.first_name, saved.last_name)
-      setDone(t('profile.saved'))
+      if (language !== startLanguage) {
+        await setPreferredLanguage(userId, language)
+        await setLanguage(language)
+      }
+      // Read now, not from `t`: the language may have just changed.
+      setDone(i18n.t('account:profile.saved'))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('profile.saveFailed'))
     }
@@ -98,6 +108,21 @@ function ProfileForm({ userId, email, initial }: { userId: string; email: string
             className={control}
           />
         </div>
+      </div>
+      <div className="text-sm text-gray-700 sm:w-1/2 sm:pr-2">
+        <label htmlFor="account-language">{t('profile.language')}</label>
+        <FormSelect
+          id="account-language"
+          value={language}
+          onChange={(e) => isLanguage(e.target.value) && setLanguageValue(e.target.value)}
+          className={control}
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l} value={l} lang={l}>
+              {LANGUAGE_NAMES[l]}
+            </option>
+          ))}
+        </FormSelect>
       </div>
       <Feedback error={error} done={done} />
       <div className="flex justify-end">

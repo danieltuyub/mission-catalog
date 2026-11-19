@@ -23,8 +23,11 @@ beforeEach(() => Object.values(m).forEach((f) => f.mockReset()))
 
 describe('getProfile', () => {
   it('returns the profile or null', async () => {
-    m.maybeSingle.mockResolvedValue({ data: { first_name: 'Ana', last_name: 'Pérez' }, error: null })
-    await expect(getProfile('u1')).resolves.toEqual({ first_name: 'Ana', last_name: 'Pérez' })
+    m.maybeSingle.mockResolvedValue({ data: { first_name: 'Ana', last_name: 'Pérez', language: 'en' }, error: null })
+    await expect(getProfile('u1')).resolves.toEqual({ first_name: 'Ana', last_name: 'Pérez', language: 'en' })
+    // A value the app does not know is no preference.
+    m.maybeSingle.mockResolvedValue({ data: { first_name: 'Ana', last_name: 'Pérez', language: 'xx' }, error: null })
+    await expect(getProfile('u1')).resolves.toMatchObject({ language: null })
     m.maybeSingle.mockResolvedValue({ data: null, error: null })
     await expect(getProfile('u1')).resolves.toBeNull()
   })

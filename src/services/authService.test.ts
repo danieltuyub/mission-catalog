@@ -6,6 +6,7 @@ const sb = vi.hoisted(() => ({
   onAuthStateChange: vi.fn(),
   rpc: vi.fn(),
   maybeSingle: vi.fn(),
+  update: vi.fn(),
 }))
 
 vi.mock('./supabaseClient', () => ({
@@ -16,7 +17,10 @@ vi.mock('./supabaseClient', () => ({
       onAuthStateChange: sb.onAuthStateChange,
     },
     rpc: sb.rpc,
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: sb.maybeSingle }) }) }),
+    from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: sb.maybeSingle }) }),
+      update: (values: unknown) => ({ eq: () => ({ select: () => sb.update(values) }) }),
+    }),
   },
 }))
 
@@ -103,6 +107,22 @@ describe('auth state', () => {
       }),
     )
     expect(listener).toHaveBeenCalled()
+  })
+
+  it('takes the language from the profile, or saves the one in use when the profile has none', async () => {
+    const { currentLanguage, setLanguage } = await import('../i18n')
+    sb.rpc.mockResolvedValue({ data: { roles: ['subscriber'], permissions: [] }, error: null })
+    sb.update.mockResolvedValue({ data: [{ user_id: 'u8' }], error: null })
+
+    sb.maybeSingle.mockResolvedValue({ data: { first_name: '', last_name: '', language: 'en' }, error: null })
+    emit('SIGNED_IN', { user: { id: 'u8', email: 'l@b.com' } })
+    await vi.waitFor(() => expect(currentLanguage()).toBe('en'))
+
+    await setLanguage('es')
+    sb.maybeSingle.mockResolvedValue({ data: { first_name: '', last_name: '', language: null }, error: null })
+    emit('SIGNED_IN', { user: { id: 'u9', email: 'm@b.com' } })
+    await vi.waitFor(() => expect(sb.update).toHaveBeenCalledWith({ language: 'es' }))
+    expect(currentLanguage()).toBe('es')
   })
 
   it('knows when the account must choose its own password, before anything else loads', async () => {

@@ -22,14 +22,20 @@ export type Language = (typeof LANGUAGES)[number]
 /** The base language: every key exists here first, and it is what a missing translation falls back to. */
 export const DEFAULT_LANGUAGE: Language = 'es'
 
+export const isLanguage = (value: unknown): value is Language => LANGUAGES.includes(value as Language)
+
+/** Each language written in itself, so a reader always finds theirs. */
+export const LANGUAGE_NAMES: Record<Language, string> = { es: 'Español', en: 'English' }
+
+/** The language in use right now. */
+export const currentLanguage = (): Language => (isLanguage(i18n.resolvedLanguage) ? i18n.resolvedLanguage : DEFAULT_LANGUAGE)
+
 export const resources = {
   es: { account: esAccount, admin: esAdmin, auth: esAuth, common: esCommon, errors: esErrors, map: esMap, project: esProject, projects: esProjects },
   en: { account: enAccount, admin: enAdmin, auth: enAuth, common: enCommon, errors: enErrors, map: enMap, project: enProject, projects: enProjects },
 } as const
 
 const STORAGE_KEY = 'lang'
-
-const isLanguage = (value: unknown): value is Language => LANGUAGES.includes(value as Language)
 
 /** The saved choice, else the browser's language, else Spanish. */
 export function initialLanguage(): Language {

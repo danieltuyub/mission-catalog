@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
+import BackLink from '../components/BackLink'
 import PageHeader from '../components/PageHeader'
 import PanelTabs from '../components/PanelTabs'
 import { useAdminSection, type AdminSection } from '../hooks/useRoute'
@@ -49,12 +50,7 @@ export default function AdminPage() {
   return (
     <div className="mx-auto w-[94%] pb-10 md:w-4/5">
       <PageHeader title={t('title')}>
-        <a
-          href="#/cuenta"
-          className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
-        >
-          {t('title', { ns: 'account' })}
-        </a>
+        <BackLink href="#/cuenta">{t('title', { ns: 'account' })}</BackLink>
       </PageHeader>
       <PanelTabs
         label={t('title')}

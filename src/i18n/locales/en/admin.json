@@ -50,7 +50,9 @@
     "save": "Save",
     "saving": "Saving…",
     "saveFailed": "Could not save",
-    "updated": "User updated"
+    "updated": "User updated",
+    "language": "Language",
+    "languageNone": "Not set"
   },
   "newUser": {
     "title": "New user",

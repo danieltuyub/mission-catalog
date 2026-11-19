@@ -6,6 +6,7 @@ const svc = vi.hoisted(() => ({
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
   changePassword: vi.fn(),
+  setPreferredLanguage: vi.fn(),
 }))
 vi.mock('../../services/accountService', () => ({ ...svc, MIN_PASSWORD_LENGTH: 8 }))
 
@@ -18,6 +19,7 @@ beforeEach(() => {
   svc.getProfile.mockResolvedValue({ first_name: 'Ana', last_name: 'Pérez' })
   svc.updateProfile.mockResolvedValue(undefined)
   svc.changePassword.mockResolvedValue(undefined)
+  svc.setPreferredLanguage.mockResolvedValue(undefined)
   vi.mocked(setProfileNames).mockClear()
   vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
 })
@@ -57,6 +59,22 @@ describe('ProfileSection', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Cambios guardados')
     // The navbar menu shows the new name without a reload.
     expect(setProfileNames).toHaveBeenCalledWith('Lucía', 'Pérez')
+  })
+
+  it('saves the preferred language and switches to it', async () => {
+    await open()
+    expect(screen.getByLabelText('Idioma')).toHaveValue('es')
+    await userEvent.selectOptions(screen.getByLabelText('Idioma'), 'en')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(svc.setPreferredLanguage).toHaveBeenCalledWith('sub-1', 'en')
+    expect(await screen.findByRole('status')).toHaveTextContent('Changes saved')
+  })
+
+  it('does not touch the language when it is left alone', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await screen.findByRole('status')
+    expect(svc.setPreferredLanguage).not.toHaveBeenCalled()
   })
 
   it('requires a first name', async () => {

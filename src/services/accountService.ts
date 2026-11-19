@@ -1,9 +1,14 @@
-import { tError } from '../i18n'
+import { isLanguage, tError, type Language } from '../i18n'
 import { supabase } from './supabaseClient'
 
-export interface Profile {
+export interface ProfileNames {
   first_name: string
   last_name: string
+}
+
+export interface Profile extends ProfileNames {
+  /** The preferred interface language; null while none is chosen. */
+  language: Language | null
 }
 
 export const MIN_PASSWORD_LENGTH = 8
@@ -11,14 +16,22 @@ export const MIN_PASSWORD_LENGTH = 8
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('first_name, last_name')
+    .select('first_name, last_name, language')
     .eq('user_id', userId)
     .maybeSingle()
   if (error) throw error
-  return data as Profile | null
+  if (!data) return null
+  const row = data as Profile
+  return { ...row, language: isLanguage(row.language) ? row.language : null }
 }
 
-export async function updateProfile(userId: string, profile: Profile): Promise<void> {
+/** Saves the user's preferred language (null clears it). The database lets everyone edit their own, and admins anyone's. */
+export async function setPreferredLanguage(userId: string, language: Language | null): Promise<void> {
+  const { data, error } = await supabase.from('profiles').update({ language }).eq('user_id', userId).select('user_id')
+  if (error || !data || data.length === 0) throw new Error(tError('actionFailed'))
+}
+
+export async function updateProfile(userId: string, profile: ProfileNames): Promise<void> {
   const { data, error } = await supabase.from('profiles').update(profile).eq('user_id', userId).select('user_id')
   if (error) throw error
   // RLS hides rows that are not yours, and a missing profile updates nothing: both look the same.

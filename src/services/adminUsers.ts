@@ -1,4 +1,4 @@
-import i18n, { tError } from '../i18n'
+import i18n, { isLanguage, tError, type Language } from '../i18n'
 import { supabase } from './supabaseClient'
 
 export type Role = 'subscriber' | 'creator' | 'admin'
@@ -19,6 +19,8 @@ export interface AdminUser {
   lastSignInAt: string | null
   /** Blocked until this moment (ISO); null when never blocked. May be in the past: see `blockState`. */
   bannedUntil: string | null
+  /** The preferred interface language; null while none is chosen. */
+  language: Language | null
 }
 
 interface UserRow {
@@ -30,6 +32,7 @@ interface UserRow {
   created_at: string
   last_sign_in_at: string | null
   banned_until?: string | null
+  language?: string | null
 }
 
 const FAILED = () => tError('actionFailed')
@@ -54,6 +57,7 @@ export async function listUsers(): Promise<AdminUser[]> {
     createdAt: r.created_at,
     lastSignInAt: r.last_sign_in_at,
     bannedUntil: r.banned_until ?? null,
+    language: isLanguage(r.language) ? r.language : null,
   }))
 }
 
@@ -82,6 +86,12 @@ export async function setUserBan(userId: string, until: Date | null): Promise<vo
   if (!error) return
   if (error.message.includes('own_ban')) throw new Error(tError('ownBan'))
   throw new Error(FAILED())
+}
+
+/** Sets (or clears) a user's preferred language (admins; the database refuses anyone else). */
+export async function setUserLanguage(userId: string, language: Language | null): Promise<void> {
+  const { data, error } = await supabase.from('profiles').update({ language }).eq('user_id', userId).select('user_id')
+  if (error || !data || data.length === 0) throw new Error(FAILED())
 }
 
 export async function updateUserName(userId: string, firstName: string, lastName: string): Promise<void> {

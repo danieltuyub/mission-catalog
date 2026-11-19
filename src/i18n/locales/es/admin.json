@@ -50,7 +50,9 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "saveFailed": "No se pudo guardar",
-    "updated": "Usuario actualizado"
+    "updated": "Usuario actualizado",
+    "language": "Idioma",
+    "languageNone": "Sin definir"
   },
   "newUser": {
     "title": "Nuevo usuario",

@@ -6,6 +6,7 @@ const svc = vi.hoisted(() => ({
   listUsers: vi.fn(),
   setUserRole: vi.fn(),
   setUserBan: vi.fn(),
+  setUserLanguage: vi.fn(),
   updateUserName: vi.fn(),
   createUser: vi.fn(),
   listRequestsPage: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock('../../services/adminUsers', async (importOriginal) => ({
   listUsers: svc.listUsers,
   setUserRole: svc.setUserRole,
   setUserBan: svc.setUserBan,
+  setUserLanguage: svc.setUserLanguage,
   updateUserName: svc.updateUserName,
   createUser: svc.createUser,
 }))
@@ -107,6 +109,7 @@ const user = (over: object) => ({
   createdAt: '2026-01-01T00:00:00Z',
   lastSignInAt: null,
   bannedUntil: null,
+  language: null,
   ...over,
 })
 const USERS = [user({}), user({ id: 'u2', email: 'leo@x.com', firstName: 'Leo', lastName: '', role: 'creator' }), user({ id: 'admin-1', email: 'a@b.com', firstName: 'Yo', lastName: '', role: 'admin' })]
@@ -199,6 +202,19 @@ describe('UsersSection', () => {
     await userEvent.selectOptions(access, 'none')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(svc.setUserBan).toHaveBeenCalledWith('u1', null))
+  })
+
+  it('sets a user\'s preferred language, and clears it', async () => {
+    svc.setUserLanguage.mockResolvedValue(undefined)
+    svc.listUsers.mockResolvedValue([user({ language: 'es' })])
+    render(<UsersSection />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar a Ana Paz' }))
+    const language = await screen.findByRole('combobox', { name: 'Idioma' })
+    expect(language).toHaveValue('es')
+    await userEvent.selectOptions(language, 'en')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(svc.setUserLanguage).toHaveBeenCalledWith('u1', 'en'))
+    expect(svc.setUserRole).not.toHaveBeenCalled()
   })
 
   it('does not let an admin block their own account', async () => {

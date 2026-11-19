@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+vi.mock('../services/accountService', () => ({ setPreferredLanguage: vi.fn(async () => {}) }))
+
+import { setPreferredLanguage } from '../services/accountService'
+import { getAuthSnapshot } from '../services/authService'
+import { SUBSCRIBER } from '../test/auth'
 import Footer from './Footer'
 import LanguageSwitch from './LanguageSwitch'
 
@@ -18,10 +23,23 @@ describe('LanguageSwitch', () => {
       </>,
     )
     expect(screen.getByText('Contáctanos')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Cambiar idioma: EN' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cambiar idioma: English' }))
     expect(await screen.findByText('Contact us')).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('en')
     expect(saved.get('lang')).toBe('en')
-    expect(screen.getByRole('button', { name: 'Change language: ES' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change language: Español' })).toBeInTheDocument()
+  })
+
+  it('also saves the choice in the profile when signed in, and only then', async () => {
+    const { unmount } = render(<LanguageSwitch />)
+    await userEvent.click(screen.getByRole('button', { name: 'Cambiar idioma: English' }))
+    expect(setPreferredLanguage).not.toHaveBeenCalled()
+    unmount()
+
+    vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+    render(<LanguageSwitch />)
+    // The first click left the page in English: the button now offers Spanish.
+    await userEvent.click(screen.getByRole('button', { name: 'Change language: Español' }))
+    expect(setPreferredLanguage).toHaveBeenCalledWith('sub-1', 'es')
   })
 })

@@ -1,6 +1,6 @@
-import { tError } from '../i18n'
+import { currentLanguage, setLanguage, tError } from '../i18n'
 import type { Session } from '@supabase/supabase-js'
-import { getProfile } from './accountService'
+import { getProfile, setPreferredLanguage, type Profile } from './accountService'
 import { supabase } from './supabaseClient'
 
 export interface AuthState {
@@ -29,6 +29,23 @@ function setState(next: AuthState) {
   listeners.forEach((l) => l())
 }
 
+/**
+ * The profile's language wins over what this device had; a profile without one takes the language
+ * already in use, so the next sign-in (anywhere) finds it.
+ */
+async function syncLanguage(userId: string, profile: Profile | null) {
+  if (!profile) return
+  try {
+    if (profile.language) {
+      if (profile.language !== currentLanguage()) await setLanguage(profile.language)
+    } else {
+      await setPreferredLanguage(userId, currentLanguage())
+    }
+  } catch {
+    // A nicety: never blocks the session.
+  }
+}
+
 async function resolve(session: Session | null) {
   const id = ++resolveId
   if (!session) return setState(SIGNED_OUT)
@@ -41,6 +58,7 @@ async function resolve(session: Session | null) {
     getProfile(userId).catch(() => null), // the name is a nicety: never block the session on it
   ])
   if (id !== resolveId) return // a newer session change won
+  void syncLanguage(userId, profile)
   const permissions = !error && Array.isArray(data?.permissions) ? (data.permissions as string[]) : []
   setState({
     loading: false,
