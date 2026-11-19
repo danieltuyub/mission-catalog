@@ -89,5 +89,9 @@
     "mam": "Mam",
     "cak": "Kaqchikel",
     "yua": "Yucatec Maya"
+  },
+  "gesture": {
+    "touch": "Use two fingers to move the map",
+    "scroll": "Use ctrl + scroll to zoom"
   }
 }

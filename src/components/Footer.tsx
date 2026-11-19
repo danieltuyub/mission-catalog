@@ -20,8 +20,8 @@ export default function Footer() {
   const invite = !isAdmin && !privateArea
   const links = isAdmin ? LINKS.filter((l) => l.href !== '#/contacto') : LINKS
   return (
-    <footer className="pb-5 pt-5">
-      <div className={`mx-auto w-[94%] rounded-3xl bg-brand-primary px-6 text-brand-blush md:w-4/5 md:px-12 ${invite ? 'pb-6 pt-14 md:pt-16' : 'pb-8 pt-10 md:pt-12'}`}>
+    <footer className="pt-5 md:pb-5">
+      <div className={`mx-auto rounded-t-3xl bg-brand-primary px-6 text-brand-blush md:w-4/5 md:rounded-3xl md:px-12 ${invite ? 'pb-6 pt-14 md:pt-16' : 'pb-8 pt-10 md:pt-12'}`}>
         {invite && (
           <div className="text-center">
             <p className="mx-auto max-w-2xl text-lg leading-relaxed">{t('footer.pitch')}</p>
