@@ -1,4 +1,6 @@
 import L, { type LatLngBoundsLiteral, type LatLngTuple } from 'leaflet'
+import 'leaflet-gesture-handling'
+import 'leaflet-gesture-handling/dist/leaflet-gesture-handling.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Circle,
@@ -171,9 +173,16 @@ export default function MapView() {
 
   const notice = placing ? t('notice.placing') : (error ?? (status in GEO_KEYS ? t(GEO_KEYS[status as keyof typeof GEO_KEYS]) : undefined))
 
+  // Touch only: one finger scrolls the page, two move the map. Desktop keeps its own wheel/trackpad handling.
+  const gesture = {
+    gestureHandling: L.Browser.mobile,
+    gestureHandlingOptions: { text: { touch: t('gesture.touch'), scroll: t('gesture.scroll'), scrollMac: t('gesture.scroll') } },
+  }
+
   return (
     <div className="relative h-full w-full">
       <MapContainer
+        {...gesture}
         center={savedView?.center ?? DEFAULT_CENTER}
         zoom={savedView?.zoom ?? DEFAULT_ZOOM}
         minZoom={MIN_ZOOM}
