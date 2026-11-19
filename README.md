@@ -128,35 +128,10 @@ Repository **Settings → Secrets and variables → Actions** (or the `productio
 sudo adduser --disabled-password --gecos "" deploy
 sudo mkdir -p /var/www/mission-catalog && sudo chown deploy: /var/www/mission-catalog
 
-# A key made for this, with no passphrase; the public half goes to the server
-ssh-keygen -t ed25519 -f deploy_key -N "" -C "github-actions"
-sudo -u deploy install -m 700 -d ~deploy/.ssh
-cat deploy_key.pub | sudo -u deploy tee -a ~deploy/.ssh/authorized_keys   # then delete deploy_key.pub; deploy_key goes into VPS_SSH_KEY and is deleted from your machine
+# The deploy key and its public half: see "Where each value comes from" (VPS_SSH_KEY)
 ```
 
-nginx (the app routes with `#`, so there is no rewrite to configure):
-
-```nginx
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name catalog.example.com;
-    # ssl_certificate / ssl_certificate_key: e.g. certbot
-
-    root /var/www/mission-catalog/current;
-    index index.html;
-
-    # Hashed files never change: cache them for good. The page itself must be re-read to see a new release.
-    location /assets/ {
-        add_header Cache-Control "public, max-age=31536000, immutable";
-    }
-    location = /index.html {
-        add_header Cache-Control "no-cache";
-    }
-}
-```
-
-`root` follows the `current` link, so a deploy needs no nginx reload. If you serve it under a sub-path, set `base` in `vite.config.ts` first.
+nginx and the certificate: see "nginx and TLS" below.
 
 ### Going back
 
@@ -165,3 +140,100 @@ ssh deploy@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -sfn 
 ```
 
 (`mv -T` is GNU: fine on Linux.) The next push to main publishes again from there.
+
+### Where each value comes from
+
+| Secret | How to get it |
+| --- | --- |
+| `VPS_HOST` | the name you ssh to (`catalog.example.com`) or the server's IP. Use the same text in `VPS_KNOWN_HOSTS` |
+| `VPS_PORT` | `sudo sshd -T \| grep '^port'` on the VPS (22 unless you changed it) |
+| `VPS_USER` | `deploy`, the user created in "Server, once" |
+| `VPS_PATH` | the folder from "Server, once": `/var/www/mission-catalog` |
+| `VPS_SSH_KEY` | on the VPS: `sudo -u deploy ssh-keygen -t ed25519 -N "" -C github-actions -f /tmp/deploy_key`, then `sudo -u deploy sh -c 'install -m 700 -d ~/.ssh && cat /tmp/deploy_key.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'`, then `sudo cat /tmp/deploy_key`, paste **all of it** (with the `BEGIN`/`END` lines) into the secret and `sudo shred -u /tmp/deploy_key /tmp/deploy_key.pub` |
+| `VPS_KNOWN_HOSTS` | on the VPS: `echo "catalog.example.com $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"`. With a port other than 22 the line starts with `[catalog.example.com]:2222` |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API (the project URL and the anon / publishable key) |
+| `SUPABASE_PROJECT_REF` | the `<ref>` in `https://<ref>.supabase.co` |
+| `SUPABASE_ACCESS_TOKEN` | Supabase → Account (your avatar) → Access Tokens → Generate new token |
+| `SUPABASE_DB_PASSWORD` | Supabase → Project Settings → Database (reset it there if lost) |
+
+The key and the known-hosts line are the only ones that need the VPS. Test the key from your own machine before pasting it: `ssh -i deploy_key -p 22 deploy@catalog.example.com 'echo ok'`.
+
+### Migrations from GitHub
+
+`.github/workflows/migrations.yml`, manual only: Actions → "Database migrations" → Run workflow, **from main**.
+
+- **Untick "apply" (default):** dry run, it prints the migrations that are pending and changes nothing.
+- **Tick "apply":** runs `npm run db:push` against the linked project.
+- It uses the `production` environment (approval rules and secrets) and refuses to run from any branch but main, so a migration that is not merged never reaches the database.
+- Needs `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` in the `production` environment. They are passed as environment variables to the steps only.
+- If linking or pushing fails with a network error, the runner cannot reach the database directly (Supabase's direct host can be IPv6 only). The CLI normally goes through the pooler once linked; if it does not, apply from your machine as before.
+- The Edge Function is still deployed by hand (`npx supabase functions deploy admin-create-user`).
+
+### nginx and TLS
+
+Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once".
+
+1. **DNS.** An `A` record (and `AAAA` if the server has IPv6) for `catalog.example.com` pointing at the VPS. Wait until `dig +short catalog.example.com` shows it.
+2. **Packages and firewall.**
+
+   ```bash
+   sudo apt update && sudo apt install -y nginx
+   sudo ufw allow 'Nginx Full'   # 80 and 443 (and keep your SSH rule)
+   ```
+
+3. **Folder permissions.** nginx (`www-data`) must be able to walk into the folder and read the files:
+
+   ```bash
+   sudo chmod 755 /var/www /var/www/mission-catalog
+   ```
+
+4. **The site, first on port 80 only.** `/etc/nginx/sites-available/mission-catalog`:
+
+   ```nginx
+   server {
+       listen 80;
+       listen [::]:80;
+       server_name catalog.example.com;
+
+       root /var/www/mission-catalog/current;
+       index index.html;
+
+       # Hashed files never change: cache them for good. The page itself is re-read to see a new release.
+       location /assets/ {
+           add_header Cache-Control "public, max-age=31536000, immutable";
+       }
+       location = /index.html {
+           add_header Cache-Control "no-cache";
+       }
+   }
+   ```
+
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/mission-catalog /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+   The app routes with `#`: there is no rewrite to configure. `root` follows the `current` link, so a deploy needs no reload. Another site on the same VPS only needs its own `server_name` and folder. Until the first deploy `current` does not exist and nginx answers 404 or 403: that is expected.
+
+5. **The certificate (Let's Encrypt).**
+
+   ```bash
+   sudo apt install -y certbot python3-certbot-nginx
+   sudo certbot --nginx -d catalog.example.com --redirect -m you@example.com --agree-tos
+   ```
+
+   certbot adds the `listen 443 ssl` block and the certificate paths to that same file, and redirects port 80 to 443. It installs a systemd timer that renews by itself: check it with `systemctl list-timers | grep certbot` and `sudo certbot renew --dry-run`.
+
+6. **Optional hardening**, inside the 443 `server` block certbot wrote:
+
+   ```nginx
+   add_header Strict-Transport-Security "max-age=31536000" always;
+   add_header X-Content-Type-Options "nosniff" always;
+   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+   ```
+
+   `add_header` inside a `location` replaces the ones of the `server`: repeat them there if you want them on `/assets/` too. Do not add a `Content-Security-Policy` without testing: the app talks to Supabase and loads map tiles.
+
+7. **Check.** `curl -I https://catalog.example.com` answers `200` after the first deploy, and `sudo nginx -T | grep -n "server_name"` lists every site the server knows.
+
+If the site lives under a sub-path (`/catalog/`), set `base` in `vite.config.ts` first and use `alias` instead of `root`.
