@@ -1,3 +1,4 @@
+import i18n from '../i18n'
 import type { ToastAction } from './toast'
 
 const DEFAULT_NEXT = '/proyectos'
@@ -10,7 +11,7 @@ export function loginUrl(path: string): string {
 /** Toast button that takes a signed-out visitor to the login and back to the page they are on. */
 export function loginToastAction(): ToastAction {
   return {
-    label: 'Iniciar sesión',
+    label: i18n.t('auth:signIn'),
     onClick: () => {
       window.location.hash = loginUrl(window.location.hash.replace(/^#/, '') || '/')
     },

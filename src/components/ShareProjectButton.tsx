@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { shareProject } from '../services/shareProject'
 import { showToast } from '../services/toast'
 
@@ -9,17 +10,18 @@ interface Props {
 
 /** Round share icon: opens the system share sheet, or copies the link. Same look as the heart and edit icons. */
 export default function ShareProjectButton({ id, name, className = '' }: Props) {
+  const { t } = useTranslation('project')
   async function share() {
     const result = await shareProject(id, name)
-    if (result === 'copied') showToast('Enlace copiado')
-    else if (result === 'failed') showToast('No se pudo compartir el proyecto')
+    if (result === 'copied') showToast(t('linkCopied'))
+    else if (result === 'failed') showToast(t('shareFailed'))
   }
 
   return (
     <button
       type="button"
-      aria-label="Compartir proyecto"
-      title="Compartir proyecto"
+      aria-label={t('share')}
+      title={t('share')}
       onClick={share}
       className={`inline-flex size-10 items-center justify-center rounded-full bg-white text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage ${className}`}
     >

@@ -1,17 +1,20 @@
+import i18n from '../i18n'
+
 /** Where a project page was opened from, so it can lead back there: the public list or a list in "Mi espacio". */
 export type EditOrigin = 'lista' | 'creados' | 'guardados' | 'admin'
 
 const ORIGINS: readonly EditOrigin[] = ['lista', 'creados', 'guardados', 'admin']
 
-/** Where "back" goes, and what the button says. */
-const BACK: Record<EditOrigin, { href: string; label: string }> = {
-  lista: { href: '#/proyectos', label: 'Proyectos' },
-  creados: { href: '#/cuenta/proyectos/creados', label: 'Creados por mí' },
-  guardados: { href: '#/cuenta/proyectos/guardados', label: 'Guardados' },
-  admin: { href: '#/admin/proyectos', label: 'Administración' },
-}
+/** Where "back" goes, and the translation key of what the button says (`project` namespace). */
+const BACK = {
+  lista: { href: '#/proyectos', key: 'backList' },
+  creados: { href: '#/cuenta/proyectos/creados', key: 'backCreated' },
+  guardados: { href: '#/cuenta/proyectos/guardados', key: 'backSaved' },
+  admin: { href: '#/admin/proyectos', key: 'backAdmin' },
+} as const satisfies Record<EditOrigin, { href: string; key: string }>
 
-export const originBack = (origin: EditOrigin) => BACK[origin]
+/** The link back and its text, in the current language. */
+export const originBack = (origin: EditOrigin) => ({ href: BACK[origin].href, label: i18n.t(`project:${BACK[origin].key}`) })
 
 const withOrigin = (path: string, from?: EditOrigin) => `${path}${from ? `?from=${from}` : ''}`
 

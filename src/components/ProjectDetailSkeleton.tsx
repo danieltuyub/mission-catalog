@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 // Gray placeholder with the same layout as the loaded detail, so nothing jumps when it fills in.
 const Bar = ({ className }: { className: string }) => (
   <div className={`rounded-md bg-stone-200 ${className}`} />
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export default function ProjectDetailSkeleton({ visible = true }: Props) {
+  const { t } = useTranslation('project')
   return (
     <div
       role="status"
@@ -20,7 +23,7 @@ export default function ProjectDetailSkeleton({ visible = true }: Props) {
           : 'opacity-0'
       }
     >
-      <span className="sr-only">Cargando proyecto…</span>
+      <span className="sr-only">{t('loading')}</span>
 
       <div className="pb-5">
         <Bar className="h-8 w-56 max-w-full" />

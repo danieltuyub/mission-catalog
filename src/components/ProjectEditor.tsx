@@ -1,4 +1,5 @@
 import { useMemo, type ComponentProps } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDelayed } from '../hooks/useDelayed'
 import { useAuth } from '../hooks/useAuth'
 import { useProject } from '../hooks/useProject'
@@ -33,6 +34,7 @@ interface Props {
 
 /** Loads a project and edits it: the same body for the edit page and for the admin's modal. */
 export default function ProjectEditor({ id, onSaved, onCancel }: Props) {
+  const { t } = useTranslation('project')
   const { project, loading, error } = useProject(id)
   const auth = useAuth()
   const allowed = !project || canEditProject(auth, project)
@@ -52,21 +54,21 @@ export default function ProjectEditor({ id, onSaved, onCancel }: Props) {
         // Reserves the form's space; shown only if loading outlasts the delay (no flash).
         <div
           role="status"
-          aria-label="Cargando proyecto"
+          aria-label={t('loadingLabel')}
           className={`h-[40rem] rounded-2xl bg-stone-200/60 motion-safe:animate-pulse ${showPlaceholder ? '' : 'opacity-0'}`}
         />
       )}
       {error && (
         <p role="alert" className="py-24 text-center text-red-700">
-          No se pudo cargar el proyecto: {error}
+          {t('loadFailed', { error })}
         </p>
       )}
       {!loading && !error && !project && (
-        <p className="py-24 text-center text-stone-500">No existe un proyecto con ese enlace.</p>
+        <p className="py-24 text-center text-stone-500">{t('notFound')}</p>
       )}
       {project && !allowed && (
         <p role="alert" className="py-24 text-center text-stone-500">
-          No tienes permiso para editar este proyecto
+          {t('noPermission')}
         </p>
       )}
       {project && allowed && (

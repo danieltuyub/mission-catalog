@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface Photo {
   src: string
@@ -47,7 +48,8 @@ const Arrow = ({ dir }: { dir: 'prev' | 'next' }) => (
 const navButton =
   'absolute top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-brand-primary shadow hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage'
 
-export default function PhotoCarousel({ photos = [], placeholders = 3, label = 'Fotos del proyecto' }: Props) {
+export default function PhotoCarousel({ photos = [], placeholders = 3, label }: Props) {
+  const { t } = useTranslation('project')
   const count = photos.length > 0 ? photos.length : placeholders
   const [index, setIndex] = useState(0)
 
@@ -61,7 +63,7 @@ export default function PhotoCarousel({ photos = [], placeholders = 3, label = '
   }
 
   return (
-    <section aria-roledescription="carousel" aria-label={label} onKeyDown={onKeyDown}>
+    <section aria-roledescription="carousel" aria-label={label ?? t('photos')} onKeyDown={onKeyDown}>
       <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-stone-200">
         <div
           className="flex h-full transition-transform duration-300 ease-out motion-reduce:transition-none"
@@ -72,7 +74,7 @@ export default function PhotoCarousel({ photos = [], placeholders = 3, label = '
               key={i}
               role="group"
               aria-roledescription="slide"
-              aria-label={`${i + 1} de ${count}`}
+              aria-label={t('photoOf', { n: i + 1, count })}
               aria-hidden={i !== index}
               className={`flex h-full w-full shrink-0 items-center justify-center text-stone-400 ${
                 i % 2 === 0 ? 'bg-stone-200' : 'bg-stone-300/70'
@@ -89,10 +91,10 @@ export default function PhotoCarousel({ photos = [], placeholders = 3, label = '
 
         {count > 1 && (
           <>
-            <button type="button" aria-label="Foto anterior" onClick={() => move(-1)} className={`${navButton} left-3`}>
+            <button type="button" aria-label={t('prev')} onClick={() => move(-1)} className={`${navButton} left-3`}>
               <Arrow dir="prev" />
             </button>
-            <button type="button" aria-label="Foto siguiente" onClick={() => move(1)} className={`${navButton} right-3`}>
+            <button type="button" aria-label={t('next')} onClick={() => move(1)} className={`${navButton} right-3`}>
               <Arrow dir="next" />
             </button>
             <p
@@ -111,7 +113,7 @@ export default function PhotoCarousel({ photos = [], placeholders = 3, label = '
             <li key={i} className="shrink-0">
               <button
                 type="button"
-                aria-label={`Ir a la foto ${i + 1}`}
+                aria-label={t('goTo', { n: i + 1 })}
                 aria-current={i === index ? 'true' : undefined}
                 onClick={() => go(i)}
                 className={`flex h-14 w-20 items-center justify-center overflow-hidden rounded-lg text-stone-400 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-sage ${

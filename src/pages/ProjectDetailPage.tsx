@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import EditProjectLink from '../components/EditProjectLink'
 import MessageComposer from '../components/MessageComposer'
 import PageHeader from '../components/PageHeader'
@@ -23,8 +24,6 @@ import { SKELETON_DELAY_MS } from './projectsConfig'
 
 const EMPTY = '—'
 
-const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' })
-
 /** Blank-line separated paragraphs; empty when there is no text. */
 function paragraphs(text: string | null | undefined): string[] {
   return (text ?? '')
@@ -33,12 +32,12 @@ function paragraphs(text: string | null | undefined): string[] {
     .filter(Boolean)
 }
 
-const formatDate = (dateString?: string | null) => {
+const formatDate = (dateString: string | null | undefined, language: string) => {
   if (!dateString) return null
   const date = new Date(dateString)
   // If the date is invalid (NaN timestamp), return null
   if (isNaN(date.getTime())) return null
-  return dateFormat.format(date)
+  return new Intl.DateTimeFormat(language, { dateStyle: 'long', timeZone: 'UTC' }).format(date)
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -54,6 +53,7 @@ const linkClass =
   'underline decoration-stone-300 underline-offset-2 hover:decoration-brand-primary focus-visible:outline-2 focus-visible:outline-brand-sage'
 
 export default function ProjectDetailPage({ id }: { id: string }) {
+  const { t, i18n } = useTranslation('project')
   const statusLabel = useStatusLabel()
   const { project, loading, error, full } = useProject(id)
   const auth = useAuth()
@@ -76,7 +76,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
 
   return (
     <div className="mx-auto w-[94%] md:w-4/5">
-      <nav aria-label="Volver" className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-4">
+      <nav aria-label={t('back')} className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-4">
         <a
           href={back.href}
           className="inline-flex h-10 items-center gap-2 rounded-full bg-white pl-3 pr-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
@@ -101,11 +101,11 @@ export default function ProjectDetailPage({ id }: { id: string }) {
             {(!project.created_by || project.created_by !== auth.userId) && (
               <SendMessageButton
                 unavailable={!project.created_by}
-                title={project.created_by ? 'Enviar mensaje' : 'Este proyecto aún no tiene un contacto asignado'}
+                title={project.created_by ? t('message.send', { ns: 'common' }) : t('noContact')}
                 onClick={() => {
                   if (auth.loading) return
-                  if (!auth.userId) showToast('Inicia sesión para enviar mensajes', loginToastAction())
-                  else if (!can(auth, 'messages.send')) showToast('Tu cuenta no puede enviar mensajes')
+                  if (!auth.userId) showToast(t('signInToMessage'), loginToastAction())
+                  else if (!can(auth, 'messages.send')) showToast(t('cannotSend'))
                   else setComposing(true)
                 }}
               />
@@ -128,8 +128,8 @@ export default function ProjectDetailPage({ id }: { id: string }) {
           onSend={async (body) => {
             await sendProjectMessage(project.id, body)
             setComposing(false)
-            showToast('Mensaje enviado', {
-              label: 'Ver mensajes',
+            showToast(t('sent'), {
+              label: t('viewMessages'),
               onClick: () => {
                 window.location.hash = '#/cuenta/mensajes'
               },
@@ -143,7 +143,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
       ) : (
         <div className="animate-fade-in motion-reduce:animate-none">
           <PageHeader
-            title={project?.name ?? (error ? 'Proyecto' : 'Proyecto no encontrado')}
+            title={project?.name ?? (error ? t('title') : t('notFoundTitle'))}
             badge={
               status && (
                 <span className={`translate-y-0.5 rounded-full px-3 py-1 text-xs font-medium ${status.chip}`}>
@@ -155,11 +155,11 @@ export default function ProjectDetailPage({ id }: { id: string }) {
 
           {error && (
             <p role="alert" className="py-24 text-center text-red-700">
-              No se pudo cargar el proyecto: {error}
+              {t('loadFailed', { error })}
             </p>
           )}
           {!error && !project && (
-            <p className="py-24 text-center text-stone-500">No existe un proyecto con ese enlace.</p>
+            <p className="py-24 text-center text-stone-500">{t('notFound')}</p>
           )}
 
           {project && (
@@ -168,17 +168,17 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                 {/* Placeholder slides when the project has no photos. */}
                 <PhotoCarousel photos={projectPhotos(project)} />
                 <div className="min-w-0 space-y-6">
-                  <p className="leading-relaxed text-stone-600">{project.description || 'Sin descripción'}</p>
+                  <p className="leading-relaxed text-stone-600">{project.description || t('noDescription')}</p>
                   <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-                    <Field label="Encargado">{project.responsible || EMPTY}</Field>
-                    <Field label="Inicio">
-                      {formatDate(project.started_at) || EMPTY}
+                    <Field label={t('responsible')}>{project.responsible || EMPTY}</Field>
+                    <Field label={t('started')}>
+                      {formatDate(project.started_at, i18n.language) || EMPTY}
                     </Field>
-                    <Field label="País">{project.country || EMPTY}</Field>
-                    <Field label="Región">{project.region || EMPTY}</Field>
+                    <Field label={t('country')}>{project.country || EMPTY}</Field>
+                    <Field label={t('region')}>{project.region || EMPTY}</Field>
                     {full && (
                       <>
-                    <Field label="Teléfono">
+                    <Field label={t('phone')}>
                       {project.phone ? (
                         <a href={`tel:${project.phone.replace(/[^\d+]/g, '')}`} className={linkClass}>
                           {project.phone}
@@ -187,7 +187,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                         EMPTY
                       )}
                     </Field>
-                    <Field label="Mail">
+                    <Field label={t('mail')}>
                       {project.mail ? (
                         <a href={`mailto:${project.mail}`} className={linkClass}>
                           {project.mail}
@@ -198,8 +198,8 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                     </Field>
                       </>
                     )}
-                    <Field label="Actualizado">
-                      {formatDate(project.updated_at) || EMPTY}
+                    <Field label={t('updated')}>
+                      {formatDate(project.updated_at, i18n.language) || EMPTY}
                     </Field>
                   </dl>
                 </div>
@@ -208,7 +208,7 @@ export default function ProjectDetailPage({ id }: { id: string }) {
               {full ? (
               <section aria-labelledby="project-details" className="mt-8 border-t border-stone-100 pt-6">
                 <h2 id="project-details" className="text-lg font-semibold text-brand-primary">
-                  Detalles
+                  {t('details')}
                 </h2>
                 <div className="mt-3 max-w-3xl space-y-4 leading-relaxed text-stone-600">
                   {paragraphs(project.details).map((text, i) => (
@@ -216,20 +216,20 @@ export default function ProjectDetailPage({ id }: { id: string }) {
                       {text}
                     </p>
                   ))}
-                  {paragraphs(project.details).length === 0 && <p className="text-stone-500">Sin detalles</p>}
+                  {paragraphs(project.details).length === 0 && <p className="text-stone-500">{t('noDetails')}</p>}
                 </div>
               </section>
               ) : (
                 <section
-                  aria-label="Acceso restringido"
+                  aria-label={t('restricted')}
                   className="mt-8 border-t border-stone-100 pt-6 text-stone-600"
                 >
-                  <p>Inicia sesión para ver el detalle completo, la información de contacto y todas las fotos.</p>
+                  <p>{t('restrictedText')}</p>
                   <a
                     href={loginUrl(`/proyectos/${project.id}`)}
                     className="mt-3 inline-flex h-10 items-center rounded-full bg-brand-primary px-5 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
                   >
-                    Iniciar sesión
+                    {t('signIn', { ns: 'auth' })}
                   </a>
                 </section>
               )}

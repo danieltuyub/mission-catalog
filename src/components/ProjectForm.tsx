@@ -1,5 +1,6 @@
 import FormSelect from './FormSelect'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { validateImage } from '../services/imageUtils'
 import type { ImageInput, NewProject } from '../services/projectAdmin'
 import { projectImageUrl } from '../services/projectImages'
@@ -86,6 +87,7 @@ const Icon = ({ d }: { d: string }) => (
 )
 
 export default function ProjectForm({ project, creator, onSubmit, onCancel }: Props) {
+  const { t } = useTranslation('project')
   const statusLabel = useStatusLabel()
   const [values, setValues] = useState({
     name: project?.name ?? '',
@@ -124,7 +126,7 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
     for (const file of files) {
       const invalid = validateImage(file)
       if (invalid) problem = `${file.name}: ${invalid}`
-      else if (images.length + accepted.length >= MAX_IMAGES) problem = `Máximo ${MAX_IMAGES} fotos`
+      else if (images.length + accepted.length >= MAX_IMAGES) problem = t('form.maxPhotos', { max: MAX_IMAGES })
       else accepted.push({ id: crypto.randomUUID(), input: { kind: 'new', file }, url: URL.createObjectURL(file) })
     }
     setImageError(problem)
@@ -152,8 +154,8 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
     const name = values.name.trim()
     const mail = values.mail.trim()
     const found = {
-      name: name ? undefined : 'El nombre es obligatorio',
-      mail: mail && !EMAIL.test(mail) ? 'Escribe un correo válido' : undefined,
+      name: name ? undefined : t('form.nameRequired'),
+      mail: mail && !EMAIL.test(mail) ? t('form.mailInvalid') : undefined,
     }
     setErrors(found)
     if (found.name || found.mail) return
@@ -180,7 +182,7 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
         images: images.map((i) => i.input),
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar el proyecto')
+      setError(err instanceof Error ? err.message : t('form.saveFailed'))
       setSaving(false)
     }
   }
@@ -192,15 +194,15 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
     <form
       noValidate
       onSubmit={handleSubmit}
-      aria-label={project ? 'Editar proyecto' : 'Nuevo proyecto'}
+      aria-label={project ? t('edit') : t('new')}
       className="space-y-5 rounded-2xl bg-white p-6 shadow ring-1 ring-black/5"
     >
       <section aria-labelledby="section-data">
         <h2 id="section-data" className={sectionTitle}>
-          Datos del proyecto
+          {t('form.data')}
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
-          <Field id="project-name" label="Nombre *" error={errors.name} className="md:col-span-2">
+          <Field id="project-name" label={t('form.name')} error={errors.name} className="md:col-span-2">
             <input
               id="project-name"
               autoFocus
@@ -212,7 +214,7 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
             />
           </Field>
 
-          <Field id="project-status" label="Estado">
+          <Field id="project-status" label={t('form.status')}>
             <FormSelect id="project-status" value={values.status} onChange={set('status')} className={control}>
               {STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
@@ -222,14 +224,14 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
             </FormSelect>
           </Field>
 
-          <Field id="project-responsible" label="Encargado">
+          <Field id="project-responsible" label={t('form.responsible')}>
             <input id="project-responsible" value={values.responsible} onChange={set('responsible')} className={control} />
           </Field>
 
           {project && creator && (
-            <Field id="project-creator" label="Creador" hint="Puede editarlo y recibe sus mensajes.">
+            <Field id="project-creator" label={t('form.creator')} hint={t('form.creatorHint')}>
               <FormSelect id="project-creator" value={creatorId} onChange={(e) => setCreatorId(e.target.value)} className={control}>
-                <option value="">Sin asignar</option>
+                <option value="">{t('form.unassigned')}</option>
                 {creator.options.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
@@ -239,18 +241,18 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
             </Field>
           )}
 
-          <Field id="project-started" label="Inicio">
+          <Field id="project-started" label={t('form.started')}>
             <input id="project-started" type="date" value={values.started_at} onChange={set('started_at')} className={control} />
           </Field>
 
-          <Field id="project-description" label="Descripción" className="md:col-span-3">
+          <Field id="project-description" label={t('form.description')} className="md:col-span-3">
             <textarea id="project-description" rows={3} value={values.description} onChange={set('description')} className={`${control} resize-y`} />
           </Field>
 
           <Field
             id="project-details"
-            label="Detalles"
-            hint="Se muestra solo en la página del proyecto. Separa los párrafos con una línea en blanco."
+            label={t('form.details')}
+            hint={t('form.detailsHint')}
             className="md:col-span-3"
           >
             <textarea id="project-details" rows={5} value={values.details} onChange={set('details')} className={`${control} resize-y`} />
@@ -260,22 +262,22 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
 
       <section aria-labelledby="section-contact" className="border-t border-stone-200 pt-5">
         <h2 id="section-contact" className={sectionTitle}>
-          Ubicación y contacto
+          {t('form.place')}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="project-country" label="País">
+          <Field id="project-country" label={t('form.country')}>
             <input id="project-country" value={values.country} onChange={set('country')} className={control} />
           </Field>
 
-          <Field id="project-region" label="Región">
+          <Field id="project-region" label={t('form.region')}>
             <input id="project-region" value={values.region} onChange={set('region')} className={control} />
           </Field>
 
-          <Field id="project-phone" label="Teléfono">
+          <Field id="project-phone" label={t('form.phone')}>
             <input id="project-phone" type="tel" autoComplete="off" value={values.phone} onChange={set('phone')} className={control} />
           </Field>
 
-          <Field id="project-mail" label="Mail" error={errors.mail}>
+          <Field id="project-mail" label={t('form.mail')} error={errors.mail}>
             <input
               id="project-mail"
               type="email"
@@ -290,14 +292,14 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
       </section>
 
       <fieldset className="border-t border-stone-200 pt-5">
-        <legend className="sr-only">Fotos</legend>
+        <legend className="sr-only">{t('form.photos')}</legend>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Fotos</h2>
-            <p className="text-xs text-stone-500">La primera es la portada. Hasta {MAX_IMAGES}.</p>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">{t('form.photos')}</h2>
+            <p className="text-xs text-stone-500">{t('form.photosHint', { max: MAX_IMAGES })}</p>
           </div>
           <label className="inline-flex h-10 cursor-pointer items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-brand-sage">
-            Agregar fotos
+            {t('form.addPhotos')}
             <input type="file" accept="image/*" multiple onChange={addImages} className="sr-only" disabled={images.length >= MAX_IMAGES} />
           </label>
         </div>
@@ -312,20 +314,20 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {images.map((image, i) => (
               <li key={image.id} className="relative aspect-4/3 overflow-hidden rounded-xl bg-stone-200">
-                <img src={image.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
+                <img src={image.url} alt={t('form.photo', { n: i + 1 })} className="size-full object-cover" />
                 {i === 0 && (
-                  <span className="absolute left-2 top-2 rounded-full bg-brand-primary/80 px-2 py-0.5 text-xs text-white">Portada</span>
+                  <span className="absolute left-2 top-2 rounded-full bg-brand-primary/80 px-2 py-0.5 text-xs text-white">{t('form.cover')}</span>
                 )}
                 <div className="absolute inset-x-2 bottom-2 flex items-center justify-between">
                   <div className="flex gap-1">
-                    <button type="button" aria-label={`Subir foto ${i + 1}`} disabled={i === 0} onClick={() => moveImage(i, -1)} className={iconButton}>
+                    <button type="button" aria-label={t('form.moveUp', { n: i + 1 })} disabled={i === 0} onClick={() => moveImage(i, -1)} className={iconButton}>
                       <Icon d="M15 18l-6-6 6-6" />
                     </button>
-                    <button type="button" aria-label={`Bajar foto ${i + 1}`} disabled={i === images.length - 1} onClick={() => moveImage(i, 1)} className={iconButton}>
+                    <button type="button" aria-label={t('form.moveDown', { n: i + 1 })} disabled={i === images.length - 1} onClick={() => moveImage(i, 1)} className={iconButton}>
                       <Icon d="M9 6l6 6-6 6" />
                     </button>
                   </div>
-                  <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => removeImage(image.id)} className={iconButton}>
+                  <button type="button" aria-label={t('form.remove', { n: i + 1 })} onClick={() => removeImage(image.id)} className={iconButton}>
                     <Icon d="M6 6l12 12M18 6L6 18" />
                   </button>
                 </div>
@@ -348,14 +350,14 @@ export default function ProjectForm({ project, creator, onSubmit, onCancel }: Pr
           disabled={saving}
           className="h-10 rounded-full px-5 text-sm text-brand-primary hover:bg-brand-blush/70 focus-visible:outline-2 focus-visible:outline-brand-sage disabled:opacity-50"
         >
-          Cancelar
+          {t('form.cancel')}
         </button>
         <button
           type="submit"
           disabled={saving}
           className="h-10 rounded-full bg-brand-primary px-6 text-sm font-medium text-brand-blush hover:bg-brand-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage disabled:opacity-50"
         >
-          {saving ? 'Guardando…' : project ? 'Guardar cambios' : 'Guardar proyecto'}
+          {saving ? t('form.saving') : project ? t('form.saveChanges') : t('form.saveNew')}
         </button>
       </div>
     </form>

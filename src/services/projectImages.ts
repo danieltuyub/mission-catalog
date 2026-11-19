@@ -1,3 +1,4 @@
+import i18n from '../i18n'
 import type { Photo } from '../components/PhotoCarousel'
 import type { Project } from '../types'
 import { compressImage } from './imageUtils'
@@ -15,7 +16,7 @@ export function projectPhotos(project: Project): Photo[] {
     .sort((a, b) => a.position - b.position)
     .map((img, i) => ({
       src: projectImageUrl(img.path),
-      alt: img.alt || `${project.name} — foto ${i + 1}`,
+      alt: img.alt || i18n.t('project:photoAlt', { name: project.name, n: i + 1 }),
     }))
 }
 
