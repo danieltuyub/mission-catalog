@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { usePrivateRoute } from '../hooks/useRoute'
-import { can } from '../services/permissions'
 
 const LINKS = [
   { href: '#/mapa', key: 'nav.map' },
@@ -13,12 +12,12 @@ const YEAR = new Date().getFullYear()
 
 export default function Footer() {
   const { t } = useTranslation()
-  // Admins read the contact messages: they have nobody to contact here.
-  const isAdmin = can(useAuth(), 'users.manage')
+  // Signed-in users (admins read the messages) have no use for the contact form: it is for visitors.
+  const signedIn = !!useAuth().email
   // The invitation to write to us is for visitors: private areas get the short footer.
   const privateArea = usePrivateRoute()
-  const invite = !isAdmin && !privateArea
-  const links = isAdmin ? LINKS.filter((l) => l.href !== '#/contacto') : LINKS
+  const invite = !signedIn && !privateArea
+  const links = signedIn ? LINKS.filter((l) => l.href !== '#/contacto') : LINKS
   return (
     <footer className="pt-5 md:pb-5">
       <div className={`mx-auto rounded-t-3xl bg-brand-primary px-6 text-brand-blush md:w-4/5 md:rounded-3xl md:px-12 ${invite ? 'pb-6 pt-14 md:pt-16' : 'pb-8 pt-10 md:pt-12'}`}>

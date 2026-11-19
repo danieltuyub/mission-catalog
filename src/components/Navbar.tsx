@@ -58,9 +58,9 @@ export default function Navbar({ current }: { current: Route }) {
 
         <ul
           id="main-menu"
-          className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:ml-auto md:mt-0 md:flex md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
+          className={`${open ? 'visible [clip-path:inset(0_-2rem_-2rem_-2rem)]' : 'invisible [clip-path:inset(0_-2rem_100%_-2rem)]'} absolute inset-x-0 top-full mt-3 flex flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 transition-[clip-path,visibility] duration-250 ease-out motion-reduce:transition-none md:visible md:static md:ml-auto md:mt-0 md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none md:[clip-path:none]`}
         >
-          {LINKS.filter((l) => !(isAdmin && l.route === 'contacto')).map(({ route, key }) => (
+          {LINKS.filter((l) => !(email && l.route === 'contacto')).map(({ route, key }) => (
             <li key={route}>
               <a
                 href={`#/${route}`}
