@@ -6,6 +6,7 @@ import PanelTabs from '../components/PanelTabs'
 import { useAdminSection, type AdminSection } from '../hooks/useRoute'
 import { useUnreadContacts } from '../hooks/useUnreadContacts'
 import { countPendingRequests } from '../services/pinRequests'
+import AuditSection from './admin/AuditSection'
 import ContactInboxSection from './admin/ContactInboxSection'
 import ModerationSection from './admin/ModerationSection'
 import PinRequestsSection from './admin/PinRequestsSection'
@@ -13,7 +14,7 @@ import PinsSection from './admin/PinsSection'
 import ProjectsAdminSection from './admin/ProjectsAdminSection'
 import UsersSection from './admin/UsersSection'
 
-const ADMIN_TABS: readonly { id: AdminSection }[] = [{ id: 'solicitudes' }, { id: 'pines' }, { id: 'proyectos' }, { id: 'usuarios' }, { id: 'mensajes' }, { id: 'contacto' }]
+const ADMIN_TABS: readonly { id: AdminSection }[] = [{ id: 'solicitudes' }, { id: 'pines' }, { id: 'proyectos' }, { id: 'usuarios' }, { id: 'mensajes' }, { id: 'contacto' }, { id: 'auditoria' }]
 
 const CONTENT: Record<AdminSection, ComponentType> = {
   solicitudes: PinRequestsSection,
@@ -22,6 +23,7 @@ const CONTENT: Record<AdminSection, ComponentType> = {
   usuarios: UsersSection,
   mensajes: ModerationSection,
   contacto: ContactInboxSection,
+  auditoria: AuditSection,
 }
 
 function CountBadge({ count, label }: { count: number; label: string }) {

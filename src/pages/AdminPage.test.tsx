@@ -34,11 +34,11 @@ describe('AdminPage', () => {
     expect(window.location.hash).toBe('#/admin/solicitudes')
   })
 
-  it('lists the six sections and marks the current one', () => {
+  it('lists the seven sections and marks the current one', () => {
     window.location.hash = '#/admin/usuarios'
     render(<AdminPage />)
     const nav = screen.getByRole('navigation', { name: 'Administración' })
-    expect(nav.querySelectorAll('a')).toHaveLength(6)
+    expect(nav.querySelectorAll('a')).toHaveLength(7)
     expect(screen.getByRole('link', { name: 'Usuarios' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Mensajes' })).toHaveAttribute('href', '#/admin/mensajes')
   })

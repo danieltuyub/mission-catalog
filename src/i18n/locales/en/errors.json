@@ -51,5 +51,6 @@
   "contactFailed": "Could not send the message. Try again.",
   "contactRateLimited": "We already received several messages from you. Wait a while before sending another.",
   "loadContact": "Could not load the contact messages. Try again.",
-  "contactUpdateFailed": "Could not update the message. Try again."
+  "contactUpdateFailed": "Could not update the message. Try again.",
+  "loadAudit": "Could not load the audit log. Try again."
 }

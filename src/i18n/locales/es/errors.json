@@ -51,5 +51,6 @@
   "contactFailed": "No se pudo enviar el mensaje. Inténtalo de nuevo.",
   "contactRateLimited": "Ya recibimos varios mensajes tuyos. Espera un rato antes de enviar otro.",
   "loadContact": "No se pudieron cargar los mensajes de contacto. Inténtalo de nuevo.",
-  "contactUpdateFailed": "No se pudo actualizar el mensaje. Inténtalo de nuevo."
+  "contactUpdateFailed": "No se pudo actualizar el mensaje. Inténtalo de nuevo.",
+  "loadAudit": "No se pudo cargar el registro de auditoría. Inténtalo de nuevo."
 }

@@ -72,5 +72,11 @@ Deno.serve(async (req) => {
     }
   }
 
+  // The audit trail, with the admin's own session so it records who did it. Never fails the creation.
+  await asCaller.rpc('audit_user_created', { target: id, new_role: role }).then(
+    () => {},
+    () => {},
+  )
+
   return reply(200, { id })
 })

@@ -37,6 +37,10 @@ vi.mock('../../services/contactMessages', async (importOriginal) => ({
   setContactRead: vi.fn(),
   subscribeToContacts: vi.fn(() => () => {}),
 }))
+vi.mock('../../services/auditLog', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../services/auditLog')>()),
+  listAuditLog: vi.fn(),
+}))
 vi.mock('../../services/adminUsers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../services/adminUsers')>()),
   listUsers: svc.listUsers,
@@ -100,8 +104,10 @@ import { DEFAULT_ADMIN_SORT, saveAdminPageSize, saveAdminSort } from '../../serv
 import { getAuthSnapshot } from '../../services/authService'
 import { getToast } from '../../services/toast'
 import { ADMIN } from '../../test/auth'
+import AuditSection from './AuditSection'
 import ContactInboxSection from './ContactInboxSection'
 import ModerationSection from './ModerationSection'
+import { listAuditLog } from '../../services/auditLog'
 import { listContactMessages, setContactRead } from '../../services/contactMessages'
 import PinRequestsSection from './PinRequestsSection'
 import PinsSection from './PinsSection'
@@ -813,5 +819,63 @@ describe('ContactInboxSection', () => {
     vi.mocked(listContactMessages).mockResolvedValue([])
     render(<ContactInboxSection />)
     expect(await screen.findByText('Aún no hay mensajes de contacto.')).toBeInTheDocument()
+  })
+})
+
+describe('AuditSection', () => {
+  const entry = (id: number, action: string, extra = {}) => ({
+    id, createdAt: '2026-11-18T10:00:00Z', actorId: 'u1', actorEmail: 'ana@b.co', action, entityType: 'user', entityId: 'u2',
+    entityLabel: 'luis@b.co', before: null, after: null, ...extra,
+  })
+
+  beforeEach(() => {
+    svc.listUsers.mockResolvedValue([
+      { id: 'u1', email: 'ana@b.co', firstName: 'Ana', lastName: 'Pérez', role: 'admin', createdAt: '2026-01-01T00:00:00Z', lastSignInAt: null, bannedUntil: null, language: null },
+    ])
+    vi.mocked(listAuditLog).mockReset().mockResolvedValue({
+      total: 60,
+      entries: [
+        entry(2, 'user.role_changed', { before: { role: 'subscriber' }, after: { role: 'creator' } }),
+        entry(1, 'auth.login', { entityLabel: 'ana@b.co' }),
+      ],
+    })
+  })
+
+  it('lists who did what, with the user named', async () => {
+    render(<AuditSection />)
+    expect(await screen.findByText('Cambió el rol de un usuario')).toBeInTheDocument()
+    expect(screen.getAllByText(/Por Ana Pérez/).length).toBeGreaterThan(0)
+    expect(screen.getByText('60 registros')).toBeInTheDocument()
+  })
+
+  it('shows what changed, before and after, when a row is opened', async () => {
+    render(<AuditSection />)
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Ver detalle' }))[0])
+    expect(screen.getByText('Suscriptor')).toBeInTheDocument()
+    expect(screen.getByText('Creador')).toBeInTheDocument()
+  })
+
+  it('filters, and goes back to the first page', async () => {
+    render(<AuditSection />)
+    await screen.findByText('Cambió el rol de un usuario')
+    await userEvent.selectOptions(screen.getByLabelText('Acción'), 'auth.login')
+    await waitFor(() => expect(listAuditLog).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, pageSize: 25, action: 'auth.login' })))
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar filtros' }))
+    await waitFor(() => expect(listAuditLog).toHaveBeenLastCalledWith(expect.objectContaining({ action: '' })))
+  })
+
+  it('changes the page size and the page', async () => {
+    render(<AuditSection />)
+    await screen.findByText('Cambió el rol de un usuario')
+    await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }))
+    await waitFor(() => expect(listAuditLog).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })))
+    await userEvent.selectOptions(screen.getByLabelText('Por página'), '50')
+    await waitFor(() => expect(listAuditLog).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, pageSize: 50 })))
+  })
+
+  it('says when nothing matches', async () => {
+    vi.mocked(listAuditLog).mockResolvedValue({ total: 0, entries: [] })
+    render(<AuditSection />)
+    expect(await screen.findByText('Aún no hay registros.')).toBeInTheDocument()
   })
 })

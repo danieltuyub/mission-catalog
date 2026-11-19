@@ -114,7 +114,7 @@ export function useEditProjectId(): string | null {
 }
 
 /** Sections of the admin area, `#/admin/<section>`. */
-export const ADMIN_SECTIONS = ['solicitudes', 'pines', 'proyectos', 'usuarios', 'mensajes', 'contacto'] as const
+export const ADMIN_SECTIONS = ['solicitudes', 'pines', 'proyectos', 'usuarios', 'mensajes', 'contacto', 'auditoria'] as const
 export type AdminSection = (typeof ADMIN_SECTIONS)[number]
 
 /** Section of `#/admin/<section>`; null on `#/admin`, on an unknown section or on any other route. */

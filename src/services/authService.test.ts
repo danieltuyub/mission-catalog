@@ -55,6 +55,22 @@ describe('signIn', () => {
 })
 
 describe('signOut', () => {
+  it('records the logout before the session goes, and signs out even if that fails', async () => {
+    const order: string[] = []
+    sb.rpc.mockImplementation(async () => {
+      order.push('audit')
+      throw new Error('offline')
+    })
+    sb.signOut.mockImplementation(async () => {
+      order.push('signOut')
+      return { error: null }
+    })
+    await expect(signOut()).resolves.toBeUndefined()
+    expect(order).toEqual(['audit', 'signOut'])
+    expect(sb.rpc).toHaveBeenCalledWith('audit_logout')
+    sb.rpc.mockReset()
+  })
+
   it('throws when Supabase fails', async () => {
     sb.signOut.mockResolvedValue({ error: new Error('boom') })
     await expect(signOut()).rejects.toThrow('boom')

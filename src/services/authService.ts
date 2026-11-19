@@ -107,6 +107,12 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  // Recorded before the session goes: afterwards nobody can say who it was. Never blocks signing out.
+  try {
+    await supabase.rpc('audit_logout')
+  } catch {
+    // Not recorded, still signed out.
+  }
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
