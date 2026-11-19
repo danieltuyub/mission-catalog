@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth'
 import { useUnreadMessages } from '../hooks/useUnreadMessages'
 import type { Route } from '../hooks/useRoute'
 import { can } from '../services/permissions'
+import LanguageSwitch from './LanguageSwitch'
 import UserMenu from './UserMenu'
 
-const LINKS: { route: Route; label: string }[] = [
-  { route: 'mapa', label: 'Mapa' },
-  { route: 'proyectos', label: 'Proyectos' },
-  { route: 'contacto', label: 'Contacto' },
-]
+const LINKS = [
+  { route: 'mapa', key: 'nav.map' },
+  { route: 'proyectos', key: 'nav.projects' },
+  { route: 'contacto', key: 'nav.contact' },
+] as const satisfies readonly { route: Route; key: string }[]
 
 export default function Navbar({ current }: { current: Route }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const auth = useAuth()
@@ -38,7 +41,7 @@ export default function Navbar({ current }: { current: Route }) {
   return (
     <header className="relative z-[3000] flex justify-center pb-5 pt-5">
       <nav
-        aria-label="Principal"
+        aria-label={t('nav.label')}
         className="relative flex w-[94%] items-center justify-between rounded-full bg-brand-primary px-3 py-2.5 text-brand-blush shadow-lg shadow-brand-primary/25 md:w-4/5"
       >
         <a href="#/mapa" aria-label="Mission Catalog" className="flex items-center gap-3">
@@ -54,7 +57,7 @@ export default function Navbar({ current }: { current: Route }) {
           id="main-menu"
           className={`${open ? 'flex' : 'hidden'} absolute inset-x-0 top-full mt-3 flex-col items-center gap-1 rounded-3xl bg-brand-primary p-5 shadow-lg shadow-brand-primary/25 md:static md:ml-auto md:mt-0 md:flex md:flex-row md:gap-2 md:rounded-none md:bg-transparent md:p-0 md:shadow-none`}
         >
-          {LINKS.map(({ route, label }) => (
+          {LINKS.map(({ route, key }) => (
             <li key={route}>
               <a
                 href={`#/${route}`}
@@ -64,10 +67,13 @@ export default function Navbar({ current }: { current: Route }) {
                   current === route ? 'bg-brand-sage font-medium text-brand-primary' : 'hover:bg-white/10'
                 }`}
               >
-                {label}
+                {t(key)}
               </a>
             </li>
           ))}
+          <li>
+            <LanguageSwitch />
+          </li>
           {/* Not shown while the stored session is still being resolved (avoids a flash). */}
           {!email && !loading && (
             <li>
@@ -76,7 +82,7 @@ export default function Navbar({ current }: { current: Route }) {
                 onClick={() => setOpen(false)}
                 className="block rounded-full px-5 py-2 text-sm ring-1 ring-brand-blush/40 transition-colors hover:bg-white/10 md:ml-1"
               >
-                Iniciar sesión
+                {t('nav.signIn')}
               </a>
             </li>
           )}
@@ -98,7 +104,7 @@ export default function Navbar({ current }: { current: Route }) {
           )}
           <button
             type="button"
-            aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+            aria-label={open ? t('nav.closeMenu') : t('nav.openMenu')}
             aria-expanded={open}
             aria-controls="main-menu"
             onClick={toggleMenu}

@@ -1,25 +1,27 @@
+import { useTranslation } from 'react-i18next'
+
 const LINKS = [
-  { href: '#/mapa', label: 'Mapa' },
-  { href: '#/proyectos', label: 'Proyectos' },
-  { href: '#/contacto', label: 'Contacto' },
-]
+  { href: '#/mapa', key: 'nav.map' },
+  { href: '#/proyectos', key: 'nav.projects' },
+  { href: '#/contacto', key: 'nav.contact' },
+] as const
 
 const YEAR = new Date().getFullYear()
 
 export default function Footer() {
+  const { t } = useTranslation()
   return (
     <footer className="pb-5 pt-5">
       <div className="mx-auto w-[94%] rounded-3xl bg-brand-primary px-6 pb-6 pt-14 text-brand-blush md:w-4/5 md:px-12 md:pt-16">
         <div className="text-center">
           <p className="mx-auto max-w-2xl text-lg leading-relaxed">
-            Si quieres más información sobre las iglesias en casa, o de algún proyecto en
-            particular, ponte en contacto con nosotros
+            {t('footer.pitch')}
           </p>
           <a
             href="#/contacto"
             className="mt-8 inline-block rounded-full bg-brand-blush px-6 py-2 text-sm font-medium text-brand-primary transition-colors hover:bg-brand-sage"
           >
-            Contáctanos
+            {t('footer.contactUs')}
           </a>
         </div>
 
@@ -27,16 +29,16 @@ export default function Footer() {
           <div>
             <p className="font-medium text-white">Mission Catalog</p>
             <p className="mx-auto mt-2 max-w-xs text-brand-blush/70 md:mx-0 md:max-w-none">
-              Un mapa de las iglesias en casa y proyectos misioneros.
+              {t('footer.about')}
             </p>
           </div>
 
-          <nav aria-label="Pie de página" className="md:justify-self-center">
+          <nav aria-label={t('footer.label')} className="md:justify-self-center">
             <ul className="space-y-2">
               {LINKS.map((l) => (
                 <li key={l.href}>
                   <a href={l.href} className="text-brand-blush/70 transition-colors hover:text-white">
-                    {l.label}
+                    {t(l.key)}
                   </a>
                 </li>
               ))}
@@ -50,7 +52,7 @@ export default function Footer() {
             >
               hey@danieltuyub.com
             </a>
-            <p className="mt-2 text-brand-blush/70">Mérida, Yucatán</p>
+            <p className="mt-2 text-brand-blush/70">{t('footer.place')}</p>
           </div>
         </div>
 

@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "label": "Principal",
+    "map": "Mapa",
+    "projects": "Proyectos",
+    "contact": "Contacto",
+    "signIn": "Iniciar sesión",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "language": "Cambiar idioma"
+  },
+  "userMenu": {
+    "label": "Menú de usuario",
+    "labelFor": "Menú de usuario de {{name}}",
+    "unread_one": "{{count}} mensaje sin leer",
+    "unread_other": "{{count}} mensajes sin leer",
+    "completeName": "Completa tu nombre",
+    "admin": "Administración",
+    "myspace": "Mi espacio",
+    "signOut": "Cerrar sesión",
+    "signedOut": "Sesión cerrada",
+    "signOutFailed": "No se pudo cerrar la sesión. Inténtalo de nuevo."
+  },
+  "footer": {
+    "label": "Pie de página",
+    "pitch": "Si quieres más información sobre las iglesias en casa, o de algún proyecto en particular, ponte en contacto con nosotros",
+    "contactUs": "Contáctanos",
+    "about": "Un mapa de las iglesias en casa y proyectos misioneros.",
+    "place": "Mérida, Yucatán"
+  }
+}

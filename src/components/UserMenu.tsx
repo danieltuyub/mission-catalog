@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isPrivateRoute } from '../hooks/useRoute'
 import { signOut } from '../services/authService'
 import { fullName, initials } from '../services/displayName'
@@ -27,9 +28,10 @@ const Icon = ({ d, className }: { d: string; className: string }) => (
 )
 
 export default function UserMenu({ email, firstName, lastName, loading, unread, isAdmin, active, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const name = fullName(firstName, lastName)
   const letters = initials(firstName, lastName)
-  const unreadLabel = unread > 0 ? `${unread} ${unread === 1 ? 'mensaje sin leer' : 'mensajes sin leer'}` : ''
+  const unreadLabel = unread > 0 ? t('userMenu.unread', { count: unread }) : ''
   const unreadText = unread > 9 ? '9+' : String(unread)
   // The first name is required in "Mi cuenta", so an empty one means the profile is not filled in.
   // Not while loading: the names are not known yet.
@@ -62,7 +64,7 @@ export default function UserMenu({ email, firstName, lastName, loading, unread, 
       <button
         ref={trigger}
         type="button"
-        aria-label={`${name ? `Menú de usuario de ${name}` : 'Menú de usuario'}${unreadLabel ? `, ${unreadLabel}` : ''}`}
+        aria-label={`${name ? t('userMenu.labelFor', { name }) : t('userMenu.label')}${unreadLabel ? `, ${unreadLabel}` : ''}`}
         aria-expanded={open}
         aria-controls="user-menu"
         onClick={() => onOpenChange(!open)}
@@ -120,7 +122,7 @@ export default function UserMenu({ email, firstName, lastName, loading, unread, 
                   onClick={() => onOpenChange(false)}
                   className="text-xs text-brand-blush/70 underline underline-offset-2 hover:text-brand-blush focus-visible:outline-2 focus-visible:outline-brand-sage"
                 >
-                  Completa tu nombre
+                  {t('userMenu.completeName')}
                 </a>
               )}
             </>
@@ -140,7 +142,7 @@ export default function UserMenu({ email, firstName, lastName, loading, unread, 
             }
             className="size-4"
           />
-          {isAdmin ? 'Administración' : 'Mi espacio'}
+          {isAdmin ? t('userMenu.admin') : t('userMenu.myspace')}
           {unread > 0 && (
             <span
               aria-label={unreadLabel}
@@ -157,17 +159,17 @@ export default function UserMenu({ email, firstName, lastName, loading, unread, 
             try {
               await signOut()
             } catch {
-              showToast('No se pudo cerrar la sesión. Inténtalo de nuevo.')
+              showToast(t('userMenu.signOutFailed'))
               return
             }
             // Public pages stay as they are (they just turn into the guest view); private ones cannot.
             if (isPrivateRoute()) window.location.hash = '#/mapa'
-            showToast('Sesión cerrada')
+            showToast(t('userMenu.signedOut'))
           }}
           className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand-sage"
         >
           <Icon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" className="size-4" />
-          Cerrar sesión
+          {t('userMenu.signOut')}
         </button>
       </div>
     </div>

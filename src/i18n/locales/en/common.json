@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "label": "Main",
+    "map": "Map",
+    "projects": "Projects",
+    "contact": "Contact",
+    "signIn": "Sign in",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Change language"
+  },
+  "userMenu": {
+    "label": "User menu",
+    "labelFor": "User menu for {{name}}",
+    "unread_one": "{{count}} unread message",
+    "unread_other": "{{count}} unread messages",
+    "completeName": "Complete your name",
+    "admin": "Administration",
+    "myspace": "My space",
+    "signOut": "Sign out",
+    "signedOut": "Signed out",
+    "signOutFailed": "Could not sign out. Please try again."
+  },
+  "footer": {
+    "label": "Footer",
+    "pitch": "If you want more information about house churches, or about a particular project, get in touch with us",
+    "contactUs": "Contact us",
+    "about": "A map of house churches and mission projects.",
+    "place": "Mérida, Yucatán"
+  }
+}

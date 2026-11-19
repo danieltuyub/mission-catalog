@@ -1,8 +1,14 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
+import { setLanguage } from '../i18n'
 import { resetSavedProjects } from '../hooks/useSavedProjects'
 import { dismissToast } from '../services/toast'
+
+// Tests run in Spanish, whatever the browser says; a test that changes it must not leak.
+beforeEach(async () => {
+  await setLanguage('es')
+})
 
 // The saved marks and the toast live in module state: clear them between tests.
 afterEach(() => {
