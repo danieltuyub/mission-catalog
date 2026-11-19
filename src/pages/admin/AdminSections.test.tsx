@@ -139,32 +139,39 @@ describe('UsersSection new user', () => {
 })
 
 describe('UsersSection', () => {
-  it('changes a role and reloads', async () => {
+  it('shows the role as text and changes it from the edit form', async () => {
     svc.setUserRole.mockResolvedValue(undefined)
     render(<UsersSection />)
-    const select = await screen.findByRole('combobox', { name: 'Rol de Ana Paz' })
-    await userEvent.selectOptions(select, 'creator')
+    await screen.findByText('Ana Paz')
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Editar a Ana Paz' }))
+    const form = await screen.findByRole('form', { name: 'Editar a ana@x.com' })
+    await userEvent.selectOptions(within(form).getByRole('combobox', { name: 'Rol' }), 'creator')
+    await userEvent.click(within(form).getByRole('button', { name: 'Guardar' }))
     expect(svc.setUserRole).toHaveBeenCalledWith('u1', 'creator')
-    expect(getToast()?.message).toBe('Rol actualizado')
+    expect(svc.updateUserName).not.toHaveBeenCalled()
+    await waitFor(() => expect(getToast()?.message).toBe('Usuario actualizado'))
     expect(svc.listUsers).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Editar a ana@x.com' })).not.toBeInTheDocument())
   })
 
   it('does not let an admin change their own role', async () => {
     render(<UsersSection />)
-    expect(await screen.findByRole('combobox', { name: 'Rol de Yo' })).toBeDisabled()
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar a Yo' }))
+    expect(await screen.findByRole('combobox', { name: 'Rol' })).toBeDisabled()
   })
 
   it('edits a name', async () => {
     svc.updateUserName.mockResolvedValue(undefined)
     render(<UsersSection />)
-    await screen.findByText('Ana Paz')
-    await userEvent.click(screen.getAllByRole('button', { name: 'Editar nombre' })[0])
-    const form = screen.getByRole('form', { name: 'Editar nombre de ana@x.com' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar a Ana Paz' }))
+    const form = await screen.findByRole('form', { name: 'Editar a ana@x.com' })
     const first = within(form).getByLabelText('Nombre')
     await userEvent.clear(first)
     await userEvent.type(first, 'Anita')
     await userEvent.click(within(form).getByRole('button', { name: 'Guardar' }))
     expect(svc.updateUserName).toHaveBeenCalledWith('u1', 'Anita', 'Paz')
+    expect(svc.setUserRole).not.toHaveBeenCalled()
   })
 
   it('filters by name or email', async () => {

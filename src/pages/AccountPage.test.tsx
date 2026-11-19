@@ -9,7 +9,7 @@ vi.mock('./account/ProfileSection', () => ({ default: () => <p>sección perfil</
 
 import { getAuthSnapshot } from '../services/authService'
 import { useUnreadMessages } from '../hooks/useUnreadMessages'
-import { CREATOR, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
+import { ADMIN, CREATOR, SIGNED_OUT, SUBSCRIBER } from '../test/auth'
 import AccountPage from './AccountPage'
 
 vi.mock('../hooks/useUnreadMessages', () => ({ useUnreadMessages: vi.fn(() => 0) }))
@@ -47,6 +47,16 @@ describe('AccountPage', () => {
     render(<AccountPage />)
     await waitFor(() => expect(window.location.hash).toBe('#/cuenta/perfil'))
     expect(await screen.findByText('sección perfil')).toBeInTheDocument()
+  })
+
+  it('links admins back to the admin panel, and nobody else', () => {
+    window.location.hash = '#/cuenta/mensajes'
+    const { unmount } = render(<AccountPage />)
+    expect(screen.queryByRole('link', { name: 'Administración' })).not.toBeInTheDocument()
+    unmount()
+    vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+    render(<AccountPage />)
+    expect(screen.getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '#/admin')
   })
 
   it('lists the sections the account may use and marks the current one', () => {

@@ -5,6 +5,7 @@ import RequireAuth from '../components/RequireAuth'
 import { useAuth } from '../hooks/useAuth'
 import { useAccountSection, type AccountSection } from '../hooks/useRoute'
 import { useUnreadMessages } from '../hooks/useUnreadMessages'
+import { can } from '../services/permissions'
 import MessagesSection from './account/MessagesSection'
 import ProfileSection from './account/ProfileSection'
 import ProjectsSection from './account/ProjectsSection'
@@ -35,7 +36,16 @@ function Panel() {
 
   return (
     <div className="mx-auto w-[94%] pb-10 md:w-4/5">
-      <PageHeader title="Mi espacio" />
+      <PageHeader title="Mi espacio">
+        {can(auth, 'users.manage') && (
+          <a
+            href="#/admin"
+            className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm text-brand-primary ring-1 ring-black/5 hover:bg-brand-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-sage"
+          >
+            Administración
+          </a>
+        )}
+      </PageHeader>
       <PanelTabs
         label="Mi espacio"
         base="cuenta"
