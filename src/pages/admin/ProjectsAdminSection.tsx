@@ -133,15 +133,63 @@ export default function ProjectsAdminSection() {
     setBusy(null)
   }
 
-  if (error && !projects) return <LoadError message={error} onRetry={() => setVersion((v) => v + 1)} />
-  if (!projects) return <Loading />
+  // Opened straight from a link (a new tab), the form must not wait for the list: otherwise the list shows first and the form pops up over it.
+  const modal = (
+    <>
+      {editId ? (
+        <ProjectModal label={t('edit', { ns: 'project' })} onClose={closeModal}>
+          <ProjectEditor
+            key={editId}
+            id={editId}
+            onCancel={closeModal}
+            onSaved={(saved) => {
+              // The row changes in place: the list is not read again.
+              setProjects((list) => list && list.map((p) => (p.id === saved.id ? toRow(saved) : p)))
+              closeModal()
+              showToast(t('projects.updatedToast'))
+            }}
+          />
+        </ProjectModal>
+      ) : (
+        creating && (
+          <ProjectModal label={t('new', { ns: 'project' })} onClose={closeModal}>
+            <ProjectCreator
+              onCancel={closeModal}
+              onCreated={(created) => {
+                setProjects((list) => list && [...list, toRow(created)])
+                closeModal()
+                showToast(t('projects.createdToast'))
+              }}
+            />
+          </ProjectModal>
+        )
+      )}
+    </>
+  )
+
+  if (error && !projects)
+    return (
+      <>
+        <LoadError message={error} onRetry={() => setVersion((v) => v + 1)} />
+        {modal}
+      </>
+    )
+  if (!projects)
+    return (
+      <>
+        <Loading />
+        {modal}
+      </>
+    )
 
   const filtered = query.trim() ? sorted.filter((p) => matches(`${p.name} ${p.country ?? ''} ${p.region ?? ''}`, query)) : sorted
   const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1)
   const current = Math.min(page, totalPages)
   const shown = filtered.slice((current - 1) * pageSize, current * pageSize)
 
+  // The form is always the second child: it stays mounted when the list finishes loading.
   return (
+    <>
     <section aria-label={t('projects.label')} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <SearchBox
@@ -247,34 +295,8 @@ export default function ProjectsAdminSection() {
         </div>
         </div>
       )}
-      {editId ? (
-        <ProjectModal label={t('edit', { ns: 'project' })} onClose={closeModal}>
-          <ProjectEditor
-            key={editId}
-            id={editId}
-            onCancel={closeModal}
-            onSaved={(saved) => {
-              // The row changes in place: the list is not read again.
-              setProjects((list) => (list ?? []).map((p) => (p.id === saved.id ? toRow(saved) : p)))
-              closeModal()
-              showToast(t('projects.updatedToast'))
-            }}
-          />
-        </ProjectModal>
-      ) : (
-        creating && (
-          <ProjectModal label={t('new', { ns: 'project' })} onClose={closeModal}>
-            <ProjectCreator
-              onCancel={closeModal}
-              onCreated={(created) => {
-                setProjects((list) => [...(list ?? []), toRow(created)])
-                closeModal()
-                showToast(t('projects.createdToast'))
-              }}
-            />
-          </ProjectModal>
-        )
-      )}
     </section>
+    {modal}
+    </>
   )
 }

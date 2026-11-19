@@ -443,6 +443,15 @@ describe('ProjectsAdminSection', () => {
       expect(svc.listAdminProjects).toHaveBeenCalledTimes(1)
     })
 
+    it('opens the form without waiting for the list (a link opened in a new tab)', async () => {
+      svc.getProjectById.mockResolvedValue(full)
+      svc.listAdminProjects.mockReturnValueOnce(new Promise(() => {}))
+      window.location.hash = '#/admin/proyectos?editar=p1'
+      render(<ProjectsAdminSection />)
+      expect(await screen.findByRole('dialog', { name: 'Editar proyecto' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Casa Azul', level: 3 })).not.toBeInTheDocument()
+    })
+
     it('updates the row in place after saving and closes', async () => {
       svc.getProjectById.mockResolvedValue(full)
       svc.updateProjectWithImages.mockResolvedValue({ ...full, name: 'Casa Roja', updated_at: '2026-03-01T00:00:00Z' })

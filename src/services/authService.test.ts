@@ -141,6 +141,23 @@ describe('auth state', () => {
     expect(currentLanguage()).toBe('es')
   })
 
+  it('does not go back to loading when the same user is announced again (the window regained focus)', async () => {
+    sb.rpc.mockResolvedValue({ data: { roles: ['creator'], permissions: ['projects.create'] }, error: null })
+    sb.maybeSingle.mockResolvedValue({ data: { first_name: 'Eva', last_name: 'Ruiz', language: 'es' }, error: null })
+    emit('SIGNED_IN', { user: { id: 'u10', email: 'eva@b.com' } })
+    await vi.waitFor(() => expect(getAuthSnapshot()).toMatchObject({ userId: 'u10', loading: false, firstName: 'Eva' }))
+
+    const seen: boolean[] = []
+    const stop = subscribeAuth(() => seen.push(getAuthSnapshot().loading))
+    sb.maybeSingle.mockResolvedValue({ data: null, error: new Error('offline') })
+    emit('SIGNED_IN', { user: { id: 'u10', email: 'eva@b.com' } })
+    await new Promise((r) => setTimeout(r, 20))
+    stop()
+    expect(seen).not.toContain(true)
+    // The name already known survives a profile that could not be read this time.
+    expect(getAuthSnapshot()).toMatchObject({ loading: false, userId: 'u10', firstName: 'Eva', lastName: 'Ruiz' })
+  })
+
   it('knows when the account must choose its own password, before anything else loads', async () => {
     sb.rpc.mockResolvedValue({ data: { roles: ['subscriber'], permissions: [] }, error: null })
     sb.maybeSingle.mockResolvedValue({ data: null, error: null })

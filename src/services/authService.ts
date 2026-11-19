@@ -52,7 +52,10 @@ async function resolve(session: Session | null) {
   const userId = session.user.id
   const email = session.user.email ?? null
   const mustChangePassword = session.user.user_metadata?.must_change_password === true
-  setState({ loading: true, userId, email, permissions: [], firstName: '', lastName: '', mustChangePassword })
+  // Supabase repeats SIGNED_IN (and refreshes the token) whenever the window regains focus. For the same
+  // user that is not a new sign-in: showing "loading" would unmount every protected page and reload its data.
+  if (state.userId === userId) setState({ ...state, email, mustChangePassword })
+  else setState({ loading: true, userId, email, permissions: [], firstName: '', lastName: '', mustChangePassword })
   const [{ data, error }, profile] = await Promise.all([
     supabase.rpc('my_permissions'),
     getProfile(userId).catch(() => null), // the name is a nicety: never block the session on it
@@ -60,15 +63,27 @@ async function resolve(session: Session | null) {
   if (id !== resolveId) return // a newer session change won
   void syncLanguage(userId, profile)
   const permissions = !error && Array.isArray(data?.permissions) ? (data.permissions as string[]) : []
-  setState({
+  const next: AuthState = {
     loading: false,
     userId,
     email,
     permissions,
-    firstName: profile?.first_name ?? '',
-    lastName: profile?.last_name ?? '',
+    // A profile that could not be read this time keeps the name already known.
+    firstName: profile ? profile.first_name : state.userId === userId ? state.firstName : '',
+    lastName: profile ? profile.last_name : state.userId === userId ? state.lastName : '',
     mustChangePassword,
-  })
+  }
+  // Same values as before (a refocus): nobody is told, nothing re-renders.
+  const same =
+    !state.loading &&
+    state.userId === next.userId &&
+    state.email === next.email &&
+    state.firstName === next.firstName &&
+    state.lastName === next.lastName &&
+    state.mustChangePassword === next.mustChangePassword &&
+    state.permissions.length === next.permissions.length &&
+    state.permissions.every((p, i) => p === next.permissions[i])
+  if (!same) setState(next)
 }
 
 function start() {
