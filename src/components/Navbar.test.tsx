@@ -36,11 +36,13 @@ describe('Navbar', () => {
       window.location.hash = ''
     })
 
-    it('hides Contacto from admins, in the menu and in the footer', () => {
-      vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+    it.each([['admins', ADMIN], ['subscribers', SUBSCRIBER]])('hides Contacto from signed-in %s', (_, auth) => {
+      vi.mocked(getAuthSnapshot).mockReturnValue(auth)
       render(<Navbar current="mapa" />)
       expect(screen.queryByRole('link', { name: 'Contacto' })).not.toBeInTheDocument()
-      vi.mocked(getAuthSnapshot).mockReturnValue(SUBSCRIBER)
+    })
+
+    it('shows Contacto to visitors', () => {
       render(<Navbar current="mapa" />)
       expect(screen.getByRole('link', { name: 'Contacto' })).toBeInTheDocument()
     })
@@ -269,10 +271,11 @@ describe('Footer', () => {
     expect(screen.getByText(/© /)).toBeInTheDocument()
   })
 
-  it('does not invite an admin anywhere', () => {
-    vi.mocked(getAuthSnapshot).mockReturnValue(ADMIN)
+  it.each([['an admin', ADMIN], ['a subscriber', SUBSCRIBER]])('does not invite or link contact to %s', (_, auth) => {
+    vi.mocked(getAuthSnapshot).mockReturnValue(auth)
     window.location.hash = '#/mapa'
     render(<Footer />)
     expect(screen.queryByRole('link', { name: 'Contáctanos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Contacto' })).not.toBeInTheDocument()
   })
 })
