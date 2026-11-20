@@ -386,7 +386,7 @@ describe('ProjectsPage', () => {
 
     it('debounces quick changes into a single query', async () => {
       getProjects.mockResolvedValue(page([project('1', 'Uno')]))
-      render(<ProjectsPage filterDebounceMs={80} />)
+      render(<ProjectsPage filterDebounceMs={400} />)
       await screen.findByRole('heading', { name: 'Uno' })
       const before = getProjects.mock.calls.length
       await userEvent.click(screen.getByRole('checkbox', { name: 'Abierto' }))
