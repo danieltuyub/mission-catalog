@@ -103,32 +103,40 @@ curl -X POST "$VITE_SUPABASE_URL/functions/v1/admin-create-user" \
 `.github/workflows/deploy.yml`:
 
 - **Every push (main, dev) and pull request to main:** `npm run lint`, `npx tsc -b`, `npm test`. The tests mock Supabase: no container or network needed (the workflow only sets dummy `VITE_SUPABASE_*` values, which the client requires to exist).
-- **Push to main, after the checks pass:** builds with the real `VITE_SUPABASE_*`, uploads `dist/` over SSH (rsync) to `<VPS_PATH>/releases/<commit>/` and then points `<VPS_PATH>/current` at it with an atomic rename. The 5 newest releases are kept (`RELEASES_TO_KEEP`), never the one in use.
-- **Manual run:** GitHub → Actions → "CI and deploy" → Run workflow, choosing the branch. It runs the checks and publishes that branch.
-- **Not included:** migrations (`db:push`) and the Edge Function stay manual.
+- **Push to main or dev, after the checks pass:** builds with that target's `VITE_SUPABASE_*`, uploads `dist/` over SSH (rsync) to `<VPS_PATH>/releases/<commit>/` and then points `<VPS_PATH>/current` at it with an atomic rename. The 5 newest releases are kept (`RELEASES_TO_KEEP`), never the one in use.
+- **Manual run:** GitHub → Actions → "CI and deploy" → Run workflow, choosing the branch and the target. It runs the checks and publishes that branch.
+- **Not included:** migrations ("Migrations from GitHub", manual) and the Edge Function (by hand).
+
+| Target | Published by | Secrets | Folder on the VPS | Deploy user |
+| --- | --- | --- | --- | --- |
+| `development` (default of a manual run) | push to `dev`, or a manual run from any branch | `development` environment | `/var/www/mission-catalog-dev` | `ghdeployer-dev` |
+| `production` | push to `main`, or a manual run from `main` | `production` environment | `/var/www/mission-catalog` | `ghdeployer` |
 
 ### Secrets
 
-Repository **Settings → Secrets and variables → Actions** (or the `production` environment, which also lets you require an approval before each deploy):
+**Settings → Environments**, once in `development` and once in `production`, each with its own values. Keep them out of the repository-level secrets: one missing in an environment would silently take the repository's value, maybe production's. In `production`, set "Deployment branches" to `main` only (the check inside the workflow can be edited away in a branch); you can also require an approval before each deploy.
 
 | Secret | Value |
 | --- | --- |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | the same publishable values as `.env` |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | the publishable values of that environment's Supabase project |
 | `VPS_HOST` | server name or IP |
 | `VPS_PORT` | optional, `22` by default |
-| `VPS_USER` | the deploy user (below) |
-| `VPS_PATH` | absolute path of the site's folder, e.g. `/var/www/mission-catalog` (letters, digits, `_ . / -` only) |
+| `VPS_USER` | that target's deploy user (below) |
+| `VPS_PATH` | absolute path of that target's folder, e.g. `/var/www/mission-catalog` (letters, digits, `_ . / -` only) |
 | `VPS_SSH_KEY` | the deploy user's **private** key (whole file) |
 | `VPS_KNOWN_HOSTS` | the server's host key line(s): `ssh-keyscan -p 22 your.host` run from a network you trust, ideally compared with the server's own `/etc/ssh/ssh_host_ed25519_key.pub` |
 
 ### Server, once
 
 ```bash
-# A user that can only write the site's folder (no sudo, no password)
+# One user per target, each able to write only its own folder (no sudo, no password)
 sudo adduser --disabled-password --gecos "" ghdeployer
 sudo mkdir -p /var/www/mission-catalog && sudo chown ghdeployer: /var/www/mission-catalog
 
-# The deploy key and its public half: see "Where each value comes from" (VPS_SSH_KEY)
+sudo adduser --disabled-password --gecos "" ghdeployer-dev
+sudo mkdir -p /var/www/mission-catalog-dev && sudo chown ghdeployer-dev: /var/www/mission-catalog-dev
+
+# A deploy key for each user: see "Where each value comes from" (VPS_SSH_KEY)
 ```
 
 Caddy and the certificate: see "Caddy and TLS" below.
@@ -139,7 +147,7 @@ Caddy and the certificate: see "Caddy and TLS" below.
 ssh ghdeployer@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -sfn releases/<commit> current.new && mv -T current.new current'
 ```
 
-(`mv -T` is GNU: fine on Linux.) The next push to main publishes again from there.
+(`mv -T` is GNU: fine on Linux.) For development use `ghdeployer-dev` and its folder. The next deploy of that target publishes again from there.
 
 ### Where each value comes from
 
@@ -153,27 +161,44 @@ ssh ghdeployer@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -
 | `VPS_KNOWN_HOSTS` | on the VPS: `echo "catalog.example.com $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"`. With a port other than 22 the line starts with `[catalog.example.com]:2222` |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API (the project URL and the anon / publishable key) |
 | `SUPABASE_PROJECT_REF` | the `<ref>` in `https://<ref>.supabase.co` |
-| `SUPABASE_ACCESS_TOKEN` | Supabase → Account (your avatar) → Access Tokens → Generate new token |
+| `SUPABASE_ACCESS_TOKEN` | Supabase → Account (your avatar) → Access Tokens → Generate new token, scoped to that one project (see "Migrations from GitHub") |
 | `SUPABASE_DB_PASSWORD` | Supabase → Project Settings → Database (reset it there if lost) |
+
+The examples are production's: for `development` repeat them with `ghdeployer-dev`, its folder and a new key (the known-hosts line is the same, the server is the same).
 
 The key and the known-hosts line are the only ones that need the VPS. Test the key from your own machine before pasting it: `ssh -i deploy_key -p 22 ghdeployer@catalog.example.com 'echo ok'`.
 
 ### Migrations from GitHub
 
-`.github/workflows/migrations.yml`, manual only: Actions → "Database migrations" → Run workflow, **from main**.
+`.github/workflows/migrations.yml`, manual only: Actions → "Database migrations" → Run workflow.
+
+| Target | Run it from | Secrets and rules |
+| --- | --- | --- |
+| `development` (default) | any branch that has this workflow | `development` environment |
+| `production` | `main` only | `production` environment |
 
 - **Untick "apply" (default):** dry run, it prints the migrations that are pending and changes nothing.
-- **Tick "apply":** runs `npm run db:push` against the linked project.
-- It uses the `production` environment (approval rules and secrets) and refuses to run from any branch but main, so a migration that is not merged never reaches the database.
-- Needs `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` in the `production` environment. They are passed as environment variables to the steps only.
-- If linking or pushing fails with a network error, the runner cannot reach the database directly (Supabase's direct host can be IPv6 only). The CLI normally goes through the pooler once linked; if it does not, apply from your machine as before.
-- The Edge Function is still deployed by hand (`npx supabase functions deploy admin-create-user`).
+- **Tick "apply":** runs `npm run db:push -- --yes` against that project.
+- Both environments need `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`, with each project's values. They are passed as environment variables to the steps only.
+- **One scoped token per environment** ([Account → Access Tokens](https://supabase.com/dashboard/account/tokens), [docs](https://supabase.com/docs/guides/platform/personal-access-tokens)): limit it to that environment's project, with **Read** on Project Settings, API Keys and API Key Secrets (what `supabase link` needs). Never a full-access ("Legacy") token: the one in `development` could reach production.
+- The token's permissions do not limit what the database password can do: use a different password in each project. The token can still read that project's secret keys, so treat it as sensitive.
+- In the `production` environment, set "Deployment branches" to `main` only (the check inside the workflow can be edited away in a branch), and keep these secrets in the environments, not at repository level.
+- If linking or pushing fails with a network error, the runner cannot reach the database directly (Supabase's direct host can be IPv6 only). The CLI normally goes through the pooler once linked; if it does not, apply from your machine.
+- The Edge Function is still deployed by hand (`npx supabase functions deploy admin-create-user --project-ref <ref>`).
+
+**Workflow:**
+
+1. Create the migration (`npm run db:new <name>`) and apply it to `development`, from your machine (`npm run db:push`) or from GitHub. Your machine stays linked to `development` only.
+2. Test, commit, merge into `main`.
+3. Run the workflow with target `production`: first the dry run, then "apply".
+
+Do not edit or delete a migration that was already applied: add a new one. `development` is the exception, as long as you reset it afterwards (`npx supabase db reset --linked`, which erases that database).
 
 ### Caddy and TLS
 
-Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once". Caddy gets and renews the Let's Encrypt certificate by itself: no certbot.
+Assumes Debian/Ubuntu, domains you control and the folders from "Server, once". Caddy gets and renews the Let's Encrypt certificates by itself: no certbot. Both targets share ports 80 and 443; Caddy picks the site by its domain.
 
-1. **DNS.** An `A` record (and `AAAA` if the server has IPv6) for `catalog.example.com` pointing at the VPS. Wait until `dig +short catalog.example.com` shows it. Without it the certificate cannot be issued.
+1. **DNS.** An `A` record (and `AAAA` if the server has IPv6) for each domain (here `catalog.example.com` and `catalog-dev.example.org`) pointing at the VPS. Wait until `dig +short <domain>` shows it. Without it the certificate cannot be issued.
 2. **Packages and firewall.** Install Caddy from its [official apt repository](https://caddyserver.com/docs/install#debian-ubuntu-raspbian), then:
 
    ```bash
@@ -184,14 +209,13 @@ Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once". 
 3. **Folder permissions.** Caddy (user `caddy`) must be able to walk into the folder and read the files:
 
    ```bash
-   sudo chmod 755 /var/www /var/www/mission-catalog
+   sudo chmod 755 /var/www /var/www/mission-catalog /var/www/mission-catalog-dev
    ```
 
-4. **The site.** `/etc/caddy/Caddyfile`:
+4. **The sites.** `/etc/caddy/Caddyfile`:
 
    ```caddy
-   catalog.example.com {
-       root * /var/www/mission-catalog/current
+   (spa) {
        file_server
        encode zstd gzip
 
@@ -207,6 +231,17 @@ Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once". 
        @index path /index.html
        header @index Cache-Control "no-cache"
    }
+
+   catalog.example.com {
+       root * /var/www/mission-catalog/current
+       import spa
+   }
+
+   catalog-dev.example.org {
+       root * /var/www/mission-catalog-dev/current
+       header X-Robots-Tag "noindex, nofollow"
+       import spa
+   }
    ```
 
    ```bash
@@ -216,6 +251,6 @@ Assumes Debian/Ubuntu, a domain you control and the folder from "Server, once". 
 
    The app routes with `#`: there is no rewrite to configure. `root` follows the `current` link, so a deploy needs no reload. Another site on the same VPS is one more block with its own domain and folder. Until the first deploy `current` does not exist and Caddy answers 404: that is expected. Do not add a `Content-Security-Policy` without testing: the app talks to Supabase and loads map tiles.
 
-5. **Check.** `curl -I https://catalog.example.com` answers `200` after the first deploy. `journalctl -u caddy -n 50` shows the certificate being issued, or why it failed.
+5. **Check.** `curl -I https://catalog.example.com` (and the development domain) answers `200` after the first deploy. `journalctl -u caddy -n 50` shows the certificate being issued, or why it failed.
 
 If the site lives under a sub-path (`/catalog/`), set `base` in `vite.config.ts` first and replace `root`/`file_server` with `handle_path /catalog/* { root * /var/www/mission-catalog/current; file_server }`.

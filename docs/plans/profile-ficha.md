@@ -29,6 +29,13 @@ Fuente de verdad del trabajo. Una fase por sesión; marcar al terminar.
 - El pin del usuario se ve solo si: opt-in, testimonio validado vigente, pin aprobado por admin y cuenta no
   bloqueada. Editar el testimonio lo oculta hasta revalidar.
 
+## Ambientes
+
+- Dos proyectos Supabase en la nube (plan gratis): `dev` y producción. Sin Supabase local.
+- La máquina local apunta solo a `dev` (`.env` y CLI enlazada). Producción: secretos del environment
+  `production` de GitHub; migraciones solo con el workflow manual desde `main`.
+- Migraciones en `dev`: desde local o con el workflow (target `development`, environment `development`).
+
 ## Al crecer la aplicación
 
 Cada función nueva trae en su migración sus permisos (`seccion.accion`, con nombre y descripción es/en), sus
@@ -100,9 +107,10 @@ Reglas:
 
 ## Fases
 
-- [ ] **0. Preparación.** Rama `feature/ficha`, tag `v0-baseline`, Supabase local (Docker).
+- [ ] **0. Preparación.** Tag `v0-baseline`, proyecto `dev` creado, enlazado y con las migraciones actuales aplicadas.
 - [ ] **1. Base de datos.** Todo el modelo. Script SQL que prueba el acceso por rol (anónimo, dueño, otro,
-      validador, admin). Listo: `db reset` limpio y script en verde.
+      validador, admin) en `dev`, dentro de una transacción que se deshace. Listo: migraciones aplicadas desde
+      cero (`db reset --linked`, solo con `dev` enlazado) y script en verde.
 - [ ] **2. Roles.** Editor de roles, pestañas por permiso, multi-rol en Usuarios y alta (`admin-create-user`,
       requiere desplegarla), solicitud de rol.
 - [ ] **3. Ficha.** Servicios y tarjetas (sin ubicación); usuario y admin. Verificación solo lectura y aviso al editar.

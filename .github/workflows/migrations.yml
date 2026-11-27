@@ -1,14 +1,19 @@
-# Applies the pending database migrations (supabase/migrations) to the production project. Manual only.
+# Applies the pending database migrations (supabase/migrations) to the chosen Supabase project. Manual only.
 #
-# By default it only LISTS what would be applied (dry run). Tick "apply" to really run them.
-# It runs from main, through the `production` environment (so its approval rules and secrets apply):
-# a migration that is not in main never reaches the database.
+# By default it targets `development` and only LISTS what would be applied (dry run). Tick "apply" to run them.
+# Each target is a GitHub environment with the same secret names (so its approval rules and secrets apply).
+# Production runs from main only: a migration that is not in main never reaches that database.
 # Secrets: README, "Migrations from GitHub".
 name: Database migrations
 
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Database to migrate'
+        type: choice
+        options: [development, production]
+        default: development
       apply:
         description: 'Apply the migrations (unticked: only list what is pending)'
         type: boolean
@@ -19,23 +24,32 @@ permissions:
 
 jobs:
   migrate:
-    name: ${{ inputs.apply && 'Apply migrations' || 'Dry run' }}
+    name: ${{ inputs.apply && 'Apply migrations' || 'Dry run' }} (${{ inputs.target }})
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.target }}
     # Two runs at once would race on the same database.
     concurrency:
-      group: supabase-migrations
+      group: supabase-migrations-${{ inputs.target }}
       cancel-in-progress: false
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
-      - name: Only from main
-        if: github.ref != 'refs/heads/main'
+      - name: Production only from main
+        if: inputs.target == 'production' && github.ref != 'refs/heads/main'
         run: |
-          echo "Migrations run from main only (this run is on ${GITHUB_REF_NAME}). Choose main in 'Use workflow from'." >&2
+          echo "Production migrations run from main only (this run is on ${GITHUB_REF_NAME}). Choose main in 'Use workflow from'." >&2
           exit 1
+      # An environment that does not exist yet is created empty by GitHub: fail with a clear message.
+      - name: Check the secrets
+        run: |
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then
+              echo "Missing secret $name in this environment." >&2
+              exit 1
+            fi
+          done
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -50,4 +64,5 @@ jobs:
         run: npm run db:push -- --dry-run
       - name: Apply migrations
         if: ${{ inputs.apply }}
-        run: npm run db:push
+        # Nobody can answer a prompt here, and a hosted database only takes this flag as the confirmation.
+        run: npm run db:push -- --yes

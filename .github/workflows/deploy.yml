@@ -1,4 +1,6 @@
-# Lint and tests on every push and pull request; a push to main, or a manual run, also builds and publishes to the VPS.
+# Lint and tests on every push and pull request. A push to main (production) or to dev (development), or a manual
+# run, also builds and publishes to the VPS. Each target is a GitHub environment with the same secret names.
+# Production is published from main only.
 #
 # Publishing: the build is uploaded to <VPS_PATH>/releases/<commit>/ and the `current` link is switched to it
 # in one step, so the web server never serves a half-copied folder and going back is pointing `current` at an older release.
@@ -11,6 +13,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Where to publish (production: main only)'
+        type: choice
+        options: [development, production]
+        default: development
 
 permissions:
   contents: read
@@ -36,19 +44,26 @@ jobs:
           VITE_SUPABASE_ANON_KEY: test
 
   deploy:
-    name: Build and publish
+    # The target expression is repeated below: `env` is not available in these keys.
+    # A manual run has `inputs.target`; a push takes it from the branch.
+    name: Build and publish (${{ inputs.target || (github.ref == 'refs/heads/main' && 'production' || 'development') }})
     needs: check
-    # A push to main, or a manual run (Actions tab -> Run workflow) of whichever branch is chosen there.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    # A push to main or dev, or a manual run (Actions tab -> Run workflow) of whichever branch is chosen there.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'))
     runs-on: ubuntu-latest
-    environment: production
-    # One deploy at a time; a newer push waits instead of cancelling one that is already copying.
+    environment: ${{ inputs.target || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
+    # One deploy at a time per target; a newer push waits instead of cancelling one that is already copying.
     concurrency:
-      group: deploy-production
+      group: deploy-${{ inputs.target || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
       cancel-in-progress: false
     env:
       RELEASES_TO_KEEP: 5
     steps:
+      - name: Production only from main
+        if: inputs.target == 'production' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Production is published from main only (this run is on ${GITHUB_REF_NAME}). Choose main in 'Use workflow from'." >&2
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
