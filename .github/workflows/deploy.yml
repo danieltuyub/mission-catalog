@@ -1,10 +1,10 @@
 # Lint and tests on every push and pull request. A push to main (production) or to dev (development), or a manual
-# run, also builds and publishes to the VPS. Each target is a GitHub environment with the same secret names.
+# run, also builds and publishes to the VPS. Each target is a GitHub environment with the same names.
 # Production is published from main only.
 #
 # Publishing: the build is uploaded to <VPS_PATH>/releases/<commit>/ and the `current` link is switched to it
 # in one step, so the web server never serves a half-copied folder and going back is pointing `current` at an older release.
-# Setup of the server and the secrets: README, "Deploy (GitHub Actions + Caddy)".
+# Setup of the server, the secrets and the variables: README, "Deploy (GitHub Actions + Caddy)".
 name: CI and deploy
 
 on:
@@ -72,13 +72,13 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx vite build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Prepare SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS || secrets.VPS_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
@@ -88,10 +88,10 @@ jobs:
 
       - name: Upload the release
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PATH: ${{ secrets.VPS_PATH }}
+          VPS_HOST: ${{ vars.VPS_HOST || secrets.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT || secrets.VPS_PORT || '22' }}
+          VPS_USER: ${{ vars.VPS_USER || secrets.VPS_USER }}
+          VPS_PATH: ${{ vars.VPS_PATH || secrets.VPS_PATH }}
         run: |
           # The path is parsed by the remote shell: keep it to plain characters.
           case "$VPS_PATH" in
@@ -107,10 +107,10 @@ jobs:
 
       - name: Switch to the new release
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PATH: ${{ secrets.VPS_PATH }}
+          VPS_HOST: ${{ vars.VPS_HOST || secrets.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT || secrets.VPS_PORT || '22' }}
+          VPS_USER: ${{ vars.VPS_USER || secrets.VPS_USER }}
+          VPS_PATH: ${{ vars.VPS_PATH || secrets.VPS_PATH }}
         run: |
           SSH="ssh -p $VPS_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
           $SSH "$VPS_USER@$VPS_HOST" 'bash -s' -- "$VPS_PATH" "$GITHUB_SHA" "$RELEASES_TO_KEEP" <<'REMOTE'

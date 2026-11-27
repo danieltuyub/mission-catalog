@@ -107,24 +107,26 @@ curl -X POST "$VITE_SUPABASE_URL/functions/v1/admin-create-user" \
 - **Manual run:** GitHub → Actions → "CI and deploy" → Run workflow, choosing the branch and the target. It runs the checks and publishes that branch.
 - **Not included:** migrations ("Migrations from GitHub", manual) and the Edge Function (by hand).
 
-| Target | Published by | Secrets | Folder on the VPS | Deploy user |
+| Target | Published by | Settings | Folder on the VPS | Deploy user |
 | --- | --- | --- | --- | --- |
 | `development` (default of a manual run) | push to `dev`, or a manual run from any branch | `development` environment | `/var/www/mission-catalog-dev` | `ghdeployer-dev` |
 | `production` | push to `main`, or a manual run from `main` | `production` environment | `/var/www/mission-catalog` | `ghdeployer` |
 
-### Secrets
+### Secrets and variables
 
-**Settings → Environments**, once in `development` and once in `production`, each with its own values. Keep them out of the repository-level secrets: one missing in an environment would silently take the repository's value, maybe production's. In `production`, set "Deployment branches" to `main` only (the check inside the workflow can be edited away in a branch); you can also require an approval before each deploy.
+**Settings → Environments**, once in `development` and once in `production`, each with its own values. Keep them out of the repository level: one missing in an environment would silently take the repository's value, maybe production's (a repository variable even wins over an environment secret).
 
-| Secret | Value |
-| --- | --- |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | the publishable values of that environment's Supabase project |
-| `VPS_HOST` | server name or IP |
-| `VPS_PORT` | optional, `22` by default |
-| `VPS_USER` | that target's deploy user (below) |
-| `VPS_PATH` | absolute path of that target's folder, e.g. `/var/www/mission-catalog` (letters, digits, `_ . / -` only) |
-| `VPS_SSH_KEY` | the deploy user's **private** key (whole file) |
-| `VPS_KNOWN_HOSTS` | the server's host key line(s): `ssh-keyscan -p 22 your.host` run from a network you trust, ideally compared with the server's own `/etc/ssh/ssh_host_ed25519_key.pub` |
+Sensitive values are **secrets**. The rest are better as **variables** (readable and editable in GitHub); the workflows read the variable and, if there is none, a secret with the same name. If both exist, the variable wins. Logs mask secrets only: if the repository is public and you would rather not show the server, keep `VPS_HOST` and `VPS_USER` as secrets. In `production`, set "Deployment branches" to `main` only (the check inside the workflow can be edited away in a branch); you can also require an approval before each deploy.
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | variable | the publishable values of that environment's Supabase project |
+| `VPS_HOST` | variable or secret | server name or IP |
+| `VPS_PORT` | variable | optional, `22` by default |
+| `VPS_USER` | variable or secret | that target's deploy user (below) |
+| `VPS_PATH` | variable | absolute path of that target's folder, e.g. `/var/www/mission-catalog` (letters, digits, `_ . / -` only) |
+| `VPS_SSH_KEY` | **secret** | the deploy user's **private** key (whole file) |
+| `VPS_KNOWN_HOSTS` | variable | the server's host key line(s): `ssh-keyscan -p 22 your.host` run from a network you trust, ideally compared with the server's own `/etc/ssh/ssh_host_ed25519_key.pub` |
 
 ### Server, once
 
@@ -151,7 +153,7 @@ ssh ghdeployer@your.host 'cd /var/www/mission-catalog && ls -1t releases && ln -
 
 ### Where each value comes from
 
-| Secret | How to get it |
+| Name | How to get it |
 | --- | --- |
 | `VPS_HOST` | the name you ssh to (`catalog.example.com`) or the server's IP. Use the same text in `VPS_KNOWN_HOSTS` |
 | `VPS_PORT` | `sudo sshd -T \| grep '^port'` on the VPS (22 unless you changed it) |
@@ -172,17 +174,17 @@ The key and the known-hosts line are the only ones that need the VPS. Test the k
 
 `.github/workflows/migrations.yml`, manual only: Actions → "Database migrations" → Run workflow.
 
-| Target | Run it from | Secrets and rules |
+| Target | Run it from | Settings and rules |
 | --- | --- | --- |
 | `development` (default) | any branch that has this workflow | `development` environment |
 | `production` | `main` only | `production` environment |
 
 - **Untick "apply" (default):** dry run, it prints the migrations that are pending and changes nothing.
 - **Tick "apply":** runs `npm run db:push -- --yes` against that project.
-- Both environments need `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`, with each project's values. They are passed as environment variables to the steps only.
+- Both environments need `SUPABASE_PROJECT_REF` (variable), `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` (**secrets**), with each project's values. They are passed as environment variables to the job's steps only.
 - **One scoped token per environment** ([Account → Access Tokens](https://supabase.com/dashboard/account/tokens), [docs](https://supabase.com/docs/guides/platform/personal-access-tokens)): limit it to that environment's project, with **Read** on Project Settings, API Keys and API Key Secrets (what `supabase link` needs). Never a full-access ("Legacy") token: the one in `development` could reach production.
 - The token's permissions do not limit what the database password can do: use a different password in each project. The token can still read that project's secret keys, so treat it as sensitive.
-- In the `production` environment, set "Deployment branches" to `main` only (the check inside the workflow can be edited away in a branch), and keep these secrets in the environments, not at repository level.
+- In the `production` environment, set "Deployment branches" to `main` only (the check inside the workflow can be edited away in a branch), and keep these values in the environments, not at repository level.
 - If linking or pushing fails with a network error, the runner cannot reach the database directly (Supabase's direct host can be IPv6 only). The CLI normally goes through the pooler once linked; if it does not, apply from your machine.
 - The Edge Function is still deployed by hand (`npx supabase functions deploy admin-create-user --project-ref <ref>`).
 

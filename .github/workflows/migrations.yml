@@ -1,9 +1,9 @@
 # Applies the pending database migrations (supabase/migrations) to the chosen Supabase project. Manual only.
 #
 # By default it targets `development` and only LISTS what would be applied (dry run). Tick "apply" to run them.
-# Each target is a GitHub environment with the same secret names (so its approval rules and secrets apply).
+# Each target is a GitHub environment with the same names (so its approval rules and values apply).
 # Production runs from main only: a migration that is not in main never reaches that database.
-# Secrets: README, "Migrations from GitHub".
+# Secrets and variables: README, "Migrations from GitHub".
 name: Database migrations
 
 on:
@@ -34,7 +34,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || secrets.SUPABASE_PROJECT_REF }}
     steps:
       - name: Production only from main
         if: inputs.target == 'production' && github.ref != 'refs/heads/main'
@@ -42,11 +42,11 @@ jobs:
           echo "Production migrations run from main only (this run is on ${GITHUB_REF_NAME}). Choose main in 'Use workflow from'." >&2
           exit 1
       # An environment that does not exist yet is created empty by GitHub: fail with a clear message.
-      - name: Check the secrets
+      - name: Check the settings
         run: |
           for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
             if [ -z "${!name}" ]; then
-              echo "Missing secret $name in this environment." >&2
+              echo "Missing $name in this environment (README says whether it is a secret or a variable)." >&2
               exit 1
             fi
           done
