@@ -15,7 +15,6 @@
     "db:push": "supabase db push --remote",
     "db:status": "supabase migration list --remote",
     "db:setup": "[ -f supabase/config.toml ] || supabase init; supabase link --project-ref $SUPABASE_PROJECT_REF",
-    "db:rollback": "npx supabase migration down --last 1 --remote",
     "db:migrate": "npx supabase migration up --remote"
   },
   "dependencies": {

@@ -11,7 +11,9 @@ import { Empty, LoadError, Loading } from './ui'
 const FIELDS = [
   'name', 'responsible', 'description', 'details', 'started_at', 'country', 'region', 'city', 'phone', 'mail', 'status', 'title', 'kind',
   'languages', 'image_path', 'exact_lat', 'exact_lng', 'first_name', 'last_name', 'language', 'role', 'banned_until', 'contact',
-  'requested_by', 'added', 'removed', 'email',
+  'requested_by', 'added', 'removed', 'email', 'roles', 'household', 'testimony', 'home_country', 'home_description',
+  'show_on_map', 'subject', 'permission', 'name_es', 'name_en', 'system', 'requestable', 'position', 'active', 'category',
+  'message', 'profile_user_id',
 ] as const
 type Field = (typeof FIELDS)[number]
 const isField = (key: string): key is Field => (FIELDS as readonly string[]).includes(key)
@@ -29,6 +31,10 @@ const dateClass = `${inputClass} mt-1 block w-40 py-0 leading-10 [&::-webkit-dat
 
 const NO_FILTERS: Filters = { actorId: '', action: '', from: '', to: '' }
 
+/** A seeded role in the current language; one created by an admin shows its id. */
+const roleName = (id: string) => (SEEDED_ROLES.includes(id) ? roleLabel(id as Role) : id)
+const SEEDED_ROLES = ['subscriber', 'creator', 'validator', 'admin']
+
 function Changes({ entry, names }: { entry: AuditEntry; names: (id: string) => string }) {
   const { t, i18n } = useTranslation('admin')
   const when = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })
@@ -37,8 +43,9 @@ function Changes({ entry, names }: { entry: AuditEntry; names: (id: string) => s
 
   const show = (key: string, value: unknown): string => {
     if (value === null || value === undefined || value === '') return t('audit.empty')
-    if (key === 'role' && typeof value === 'string') return roleLabel(value as Role)
-    if (key === 'requested_by' && typeof value === 'string') return names(value)
+    if (key === 'role' && typeof value === 'string') return roleName(value)
+    if ((key === 'requested_by' || key === 'profile_user_id') && typeof value === 'string') return names(value)
+    if (key === 'roles' && Array.isArray(value) && value.length) return value.map((r) => roleName(String(r))).join(', ')
     if (Array.isArray(value)) return value.length ? value.join(', ') : t('audit.empty')
     if (typeof value === 'string' && ISO.test(value)) return when.format(new Date(value))
     return typeof value === 'object' ? JSON.stringify(value) : String(value)

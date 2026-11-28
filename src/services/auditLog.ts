@@ -1,7 +1,7 @@
 import { tError } from '../i18n'
 import { supabase } from './supabaseClient'
 
-/** Everything the trail records, in the order the filter lists them. The database writes them (see the audit_log migration). */
+/** Everything the trail records, in the order the filter lists them. The database writes them (see the audit migrations). */
 export const AUDIT_ACTIONS = [
   'auth.login',
   'auth.logout',
@@ -21,6 +21,35 @@ export const AUDIT_ACTIONS = [
   'user.blocked',
   'user.unblocked',
   'user.deleted',
+  'profile.updated',
+  'profile.skills_changed',
+  'profile.trainings_changed',
+  'profile.backer_added',
+  'profile.backer_updated',
+  'profile.backer_removed',
+  'profile.verified',
+  'profile.verification_removed',
+  'profile_pin_request.created',
+  'profile_pin_request.updated',
+  'profile_pin_request.approved',
+  'profile_pin_request.rejected',
+  'profile_pin_request.reopened',
+  'profile_pin.updated',
+  'profile_pin.deleted',
+  'role.created',
+  'role.updated',
+  'role.deleted',
+  'role.permission_added',
+  'role.permission_removed',
+  'role_request.created',
+  'role_request.approved',
+  'role_request.rejected',
+  'skill.created',
+  'skill.updated',
+  'skill.deleted',
+  'training.created',
+  'training.updated',
+  'training.deleted',
 ] as const
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 

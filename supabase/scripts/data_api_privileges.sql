@@ -1,5 +1,6 @@
--- Gives the Data API roles access to schema `public` the way older Supabase projects did by default, so new
--- tables need no GRANT of their own. Run in the SQL Editor, once per project.
+-- Gives the Data API roles access to schema `public` the way older Supabase projects did by default.
+-- Bootstrap only: run in the SQL Editor, once, when a project is set up. Later migrations carry their own
+-- grants and revokes, so section 3 stops at 20261202000000.
 --
 -- - On an empty project, before its first migration: section 1 alone is enough.
 -- - On a project that already has the migrations: the whole script. Do not run it again after a newer

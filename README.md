@@ -69,6 +69,24 @@ npm run db:push
 
 If unset, the CLI prompts for it. Prefix the command with a space to keep it out of zsh history (requires `HIST_IGNORE_SPACE`).
 
+### Database tests
+
+`supabase/scripts/test_profile_access.sql` checks what each kind of user can read and write. It runs inside a transaction that is rolled back. With the CLI linked to `development`:
+
+```bash
+npx supabase db query --remote --file supabase/scripts/test_profile_access.sql
+```
+
+To rehearse migrations that are still pending, join them with the script in a single transaction that ends in `rollback` (the script's own `begin;` and `rollback;` lines removed):
+
+```bash
+{ echo 'begin;'; cat supabase/migrations/<pending files>; grep -vxE 'begin;|rollback;' supabase/scripts/test_profile_access.sql; echo 'rollback;'; } > /tmp/rehearsal.sql
+```
+
+```bash
+npx supabase db query --remote --file /tmp/rehearsal.sql
+```
+
 ## Edge Function: `admin-create-user`
 
 Lets an admin create accounts from **Administración → Usuarios → Nuevo usuario**, with a temporary password and the chosen role, without going to the Supabase dashboard. It exists because creating accounts needs the service-role key, which must never reach the browser.
@@ -194,7 +212,7 @@ The key and the known-hosts line are the only ones that need the VPS. Test the k
 2. Test, commit, merge into `main`.
 3. Run the workflow with target `production`: first the dry run, then "apply".
 
-Do not edit or delete a migration that was already applied: add a new one. `development` is the exception, as long as you reset it afterwards (`npx supabase db reset --linked`, which erases that database).
+Migrations only go forward, in every environment: do not edit or delete one that was already applied, and do not reset a database to fix it; add a new migration. Change what the app depends on in two steps (add the new thing, remove the old one in a later migration). Each migration carries its own grants and revokes. Before applying to production, take a backup (`npx supabase db dump`, schema and, with `--data-only`, data): the free plan keeps none.
 
 ### Caddy and TLS
 

@@ -6,14 +6,16 @@ Fuente de verdad del trabajo. Una fase por sesión; marcar al terminar.
 
 - La ficha existe para cualquier rol. Habilidades y capacitaciones son opcionales. Crear proyectos
   no exige testimonio por ahora.
-- Visible solo para su dueño, admin y validadores (excepción: lo que publica el pin).
+- Visible solo para su dueño, admin y quien tenga un permiso `profiles.*` (excepción: lo que publica el pin).
+  `profiles.verify`, `edit_any`, `authorize_pin` y `audit_read` incluyen leer la ficha. De los demás se ve el
+  nombre, no el correo.
 - Dos verificaciones: testimonio y habilidades espirituales. El dueño puede editar; al cambiar queda
   "pendiente de nueva validación" (avisar antes de guardar). Ve el estado, nunca lo modifica.
 - Nadie se valida a sí mismo, tampoco un creador. El validador ve la ficha completa, respaldos incluidos.
 - Hasta 5 respaldos, cada uno con teléfono o correo; cambiarlos no quita verificaciones.
 - Testimonio en un solo idioma, como se escriba.
 - Habilidades y capacitaciones salen solo del catálogo; capacitación sin año.
-- Pin del usuario: opt-in; solo visible si está validado por el admin. Es de tipo persona o familia.
+- Pin del usuario: opt-in; público solo si está validado y autorizado. Es de tipo persona o familia.
   Muestra nombre de pila y el testimonio como descripción. Sin categorías nuevas.
 - Admin filtra usuarios por habilidad, capacitación, país y verificación.
 - Multi-rol, sin permisos directos. Permisos efectivos = unión de los roles.
@@ -26,8 +28,10 @@ Fuente de verdad del trabajo. Una fase por sesión; marcar al terminar.
   una pendiente a la vez.
 - Tipo de ficha: "Participo como: persona / familia" (por defecto persona); da el tipo del pin, que no se
   edita en el pin. Iglesia y casa iglesia siguen por la solicitud de pin normal.
-- El pin del usuario se ve solo si: opt-in, testimonio validado vigente, pin aprobado por admin y cuenta no
-  bloqueada. Editar el testimonio lo oculta hasta revalidar.
+- El pin del usuario se ve (también sin sesión) solo si: opt-in, testimonio validado vigente, autorizado con
+  `profiles.authorize_pin` y cuenta no bloqueada. Editar el testimonio lo oculta hasta revalidar.
+- Nadie autoriza su propio pin, tampoco admin. Quitar la validación del testimonio es la forma de ocultarlo.
+- Auditoría de fichas y sus pins: `profiles.audit_read`; el resto sigue con `users.manage`.
 
 ## Ambientes
 
@@ -35,6 +39,9 @@ Fuente de verdad del trabajo. Una fase por sesión; marcar al terminar.
 - La máquina local apunta solo a `dev` (`.env` y CLI enlazada). Producción: secretos del environment
   `production` de GitHub; migraciones solo con el workflow manual desde `main`.
 - Migraciones en `dev`: desde local o con el workflow (target `development`, environment `development`).
+- Migraciones solo hacia adelante, con backfill: ningún ambiente se resetea. Cambios incompatibles en dos pasos
+  (agregar; quitar lo viejo en una fase posterior). Cada migración trae sus grants.
+- Antes de migrar producción: respaldo con `supabase db dump` (el plan gratis no respalda).
 
 ## Al crecer la aplicación
 
@@ -49,27 +56,29 @@ sin tocar código.
 | --- | --- | --- |
 | `subscriber` | `projects.view_detail`, `projects.save`, `messages.send`, `pins.request` | base de todos; editable; no se quita ni borra |
 | `creator` | `projects.create`, `projects.update_own` | editable; solicitable |
-| `validator` | `profiles.read_all`, `profiles.verify` | editable |
+| `validator` | `profiles.read_all`, `profiles.verify`, `profiles.authorize_pin` | editable |
 | `admin` | todos (implícito) | no se edita ni borra; siempre queda al menos uno |
 | nuevos | los que elija el admin | se borran solo sin usuarios asignados |
 
+Los cuatro sembrados no se borran. `subscriber` y `admin` no son solicitables.
+
 Permisos asignables: los actuales (`projects.*`, `pins.request`, `pins.write`, `pins.approve`, `messages.send`,
 `messages.moderate`, `users.manage`) y los nuevos `profiles.read_all`, `profiles.verify`, `profiles.edit_any`,
-`catalogs.manage`. El catálogo de permisos solo crece por migración; cada uno con nombre y descripción es/en.
+`profiles.authorize_pin`, `profiles.audit_read`, `catalogs.manage`. El catálogo de permisos solo crece por migración; cada uno con nombre y descripción es/en.
 
 ## Modelo de datos (todo en la fase 1)
 
 | Tabla | Campos principales | Escribe |
 | --- | --- | --- |
-| `permissions` | `key`, `description` | solo migraciones |
+| `permissions` | `key`, `name_es`, `name_en`, `description_es`, `description_en` | solo migraciones |
 | `roles` | `id`, `name_es`, `name_en`, `system`, `requestable` | admin, RPC |
 | `role_permissions`, `user_roles` (existentes) | FK a las anteriores, en vez de `check` | admin, RPC |
 | `role_requests` | `user_id`, `role`, `message`, `status`, `reviewed_by/at` | dueño crea; revisa RPC |
-| `profile_details` | `user_id`, `household`, `testimony` (≤2000), `testimony_updated_at`, `spiritual_skills_updated_at`, `home_country`, `home_description` (≤500), `show_on_map` | dueño, admin |
+| `profile_details` | `user_id`, `household`, `testimony` (≤2000), `testimony_updated_at`, `spiritual_skills_updated_at`, `home_country`, `home_description` (≤500), `show_on_map` | dueño, `profiles.edit_any` |
 | `skills` | `category` (`manual`/`spiritual`), `name_es`, `name_en`, `active`, `position` | `catalogs.manage` |
 | `trainings` | `name`, `active`, `position` | `catalogs.manage` |
 | `user_skills`, `user_trainings` | usuario + id del catálogo | solo RPC |
-| `profile_backers` | `kind` (`ministry`/`church`/`pastor`/`person`/`other`), `name`, `phone`, `email` | dueño, admin |
+| `profile_backers` | `kind` (`ministry`/`church`/`pastor`/`person`/`other`), `name`, `phone`, `email` | dueño, `profiles.edit_any` |
 | `profile_verifications` | `user_id`, `subject` (`testimony`/`spiritual_skills`), `verified_by/at`, `invalidated_at` | solo RPC y triggers |
 | `pins`, `pin_requests` (existentes) | nuevo `profile_user_id` (un pin por usuario) | flujo de solicitudes |
 
@@ -84,11 +93,28 @@ Reglas:
 - `verify_profile(target, subject, verified, seen_updated_at)`: rechaza al propio usuario y si el contenido
   cambió desde que se leyó.
 - Catálogos: se desactivan, no se borran si están en uso.
-- Pin del usuario: va por `pin_requests`; aprobar crea o actualiza el mismo pin (conserva conversaciones),
-  con el usuario como contacto (tiene botón de mensaje). Título = nombre de pila; descripción = testimonio
-  validado; mismo difuminado (300-900 m). La visibilidad se impone en la política de lectura de `pins`.
-- Mover el punto requiere nueva aprobación; quitar el opt-in oculta al instante. El desplazamiento aleatorio
-  solo se recalcula si el punto se mueve más de 1 km.
+- `profiles.edit_any` no edita fichas de cuentas admin (salvo un admin). Cuenta bloqueada no edita la suya.
+- Solicitud de rol: mensaje obligatorio (≤500), no se pide uno que ya se tiene, se puede repetir tras un rechazo,
+  no se cancela. Respaldo: nombre obligatorio. No se valida contenido vacío. Habilidad o capacitación inactiva
+  se conserva, no se agrega. `roles.id` se genera del nombre.
+- Pin del usuario: `submit_profile_pin` (una pendiente; un nuevo envío la reemplaza) y `review_profile_pin`.
+  Cualquier cambio de punto, idiomas, país, región o ciudad pasa por ahí; mientras tanto sigue lo anterior.
+  Aprobar crea o actualiza el mismo pin (conserva conversaciones), con el usuario como contacto. Título = nombre
+  de pila (obligatorio); descripción = testimonio validado; sin foto. Se puede aprobar sin testimonio validado
+  (queda oculto).
+- Nombre, tipo y testimonio revalidado actualizan el pin solos. Quitar el opt-in oculta al instante y volver a
+  marcarlo no pide autorizar otra vez.
+- La visibilidad se impone en la política de lectura de `pins`; los ocultos se listan con `admin_profile_pins()`.
+  Pin oculto: sin conversaciones nuevas, las existentes siguen. `pins.write` solo puede borrar un pin de ficha
+  (`admin_delete_profile_pin()` alcanza también los ocultos).
+- El punto publicado (300-900 m) se recalcula solo si el nuevo punto queda a más de 900 m del publicado.
+- La ubicación se guarda solo en `pin_requests` y `pins`. El filtro por país usa `home_country`, en español.
+- Borrar la cuenta borra su ficha y su pin.
+- Pedir un pin de ficha exige también `pins.request`. Si el usuario vacía su nombre, el pin conserva el anterior.
+  `profile_pin_state()` informa si está autorizado y visible.
+- Borrar un rol borra sus solicitudes (quedan en auditoría). Un admin no revisa su propia solicitud de rol.
+- Hasta la fase 2: no dar `users.manage` a otro rol (`admin-create-user` le dejaría crear un admin), y la pantalla
+  Usuarios asigna un solo rol (sobre un validador le quita `validator`).
 - Auditoría: triggers sobre todas las tablas nuevas.
 - Semillas: electricista, plomería, carpintería; enseñar, predicar, bautizar, discipular;
   TLR Luke 10 School, PTS School, CFTN.
@@ -107,16 +133,19 @@ Reglas:
 
 ## Fases
 
-- [ ] **0. Preparación.** Tag `v0-baseline`, proyecto `dev` creado, enlazado y con las migraciones actuales aplicadas.
-- [ ] **1. Base de datos.** Todo el modelo. Script SQL que prueba el acceso por rol (anónimo, dueño, otro,
-      validador, admin) en `dev`, dentro de una transacción que se deshace. Listo: migraciones aplicadas desde
-      cero (`db reset --linked`, solo con `dev` enlazado) y script en verde.
+- [x] **0. Preparación.** Tag `v0-baseline`, proyecto `dev` creado, enlazado y con las migraciones actuales aplicadas.
+- [x] **1. Base de datos.** Todo el modelo. Script SQL que prueba el acceso por rol (anónimo, dueño, otro,
+      validador, admin) en `dev`, dentro de una transacción que se deshace
+      (`supabase/scripts/test_profile_access.sql`). Listo: ensayo con rollback en verde, `db push` a `dev` y
+      script en verde.
 - [ ] **2. Roles.** Editor de roles, pestañas por permiso, multi-rol en Usuarios y alta (`admin-create-user`,
-      requiere desplegarla), solicitud de rol.
+      requiere desplegarla; asignar roles solo admin), solicitud de rol. Quitar `admin_set_user_role(uuid, text)`
+      en una migración.
 - [ ] **3. Ficha.** Servicios y tarjetas (sin ubicación); usuario y admin. Verificación solo lectura y aviso al editar.
 - [ ] **4. Catálogos.** Alta, edición, orden, desactivar.
 - [ ] **5. Verificación.** Botones, pendientes y chip.
-- [ ] **6. Pin del usuario.** Tarjeta de ubicación, aprobación y mapa.
+- [ ] **6. Pin del usuario.** Tarjeta de ubicación, aprobación y mapa. Las listas y contadores actuales de
+      solicitudes deben separar las de ficha (`profile_user_id`).
 - [ ] **7. Filtros en Usuarios.**
 - [ ] **Aparte.** Alta propia (registro público y SMTP).
 
